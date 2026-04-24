@@ -1,0 +1,13 @@
+[project]
+name = "the-cricket-fan-backend"
+version = "0.1.0"
+description = "IPL fan-first backend — match stories, trivia, predictions"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 99
+target-version = "py312"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
