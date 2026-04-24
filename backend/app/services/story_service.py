@@ -41,7 +41,7 @@ async def generate_story(stats: dict) -> dict:
         f"Today's match: {stats['team_a']['short_name']} vs {stats['team_b']['short_name']} "
         f"at {stats['venue']}.\n"
         f"Key stats:\n"
-        f"- Rohit Sharma has scored 0 fifties vs CSK in his last 10 IPL matches\n"
+        f"- {stats['shock_stat_label']}: {stats['shock_stat_value']}\n"
         f"- {stats['team_a']['short_name']} win rate at {stats['venue']}: {stats['mi_win_pct']}%\n"
         f"- Jadeja has dismissed Rohit {stats['jadeja_dismissals']} times\n"
         f"Generate the headline and shock stat. Make it feel like a newspaper back page."

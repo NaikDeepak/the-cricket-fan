@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import date
@@ -18,9 +18,11 @@ async def get_today_prediction(session: AsyncSession = Depends(get_session)):
 
     match = await session.scalar(select(Match).where(Match.is_today == True))
     if not match:
-        return {"error": "No match today"}
+        raise HTTPException(status_code=404, detail="No match today")
     team_a = await session.get(Team, match.team_a_id)
     team_b = await session.get(Team, match.team_b_id)
+    if not team_a or not team_b:
+        raise HTTPException(status_code=500, detail="Match team data missing")
 
     mi_v = await session.scalar(
         select(VenueStats).where(VenueStats.venue == match.venue, VenueStats.team_id == match.team_a_id)
@@ -33,8 +35,9 @@ async def get_today_prediction(session: AsyncSession = Depends(get_session)):
         "team_a_short": team_a.short_name,
         "team_b_short": team_b.short_name,
         "venue": match.venue,
-        "mi_chase_win_pct": round((mi_v.chase_wins / mi_v.chase_attempts) * 100) if mi_v else 50,
-        "csk_chase_win_pct": round((csk_v.chase_wins / csk_v.chase_attempts) * 100) if csk_v else 50,
+        "mi_chase_win_pct": round((mi_v.chase_wins / mi_v.chase_attempts) * 100) if (mi_v and mi_v.chase_attempts) else 50,
+        "csk_chase_win_pct": round((csk_v.chase_wins / csk_v.chase_attempts) * 100) if (csk_v and csk_v.chase_attempts) else 50,
+        # TODO Task 14: replace with phase_stats from Cricsheet ingest
         "mi_death_economy": 7.2,
         "csk_death_economy": 8.9,
         "csk_vs_spin_avg": 18,

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import date
@@ -18,9 +18,11 @@ async def get_today_trivia(session: AsyncSession = Depends(get_session)):
 
     match = await session.scalar(select(Match).where(Match.is_today == True))
     if not match:
-        return {"error": "No match today"}
+        raise HTTPException(status_code=404, detail="No match today")
     team_a = await session.get(Team, match.team_a_id)
     team_b = await session.get(Team, match.team_b_id)
+    if not team_a or not team_b:
+        raise HTTPException(status_code=500, detail="Match team data missing")
 
     result = await generate_trivia(match.venue, team_a.short_name, team_b.short_name)
 
