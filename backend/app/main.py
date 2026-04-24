@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import engine
 from .models.base import Base
 from .models import match, player  # noqa: F401 — registers models with Base
-from .api import story, trivia, prediction, stats
+from .api import story, trivia, prediction, stats, matches
 
 
 @asynccontextmanager
@@ -30,6 +30,7 @@ app.include_router(story.router)
 app.include_router(trivia.router)
 app.include_router(prediction.router)
 app.include_router(stats.router)
+app.include_router(matches.router)
 
 
 @app.get("/health")
