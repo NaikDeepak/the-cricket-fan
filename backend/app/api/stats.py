@@ -1,5 +1,6 @@
 # backend/app/api/stats.py
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -9,7 +10,19 @@ from ..models.player import Player, PlayerVsPlayer
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 
-@router.get("/player-vs-player")
+class StatRow(BaseModel):
+    label: str
+    batsman_val: float
+    bowler_val: float
+
+
+class PlayerVsPlayerResponse(BaseModel):
+    batsman: str
+    bowler: str
+    stats: list[StatRow]
+
+
+@router.get("/player-vs-player", response_model=PlayerVsPlayerResponse)
 async def get_pvp(
     player_a: str = Query(..., description="Batsman name"),
     player_b: str = Query(..., description="Bowler name"),
@@ -31,6 +44,7 @@ async def get_pvp(
         raise HTTPException(status_code=404, detail="No head-to-head data")
 
     sr = round((pvp.runs / pvp.balls) * 100, 1) if pvp.balls else 0
+    economy = round((pvp.runs / pvp.balls) * 6, 1) if pvp.balls else 0
     dot_pct = round((pvp.dot_balls / pvp.balls) * 100, 1) if pvp.balls else 0
 
     return {
@@ -39,7 +53,7 @@ async def get_pvp(
         "stats": [
             {"label": "BALLS FACED", "batsman_val": pvp.balls, "bowler_val": pvp.balls},
             {"label": "DISMISSALS", "batsman_val": pvp.dismissals, "bowler_val": pvp.dismissals},
-            {"label": "STRIKE RATE", "batsman_val": sr, "bowler_val": sr},
+            {"label": "STRIKE RATE / ECONOMY", "batsman_val": sr, "bowler_val": economy},
             {"label": "DOT BALL %", "batsman_val": dot_pct, "bowler_val": dot_pct},
         ],
     }
