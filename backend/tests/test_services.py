@@ -1,5 +1,6 @@
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 
 @pytest.mark.asyncio
 async def test_story_service_returns_required_fields():
@@ -16,20 +17,23 @@ async def test_story_service_returns_required_fields():
         "jadeja_dismissals": 5,
     }
 
-    mock_response = MagicMock()
-    mock_response.content = [MagicMock()]
-    mock_response.content[0].type = "tool_use"
-    mock_response.content[0].input = {
+    mock_parsed = MagicMock()
+    mock_parsed.model_dump.return_value = {
         "headline": "ROHIT HASN'T SCORED >30 vs CSK IN 6 MATCHES.",
         "shock_stat": {
             "value": "0",
             "label": "ROHIT 50+ VS CSK (L10)",
             "one_liner": "0. In 10 matches. Tonight changes that.",
-        }
+        },
     }
+    mock_response = MagicMock()
+    mock_response.parsed = mock_parsed
 
-    with patch("app.services.story_service.anthropic_client.messages.create",
-               new_callable=AsyncMock, return_value=mock_response):
+    with patch(
+        "app.services.story_service.gemini_client.aio.models.generate_content",
+        new_callable=AsyncMock,
+        return_value=mock_response,
+    ):
         result = await generate_story(mock_stats)
 
     assert "headline" in result
@@ -43,19 +47,22 @@ async def test_story_service_returns_required_fields():
 async def test_trivia_service_returns_required_fields():
     from app.services.trivia_service import generate_trivia
 
-    mock_response = MagicMock()
-    mock_response.content = [MagicMock()]
-    mock_response.content[0].type = "tool_use"
-    mock_response.content[0].input = {
+    mock_parsed = MagicMock()
+    mock_parsed.model_dump.return_value = {
         "question": "HOW MANY TIMES HAS DHONI FINISHED A CHASE IN THE LAST OVER AT WANKHEDE",
         "options": ["3", "7", "11", "2"],
         "correct_index": 2,
         "emphasis": "ZERO FAILURES.",
         "fact": "11. Every single time. Dhoni has never lost a chase at Wankhede in the last 2 overs.",
     }
+    mock_response = MagicMock()
+    mock_response.parsed = mock_parsed
 
-    with patch("app.services.trivia_service.anthropic_client.messages.create",
-               new_callable=AsyncMock, return_value=mock_response):
+    with patch(
+        "app.services.trivia_service.gemini_client.aio.models.generate_content",
+        new_callable=AsyncMock,
+        return_value=mock_response,
+    ):
         result = await generate_trivia("Wankhede Stadium", "CSK", "MI")
 
     assert "question" in result
