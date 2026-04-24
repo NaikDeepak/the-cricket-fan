@@ -1,10 +1,12 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap, SplitText } from "@/lib/gsap";
 import HeroStats from "./HeroStats";
+import ShareDrawer from "@/components/share/ShareDrawer";
 import type { StoryData } from "@/lib/api";
 
 export default function MatchHero({ data }: { data: StoryData }) {
+  const [shareOpen, setShareOpen] = useState(false);
   const heroRef = useRef<HTMLElement>(null);
   const teamARef = useRef<HTMLSpanElement>(null);
   const teamBRef = useRef<HTMLSpanElement>(null);
@@ -93,6 +95,21 @@ export default function MatchHero({ data }: { data: StoryData }) {
         <span style={{ color: "var(--fg)" }}>{data.scroll_bait}</span>
         <span>SEE THE BATTLE ↓</span>
       </div>
+
+      <button
+        onClick={() => setShareOpen(true)}
+        style={{
+          position: "fixed", bottom: "24px", right: "24px", zIndex: 30,
+          background: "var(--fg)", color: "var(--bg)",
+          border: "none", padding: "12px 20px",
+          fontFamily: "Space Grotesk, sans-serif", fontSize: "12px",
+          fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase",
+          cursor: "pointer",
+        }}
+      >
+        SHARE
+      </button>
+      <ShareDrawer data={data} open={shareOpen} onClose={() => setShareOpen(false)} />
     </section>
   );
 }
