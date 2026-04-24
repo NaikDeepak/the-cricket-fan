@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import engine
 from .models.base import Base
 from .models import match, player  # noqa: F401 — registers models with Base
+from .api import story, trivia, prediction
 
 
 @asynccontextmanager
@@ -24,6 +25,10 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+app.include_router(story.router)
+app.include_router(trivia.router)
+app.include_router(prediction.router)
 
 
 @app.get("/health")

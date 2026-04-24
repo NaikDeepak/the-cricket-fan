@@ -1,0 +1,47 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from datetime import date
+from ..database import get_session
+from ..models.match import Match, Team
+from ..models.player import VenueStats, DailyCache
+from ..services.prediction_service import calculate_prediction
+
+router = APIRouter(prefix="/prediction", tags=["prediction"])
+
+@router.get("/today")
+async def get_today_prediction(session: AsyncSession = Depends(get_session)):
+    cache_key = f"prediction_{date.today()}"
+    cached = await session.scalar(select(DailyCache).where(DailyCache.cache_key == cache_key))
+    if cached:
+        return cached.data
+
+    match = await session.scalar(select(Match).where(Match.is_today == True))
+    team_a = await session.get(Team, match.team_a_id)
+    team_b = await session.get(Team, match.team_b_id)
+
+    mi_v = await session.scalar(
+        select(VenueStats).where(VenueStats.venue == match.venue, VenueStats.team_id == match.team_a_id)
+    )
+    csk_v = await session.scalar(
+        select(VenueStats).where(VenueStats.venue == match.venue, VenueStats.team_id == match.team_b_id)
+    )
+
+    stats = {
+        "team_a_short": team_a.short_name,
+        "team_b_short": team_b.short_name,
+        "venue": match.venue,
+        "mi_chase_win_pct": round((mi_v.chase_wins / mi_v.chase_attempts) * 100) if mi_v else 50,
+        "csk_chase_win_pct": round((csk_v.chase_wins / csk_v.chase_attempts) * 100) if csk_v else 50,
+        "mi_death_economy": 7.2,
+        "csk_death_economy": 8.9,
+        "csk_vs_spin_avg": 18,
+        "mi_vs_spin_avg": 34,
+    }
+
+    result = calculate_prediction(stats)
+    result["team_color"] = team_a.primary_color if result["team"] == team_a.short_name else team_b.primary_color
+
+    session.add(DailyCache(cache_key=cache_key, data=result))
+    await session.commit()
+    return result
