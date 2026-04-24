@@ -1,7 +1,8 @@
+from datetime import date as date_type
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from datetime import date
+
 from ..database import get_session
 from ..models.match import Match, Team
 from ..models.player import VenueStats, DailyCache
@@ -9,16 +10,16 @@ from ..services.prediction_service import calculate_prediction
 
 router = APIRouter(prefix="/prediction", tags=["prediction"])
 
-@router.get("/today")
-async def get_today_prediction(session: AsyncSession = Depends(get_session)):
-    cache_key = f"prediction_{date.today()}"
+
+async def _get_prediction_for_date(target_date: date_type, session: AsyncSession) -> dict:
+    cache_key = f"prediction_{target_date}"
     cached = await session.scalar(select(DailyCache).where(DailyCache.cache_key == cache_key))
     if cached:
         return cached.data
 
-    match = await session.scalar(select(Match).where(Match.match_date == date.today()))
+    match = await session.scalar(select(Match).where(Match.match_date == target_date))
     if not match:
-        raise HTTPException(status_code=404, detail="No match today")
+        raise HTTPException(status_code=404, detail="No match on this date")
     team_a = await session.get(Team, match.team_a_id)
     team_b = await session.get(Team, match.team_b_id)
     if not team_a or not team_b:
@@ -37,7 +38,6 @@ async def get_today_prediction(session: AsyncSession = Depends(get_session)):
         "venue": match.venue,
         "mi_chase_win_pct": round((mi_v.chase_wins / mi_v.chase_attempts) * 100) if (mi_v and mi_v.chase_attempts) else 50,
         "csk_chase_win_pct": round((csk_v.chase_wins / csk_v.chase_attempts) * 100) if (csk_v and csk_v.chase_attempts) else 50,
-        # TODO Task 14: replace with phase_stats from Cricsheet ingest
         "mi_death_economy": 7.2,
         "csk_death_economy": 8.9,
         "csk_vs_spin_avg": 18,
@@ -50,3 +50,19 @@ async def get_today_prediction(session: AsyncSession = Depends(get_session)):
     session.add(DailyCache(cache_key=cache_key, data=result))
     await session.commit()
     return result
+
+
+@router.get("/today")
+async def get_today_prediction(session: AsyncSession = Depends(get_session)):
+    return await _get_prediction_for_date(date_type.today(), session)
+
+
+@router.get("/{match_date}")
+async def get_prediction_for_date(match_date: str, session: AsyncSession = Depends(get_session)):
+    try:
+        target = date_type.fromisoformat(match_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Date must be YYYY-MM-DD")
+    if target > date_type.today():
+        raise HTTPException(status_code=400, detail="Cannot request future dates")
+    return await _get_prediction_for_date(target, session)
