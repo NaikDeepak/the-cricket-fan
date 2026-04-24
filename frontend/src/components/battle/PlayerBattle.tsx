@@ -61,7 +61,7 @@ export default function PlayerBattle({ data, teamA, teamB }: Props) {
       <div ref={verdictRef} className="opacity-0">
         <p className="text-micro mb-3">VERDICT</p>
         <p style={{ fontSize: "18px", lineHeight: 1.6, color: "var(--fg)", maxWidth: "600px" }}>
-          Jadeja owns this. {dismissals} dismissals. Tonight is {data.batsman.split(" ")[0]}&apos;s redemption arc.
+          {data.bowler.split(" ").at(-1)} owns this. {dismissals} dismissals. Tonight is {data.batsman.split(" ")[0]}&apos;s redemption arc.
         </p>
       </div>
     </section>

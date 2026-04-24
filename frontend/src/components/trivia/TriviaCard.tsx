@@ -9,6 +9,7 @@ export default function TriviaCard({ data }: { data: TriviaData }) {
   const sectionRef = useRef<HTMLElement>(null);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const revealRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const tween = gsap.fromTo(
@@ -23,7 +24,10 @@ export default function TriviaCard({ data }: { data: TriviaData }) {
         scrollTrigger: { trigger: sectionRef.current, start: "top 70%" },
       }
     );
-    return () => { tween.kill(); };
+    return () => {
+      tween.kill();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
   const handleTap = (idx: number) => {
@@ -41,6 +45,7 @@ export default function TriviaCard({ data }: { data: TriviaData }) {
         },
       });
       const correct = optionRefs.current[data.correct_index];
+      if (!correct) return;
       gsap.fromTo(
         correct,
         { rotationY: 90 },
@@ -68,7 +73,8 @@ export default function TriviaCard({ data }: { data: TriviaData }) {
       setStreak((s) => s + 1);
     }
 
-    setTimeout(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
       if (revealRef.current) {
         revealRef.current.style.display = "block";
         gsap.fromTo(revealRef.current, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4 });
@@ -93,7 +99,7 @@ export default function TriviaCard({ data }: { data: TriviaData }) {
         {data.question}
       </h2>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10" style={{ perspective: "800px" }}>
         {data.options.map((opt, i) => (
           <button
             key={i}
@@ -110,7 +116,6 @@ export default function TriviaCard({ data }: { data: TriviaData }) {
               padding: "32px 16px",
               cursor: selected !== null ? "default" : "pointer",
               transition: "border-color 0.2s",
-              perspective: "800px",
             }}
           >
             {opt}

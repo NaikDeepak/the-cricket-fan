@@ -27,7 +27,8 @@ export default function BattleBars({ stats, teamAColor, teamBColor }: Props) {
           scrollTrigger: { trigger: ref.current, start: "top 75%" },
           onComplete() {
             if (pct > 50) {
-              gsap.to(bar, { scaleX: 0.96, duration: 0.1, yoyo: true, repeat: 1 });
+              const pulseTween = gsap.to(bar, { scaleX: 0.96, duration: 0.1, yoyo: true, repeat: 1 });
+              tweens.push(pulseTween);
             }
           },
         }
@@ -35,7 +36,12 @@ export default function BattleBars({ stats, teamAColor, teamBColor }: Props) {
       tweens.push(tween);
     });
 
-    return () => { tweens.forEach((t) => t.kill()); };
+    return () => {
+      tweens.forEach((t) => {
+        t.scrollTrigger?.kill();
+        t.kill();
+      });
+    };
   }, []);
 
   return (
