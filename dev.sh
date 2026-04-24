@@ -54,15 +54,11 @@ echo "── Step 2: Python venv ───────────────�
 if [[ ! -f "$VENV" ]]; then
   warn "No venv found — creating one now..."
   python3 -m venv "$BACKEND_DIR/.venv"
-  # shellcheck source=/dev/null
-  source "$VENV"
-  pip install -q -r "$BACKEND_DIR/requirements.txt"
-  ok "venv created and deps installed"
-else
-  # shellcheck source=/dev/null
-  source "$VENV"
-  ok "venv activated"
 fi
+# shellcheck source=/dev/null
+source "$VENV"
+pip install -q -r "$BACKEND_DIR/requirements.txt"
+ok "venv ready"
 
 # ── 3. Seed (idempotent — always runs to keep today's match fresh) ─────────
 echo "── Step 3: Seed dev data ─────────────────────────────────────────────────"
