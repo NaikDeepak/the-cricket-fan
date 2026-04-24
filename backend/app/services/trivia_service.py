@@ -1,7 +1,7 @@
 import anthropic
 from ..config import settings
 
-anthropic_client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+anthropic_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 TONE_SYSTEM_PROMPT = """You are the voice of The Cricket Fan.
 Rules: Never use "amazing" or "incredible". Start answers with the number. Period = drama.
@@ -30,7 +30,7 @@ async def generate_trivia(venue: str, team_a: str, team_b: str) -> dict:
         f"The answer should be a number."
     )
 
-    response = anthropic_client.messages.create(
+    response = await anthropic_client.messages.create(
         model="claude-opus-4-7",
         max_tokens=512,
         system=[{"type": "text", "text": TONE_SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],

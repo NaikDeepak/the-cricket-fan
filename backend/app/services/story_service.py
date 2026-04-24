@@ -1,7 +1,7 @@
 import anthropic
 from ..config import settings
 
-anthropic_client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+anthropic_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 TONE_SYSTEM_PROMPT = """You are the voice of The Cricket Fan — a fan who has watched every IPL season since 2008.
 Rules:
@@ -47,7 +47,7 @@ async def generate_story(stats: dict) -> dict:
         f"Generate the headline and shock stat. Make it feel like a newspaper back page."
     )
 
-    response = anthropic_client.messages.create(
+    response = await anthropic_client.messages.create(
         model="claude-opus-4-7",
         max_tokens=512,
         system=[{"type": "text", "text": TONE_SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],

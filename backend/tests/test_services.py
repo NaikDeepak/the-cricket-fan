@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 @pytest.mark.asyncio
 async def test_story_service_returns_required_fields():
@@ -29,7 +29,7 @@ async def test_story_service_returns_required_fields():
     }
 
     with patch("app.services.story_service.anthropic_client.messages.create",
-               return_value=mock_response):
+               new_callable=AsyncMock, return_value=mock_response):
         result = await generate_story(mock_stats)
 
     assert "headline" in result
@@ -55,7 +55,7 @@ async def test_trivia_service_returns_required_fields():
     }
 
     with patch("app.services.trivia_service.anthropic_client.messages.create",
-               return_value=mock_response):
+               new_callable=AsyncMock, return_value=mock_response):
         result = await generate_trivia("Wankhede Stadium", "CSK", "MI")
 
     assert "question" in result

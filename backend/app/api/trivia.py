@@ -17,6 +17,8 @@ async def get_today_trivia(session: AsyncSession = Depends(get_session)):
         return cached.data
 
     match = await session.scalar(select(Match).where(Match.is_today == True))
+    if not match:
+        return {"error": "No match today"}
     team_a = await session.get(Team, match.team_a_id)
     team_b = await session.get(Team, match.team_b_id)
 
