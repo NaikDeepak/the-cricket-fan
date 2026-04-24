@@ -10,7 +10,8 @@ export default function SectionCounter({ total }: { total: number }) {
       (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting && ref.current) {
-            ref.current.textContent = `0${e.target.getAttribute("data-section")} / 0${total}`;
+            const num = e.target.getAttribute("data-section") ?? "1";
+            ref.current.textContent = `${num.padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
           }
         });
       },
@@ -26,7 +27,7 @@ export default function SectionCounter({ total }: { total: number }) {
       className="text-micro fixed top-6 right-6 z-50"
       style={{ color: "var(--muted)" }}
     >
-      01 / 0{total}
+      01 / {String(total).padStart(2, "0")}
     </div>
   );
 }

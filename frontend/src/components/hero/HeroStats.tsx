@@ -9,26 +9,32 @@ export default function HeroStats({ stats }: { stats: StatRow[] }) {
   useEffect(() => {
     if (!ref.current) return;
     const numbers = ref.current.querySelectorAll<HTMLSpanElement>("[data-count]");
+    const tweens: gsap.core.Tween[] = [];
 
     numbers.forEach((el, i) => {
       const target = parseFloat(el.dataset.count ?? "0");
       const suffix = el.dataset.suffix ?? "";
-      gsap.fromTo(
-        el,
-        // @ts-ignore — GSAP supports innerText tween via its text plugin logic
-        { innerText: 0 },
+      if (isNaN(target)) return;
+
+      const proxy = { val: 0 };
+      const tween = gsap.fromTo(
+        proxy,
+        { val: 0 },
         {
-          innerText: isNaN(target) ? 0 : target,
+          val: target,
           duration: 0.8,
           delay: 0.4 + i * 0.12,
           ease: "power2.out",
-          snap: { innerText: 1 },
+          snap: { val: 1 },
           onUpdate() {
-            el.textContent = Math.round(parseFloat(el.innerText)) + suffix;
+            el.textContent = Math.round(proxy.val) + suffix;
           },
         }
       );
+      tweens.push(tween);
     });
+
+    return () => { tweens.forEach((t) => t.kill()); };
   }, []);
 
   const colorVar = (color: string) => {

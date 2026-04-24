@@ -15,6 +15,7 @@ export default function MatchHero({ data }: { data: StoryData }) {
 
   useEffect(() => {
     if (!heroRef.current) return;
+    let split: InstanceType<typeof SplitText> | null = null;
     const tl = gsap.timeline({ defaults: { ease: "cubic-bezier(0.22, 1, 0.36, 1)" } });
 
     tl.fromTo(teamARef.current, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.6 }, 0)
@@ -22,7 +23,7 @@ export default function MatchHero({ data }: { data: StoryData }) {
       .fromTo(divider1Ref.current, { scaleX: 0 }, { scaleX: 1, duration: 0.5, transformOrigin: "center" }, 0.3)
       .add(() => {
         if (!headlineRef.current) return;
-        const split = new SplitText(headlineRef.current, { type: "words" });
+        split = new SplitText(headlineRef.current, { type: "words" });
         gsap.fromTo(
           split.words,
           { opacity: 0, y: 16 },
@@ -31,6 +32,11 @@ export default function MatchHero({ data }: { data: StoryData }) {
       }, 0.4)
       .fromTo(divider2Ref.current, { scaleX: 0 }, { scaleX: 1, duration: 0.5, transformOrigin: "center" }, 0.8)
       .fromTo(scrollBaitRef.current, { opacity: 0 }, { opacity: 1, duration: 0.4 }, 1.2);
+
+    return () => {
+      tl.kill();
+      split?.revert();
+    };
   }, []);
 
   return (
