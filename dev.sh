@@ -63,7 +63,7 @@ ok "venv ready"
 # ── 3. Seed (idempotent — schedule first, then player stats) ─────────────
 echo "── Step 3: Seed dev data ─────────────────────────────────────────────────"
 (cd "$BACKEND_DIR" && python -m scripts.seed_schedule)
-ok "Schedule seeded (74 fixtures, 10 teams)"
+ok "Schedule seeded (70 fixtures, 10 teams)"
 (cd "$BACKEND_DIR" && python -m scripts.ingest_cricsheet)
 ok "Cricsheet stats ingested (players, PvP, venue)"
 
