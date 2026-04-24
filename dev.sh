@@ -39,7 +39,7 @@ ok "Postgres container started"
 echo -n "   Waiting for Postgres..."
 for i in $(seq 1 30); do
   if docker compose -f "$WORKTREE_DIR/docker-compose.yml" exec -T db \
-      pg_isready -U cricket -d cricket_fan &>/dev/null; then
+      pg_isready -U cricket -d cricket_fan -p 5432 &>/dev/null; then
     echo " ready."
     break
   fi
