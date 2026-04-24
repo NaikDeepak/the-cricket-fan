@@ -60,10 +60,12 @@ source "$VENV"
 pip install -q -r "$BACKEND_DIR/requirements.txt"
 ok "venv ready"
 
-# ── 3. Seed (idempotent — always runs to keep today's match fresh) ─────────
+# ── 3. Seed (idempotent — schedule first, then player stats) ─────────────
 echo "── Step 3: Seed dev data ─────────────────────────────────────────────────"
+(cd "$BACKEND_DIR" && python -m scripts.seed_schedule)
+ok "Schedule seeded (74 fixtures, 10 teams)"
 (cd "$BACKEND_DIR" && python -m scripts.seed_match)
-ok "Seed complete (MI vs CSK, today's date)"
+ok "Player/venue stats seeded"
 
 # ── 4. Backend ────────────────────────────────────────────────────────────────
 echo "── Step 4: Backend (port 8000) ───────────────────────────────────────────"
