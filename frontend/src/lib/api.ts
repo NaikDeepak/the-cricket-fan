@@ -12,6 +12,8 @@ export type StoryData = {
   match_time: string;
   stats_row: StatRow[];
   scroll_bait: string;
+  featured_batsman: string;
+  featured_bowler: string;
 };
 
 export type PvPStat = { label: string; batsman_val: number; bowler_val: number };

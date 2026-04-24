@@ -1,7 +1,7 @@
 from datetime import date as date_type
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_, or_
 
 from ..database import get_session
 from ..models.match import Match, Team
@@ -9,6 +9,37 @@ from ..models.player import PlayerVsPlayer, Player, VenueStats, DailyCache
 from ..services.story_service import generate_story
 
 router = APIRouter(prefix="/match-story", tags=["story"])
+
+
+async def _top_battle(team_a_id: int, team_b_id: int, session: AsyncSession):
+    """Return the PlayerVsPlayer record with most balls between the two squads."""
+    a_ids = (await session.execute(
+        select(Player.id).where(Player.team_id == team_a_id)
+    )).scalars().all()
+    b_ids = (await session.execute(
+        select(Player.id).where(Player.team_id == team_b_id)
+    )).scalars().all()
+
+    if not a_ids or not b_ids:
+        return None, None, None
+
+    pvp = await session.scalar(
+        select(PlayerVsPlayer)
+        .where(
+            or_(
+                and_(PlayerVsPlayer.batsman_id.in_(a_ids), PlayerVsPlayer.bowler_id.in_(b_ids)),
+                and_(PlayerVsPlayer.batsman_id.in_(b_ids), PlayerVsPlayer.bowler_id.in_(a_ids)),
+            )
+        )
+        .order_by(PlayerVsPlayer.balls.desc())
+        .limit(1)
+    )
+    if not pvp:
+        return None, None, None
+
+    batsman = await session.get(Player, pvp.batsman_id)
+    bowler = await session.get(Player, pvp.bowler_id)
+    return pvp, batsman, bowler
 
 
 async def _get_story_for_date(target_date: date_type, session: AsyncSession) -> dict:
@@ -26,38 +57,38 @@ async def _get_story_for_date(target_date: date_type, session: AsyncSession) -> 
     if not team_a or not team_b:
         raise HTTPException(status_code=500, detail="Match team data missing")
 
-    mi_venue = await session.scalar(
-        select(VenueStats).where(VenueStats.venue == match.venue, VenueStats.team_id == match.team_a_id)
+    team_a_venue = await session.scalar(
+        select(VenueStats).where(
+            VenueStats.venue == match.venue, VenueStats.team_id == match.team_a_id
+        )
     )
-    mi_chase_pct = (
-        round((mi_venue.chase_wins / mi_venue.chase_attempts) * 100)
-        if (mi_venue and mi_venue.chase_attempts)
-        else 0
+    team_a_chase_pct = (
+        round((team_a_venue.chase_wins / team_a_venue.chase_attempts) * 100)
+        if (team_a_venue and team_a_venue.chase_attempts) else 0
     )
 
-    rohit = await session.scalar(select(Player).where(Player.name == "Rohit Sharma"))
-    jadeja = await session.scalar(select(Player).where(Player.name == "Ravindra Jadeja"))
-    pvp = None
-    if rohit and jadeja:
-        pvp = await session.scalar(
-            select(PlayerVsPlayer).where(
-                PlayerVsPlayer.batsman_id == rohit.id,
-                PlayerVsPlayer.bowler_id == jadeja.id,
-            )
-        )
+    pvp, batsman, bowler = await _top_battle(match.team_a_id, match.team_b_id, session)
 
     stats = {
         "team_a": {"name": team_a.name, "short_name": team_a.short_name, "color": team_a.primary_color},
         "team_b": {"name": team_b.name, "short_name": team_b.short_name, "color": team_b.primary_color},
         "venue": match.venue,
         "match_time": match.match_time,
-        "shock_stat_value": 0,
-        "shock_stat_label": "ROHIT 50+ VS CSK (L10)",
-        "mi_win_pct": mi_chase_pct,
-        "jadeja_dismissals": pvp.dismissals if pvp else 0,
+        "shock_stat_value": pvp.dismissals if pvp else 0,
+        "shock_stat_label": (
+            f"{bowler.name} DISMISSALS VS {batsman.name} (L2 SEASONS)"
+            if (batsman and bowler) else "KEY BATTLE STAT"
+        ),
+        "team_a_chase_pct": team_a_chase_pct,
+        "featured_dismissals": pvp.dismissals if pvp else 0,
+        "featured_batsman": batsman.name if batsman else "",
+        "featured_bowler": bowler.name if bowler else "",
     }
 
     generated = await generate_story(stats)
+
+    batsman_team = team_a.short_name if (batsman and batsman.team_id == team_a.id) else team_b.short_name
+    bowler_team = team_b.short_name if batsman_team == team_a.short_name else team_a.short_name
 
     response_data = {
         "headline": generated["headline"],
@@ -67,11 +98,31 @@ async def _get_story_for_date(target_date: date_type, session: AsyncSession) -> 
         "venue": match.venue,
         "match_time": match.match_time,
         "stats_row": [
-            {"value": str(generated["shock_stat"]["value"]), "label": generated["shock_stat"]["label"], "color": "team_a"},
-            {"value": f"{mi_chase_pct}%", "label": "MI WIN % WANKHEDE", "color": "muted"},
-            {"value": str(pvp.dismissals if pvp else 0), "label": "JADEJA DISMISSALS VS ROHIT", "color": "team_b"},
+            {
+                "value": str(generated["shock_stat"]["value"]),
+                "label": generated["shock_stat"]["label"],
+                "color": "team_a",
+            },
+            {
+                "value": f"{team_a_chase_pct}%",
+                "label": f"{team_a.short_name} WIN % {match.venue.split(',')[0].upper()}",
+                "color": "muted",
+            },
+            {
+                "value": str(pvp.dismissals if pvp else 0),
+                "label": (
+                    f"{bowler.name} DISMISSALS VS {batsman.name}"
+                    if (batsman and bowler) else "KEY DISMISSALS"
+                ),
+                "color": "team_b",
+            },
         ],
-        "scroll_bait": "ROHIT vs JADEJA — THE KEY BATTLE",
+        "scroll_bait": (
+            f"{batsman.name} vs {bowler.name} — THE KEY BATTLE"
+            if (batsman and bowler) else "THE KEY BATTLE"
+        ),
+        "featured_batsman": batsman.name if batsman else "",
+        "featured_bowler": bowler.name if bowler else "",
     }
 
     session.add(DailyCache(cache_key=cache_key, data=response_data))

@@ -1,7 +1,10 @@
-import anthropic
+from google import genai
+from google.genai import types
+from pydantic import BaseModel
+from fastapi import HTTPException
 from ..config import settings
 
-anthropic_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+gemini_client = genai.Client(api_key=settings.gemini_api_key)
 
 TONE_SYSTEM_PROMPT = """You are the voice of The Cricket Fan — a fan who has watched every IPL season since 2008.
 Rules:
@@ -12,49 +15,52 @@ Rules:
 - Allowed: owns, haunts, chokes, dominates, raw numbers, tonight, never, every time.
 - Opinions stated as facts."""
 
-STORY_TOOL = {
-    "name": "generate_match_story",
-    "description": "Generate match story headline and shock stat",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "headline": {
-                "type": "string",
-                "description": "Max 10 words. Pattern: [PLAYER] [VERB] [STAT] [TIME CONTEXT]. All caps."
-            },
-            "shock_stat": {
-                "type": "object",
-                "properties": {
-                    "value": {"type": "string", "description": "The raw number or short value"},
-                    "label": {"type": "string", "description": "Max 5 words, all caps"},
-                    "one_liner": {"type": "string", "description": "Max 15 words, starts with number or name"}
-                },
-                "required": ["value", "label", "one_liner"]
-            }
-        },
-        "required": ["headline", "shock_stat"]
-    }
-}
+
+class ShockStat(BaseModel):
+    value: str
+    label: str
+    one_liner: str
+
+
+class StoryOutput(BaseModel):
+    headline: str
+    shock_stat: ShockStat
+
 
 async def generate_story(stats: dict) -> dict:
+    batsman = stats.get("featured_batsman", "")
+    bowler = stats.get("featured_bowler", "")
+    dismissals = stats.get("featured_dismissals", 0)
+    chase_pct = stats.get("team_a_chase_pct", 0)
+
     user_content = (
         f"Today's match: {stats['team_a']['short_name']} vs {stats['team_b']['short_name']} "
         f"at {stats['venue']}.\n"
         f"Key stats:\n"
-        f"- {stats['shock_stat_label']}: {stats['shock_stat_value']}\n"
-        f"- {stats['team_a']['short_name']} win rate at {stats['venue']}: {stats['mi_win_pct']}%\n"
-        f"- Jadeja has dismissed Rohit {stats['jadeja_dismissals']} times\n"
-        f"Generate the headline and shock stat. Make it feel like a newspaper back page."
+        f"- Featured battle: {batsman} (bat) vs {bowler} (bowl), {dismissals} dismissals in last 2 seasons\n"
+        f"- {stats['team_a']['short_name']} win rate at this venue: {chase_pct}%\n"
+        f"Generate the headline and shock stat. Make it feel like a newspaper back page. "
+        f"headline: max 10 words, pattern [PLAYER] [VERB] [STAT] [TIME CONTEXT], all caps. "
+        f"shock_stat.value: the raw number or short value (e.g. dismissal count). "
+        f"shock_stat.label: max 5 words, all caps. "
+        f"shock_stat.one_liner: max 15 words, starts with number or name."
     )
 
-    response = await anthropic_client.messages.create(
-        model="claude-opus-4-7",
-        max_tokens=512,
-        system=[{"type": "text", "text": TONE_SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
-        tools=[STORY_TOOL],
-        tool_choice={"type": "tool", "name": "generate_match_story"},
-        messages=[{"role": "user", "content": user_content}]
-    )
+    try:
+        response = await gemini_client.aio.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=user_content,
+            config=types.GenerateContentConfig(
+                system_instruction=TONE_SYSTEM_PROMPT,
+                response_mime_type="application/json",
+                response_schema=StoryOutput,
+                max_output_tokens=512,
+            ),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"AI service unavailable: {e}")
 
-    tool_use = next(b for b in response.content if b.type == "tool_use")
-    return tool_use.input
+    if not response.parsed:
+        raise HTTPException(status_code=502, detail="AI returned unexpected response format")
+
+    return response.parsed.model_dump()

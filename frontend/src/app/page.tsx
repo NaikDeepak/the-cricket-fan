@@ -1,4 +1,3 @@
-// frontend/src/app/page.tsx
 import { api } from "@/lib/api";
 import MatchHero from "@/components/hero/MatchHero";
 import PlayerBattle from "@/components/battle/PlayerBattle";
@@ -7,9 +6,9 @@ import PredictionCard from "@/components/prediction/PredictionCard";
 import SectionCounter from "@/components/ui/SectionCounter";
 
 export default async function Page() {
-  const [story, battle, trivia, prediction] = await Promise.all([
-    api.story(),
-    api.battle("Rohit Sharma", "Ravindra Jadeja"),
+  const story = await api.story();
+  const [battle, trivia, prediction] = await Promise.all([
+    api.battle(story.featured_batsman, story.featured_bowler),
     api.trivia(),
     api.prediction(),
   ]);

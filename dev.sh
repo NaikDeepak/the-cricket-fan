@@ -64,8 +64,8 @@ ok "venv ready"
 echo "── Step 3: Seed dev data ─────────────────────────────────────────────────"
 (cd "$BACKEND_DIR" && python -m scripts.seed_schedule)
 ok "Schedule seeded (74 fixtures, 10 teams)"
-(cd "$BACKEND_DIR" && python -m scripts.seed_match)
-ok "Player/venue stats seeded"
+(cd "$BACKEND_DIR" && python -m scripts.ingest_cricsheet)
+ok "Cricsheet stats ingested (players, PvP, venue)"
 
 # ── 4. Backend ────────────────────────────────────────────────────────────────
 echo "── Step 4: Backend (port 8000) ───────────────────────────────────────────"

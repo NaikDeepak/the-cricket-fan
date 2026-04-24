@@ -11,9 +11,9 @@ export default async function MatchPage({
   params: Promise<{ date: string }>;
 }) {
   const { date } = await params;
-  const [story, battle, trivia, prediction] = await Promise.all([
-    api.storyFor(date),
-    api.battle("Rohit Sharma", "Ravindra Jadeja"),
+  const story = await api.storyFor(date);
+  const [battle, trivia, prediction] = await Promise.all([
+    api.battle(story.featured_batsman, story.featured_bowler),
     api.triviaFor(date),
     api.predictionFor(date),
   ]);

@@ -9,12 +9,14 @@ async def test_story_service_returns_required_fields():
     mock_stats = {
         "team_a": {"name": "Mumbai Indians", "short_name": "MI", "color": "#004BA0"},
         "team_b": {"name": "Chennai Super Kings", "short_name": "CSK", "color": "#FFCB05"},
-        "venue": "Wankhede Stadium",
+        "venue": "Wankhede Stadium, Mumbai",
         "match_time": "7:30 PM",
-        "shock_stat_value": 0,
-        "shock_stat_label": "ROHIT 50+ VS CSK (L10)",
-        "mi_win_pct": 78,
-        "jadeja_dismissals": 5,
+        "shock_stat_value": 5,
+        "shock_stat_label": "NOOR DISMISSALS VS RG SHARMA (L2 SEASONS)",
+        "team_a_chase_pct": 78,
+        "featured_dismissals": 5,
+        "featured_batsman": "RG Sharma",
+        "featured_bowler": "Noor Ahmad",
     }
 
     mock_parsed = MagicMock()
