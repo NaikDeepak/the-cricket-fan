@@ -33,7 +33,7 @@ export default function TriviaCard({ data }: { data: TriviaData }) {
 
     if (!isCorrect) {
       gsap.to(optionRefs.current[idx], {
-        x: [0, -8, 8, -6, 6, 0],
+        keyframes: { x: [0, -8, 8, -6, 6, 0] },
         duration: 0.4,
         ease: "power2.inOut",
         onComplete() {
