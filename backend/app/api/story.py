@@ -34,6 +34,7 @@ async def get_today_story(session: AsyncSession = Depends(get_session)):
 
     mi_chase_pct = round((mi_venue.chase_wins / mi_venue.chase_attempts) * 100) if (mi_venue and mi_venue.chase_attempts) else 0
 
+    # TODO Task 14: derive featured players dynamically from today's match key battle
     rohit = await session.scalar(select(Player).where(Player.name == "Rohit Sharma"))
     jadeja = await session.scalar(select(Player).where(Player.name == "Ravindra Jadeja"))
     pvp = None
@@ -50,8 +51,8 @@ async def get_today_story(session: AsyncSession = Depends(get_session)):
         "team_b": {"name": team_b.name, "short_name": team_b.short_name, "color": team_b.primary_color},
         "venue": match.venue,
         "match_time": match.match_time,
-        "shock_stat_value": 0,
-        "shock_stat_label": "ROHIT 50+ VS CSK (L10)",
+        "shock_stat_value": 0,  # TODO Task 14: compute from real Cricsheet data
+        "shock_stat_label": "ROHIT 50+ VS CSK (L10)",  # TODO Task 14: derive from featured battle
         "mi_win_pct": mi_chase_pct,
         "jadeja_dismissals": pvp.dismissals if pvp else 0,
     }
@@ -67,10 +68,10 @@ async def get_today_story(session: AsyncSession = Depends(get_session)):
         "match_time": match.match_time,
         "stats_row": [
             {"value": str(generated["shock_stat"]["value"]), "label": generated["shock_stat"]["label"], "color": "team_a"},
-            {"value": f"{mi_chase_pct}%", "label": "MI WIN % WANKHEDE", "color": "muted"},
-            {"value": str(pvp.dismissals if pvp else 0), "label": "JADEJA DISMISSALS VS ROHIT", "color": "team_b"},
+            {"value": f"{mi_chase_pct}%", "label": "MI WIN % WANKHEDE", "color": "muted"},  # TODO Task 14
+            {"value": str(pvp.dismissals if pvp else 0), "label": "JADEJA DISMISSALS VS ROHIT", "color": "team_b"},  # TODO Task 14
         ],
-        "scroll_bait": "ROHIT vs JADEJA — THE KEY BATTLE",
+        "scroll_bait": "ROHIT vs JADEJA — THE KEY BATTLE",  # TODO Task 14: derive from key battle query
     }
 
     session.add(DailyCache(cache_key=cache_key, data=response_data))
