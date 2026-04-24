@@ -75,7 +75,7 @@ FIXTURES = [
     {"date": "2026-04-22", "team_a": "RR",   "team_b": "LSG",  "venue": _EK, "time": "7:30 PM"},
     {"date": "2026-04-23", "team_a": "CSK",  "team_b": "MI",   "venue": _W,  "time": "7:30 PM"},
     # --- Upcoming ---
-    {"date": "2026-04-24", "team_a": "MI",   "team_b": "CSK",  "venue": _W,  "time": "7:30 PM"},
+    {"date": "2026-04-24", "team_a": "RCB",  "team_b": "GT",   "venue": _MC, "time": "7:30 PM"},
     {"date": "2026-04-25", "team_a": "DC",   "team_b": "GT",   "venue": _AJ, "time": "7:30 PM"},
     {"date": "2026-04-26", "team_a": "PBKS", "team_b": "KKR",  "venue": _MY, "time": "3:30 PM"},
     {"date": "2026-04-26", "team_a": "RR",   "team_b": "SRH",  "venue": _SM, "time": "7:30 PM"},
