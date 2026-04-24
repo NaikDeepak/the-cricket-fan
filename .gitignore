@@ -25,6 +25,9 @@ Thumbs.db
 # Claude
 .claude/settings.local.json
 
+# Worktrees
+.worktrees/
+
 # Graphs / knowledge
 graphify-out/
 
