@@ -1,26 +1,68 @@
+/* frontend/src/app/globals.css */
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("https://fonts.gstatic.com/s/spacegrotesk/v16/V8mDoQDjQSkFtoMM3T6r8E7mF71Q-gowFX.woff2") format("woff2");
+  unicode-range: U+0000-00FF;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --fg: #f0f0f0;
+  --muted: #666666;
+  --border: #222222;
+  --team-a: #004ba0;
+  --team-b: #ffcb05;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+*, *::before, *::after { box-sizing: border-box; }
+
+html { background: var(--bg); color: var(--fg); font-family: "Space Grotesk", sans-serif; }
+body { margin: 0; overflow-x: hidden; }
+
+/* Typography scale */
+.text-stat-hero {
+  font-size: clamp(96px, 18vw, 200px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.text-section-headline {
+  font-size: clamp(40px, 7vw, 80px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+.text-player-name {
+  font-size: clamp(24px, 4vw, 48px);
+  font-weight: 500;
+}
+.text-micro {
+  font-size: clamp(12px, 1.2vw, 14px);
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Divider */
+.divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+  transform-origin: center;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Hero radial glow — only allowed gradient */
+.hero-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.05), transparent 70%);
+  pointer-events: none;
 }
