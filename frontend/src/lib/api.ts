@@ -1,4 +1,3 @@
-// frontend/src/lib/api.ts
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export type StatRow = { value: string; label: string; color: "team_a" | "team_b" | "muted" };
@@ -34,6 +33,17 @@ export type PredictionData = {
   team_color: string;
 };
 
+export type TeamSummary = { short_name: string; name: string; primary_color: string };
+export type MatchSummary = {
+  date: string;
+  team_a: TeamSummary;
+  team_b: TeamSummary;
+  venue: string;
+  match_time: string;
+  has_story: boolean;
+  headline: string | null;
+};
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API}${path}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
@@ -46,4 +56,8 @@ export const api = {
     get<BattleData>(`/stats/player-vs-player?player_a=${encodeURIComponent(a)}&player_b=${encodeURIComponent(b)}`),
   trivia: () => get<TriviaData>("/trivia/today"),
   prediction: () => get<PredictionData>("/prediction/today"),
+  matches: () => get<MatchSummary[]>("/matches"),
+  storyFor: (date: string) => get<StoryData>(`/match-story/${date}`),
+  triviaFor: (date: string) => get<TriviaData>(`/trivia/${date}`),
+  predictionFor: (date: string) => get<PredictionData>(`/prediction/${date}`),
 };
