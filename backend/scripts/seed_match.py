@@ -34,7 +34,6 @@ async def seed():
             venue="Wankhede Stadium",
             match_date=date.today(),
             match_time="7:30 PM",
-            is_today=True,
         )
         session.add(today_match)
         await session.flush()

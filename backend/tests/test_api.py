@@ -91,3 +91,25 @@ async def test_player_vs_player_found():
     sr_row = next(s for s in data["stats"] if "STRIKE RATE" in s["label"])
     assert sr_row["batsman_val"] == 125.0
     assert sr_row["bowler_val"] == 7.5
+
+
+@pytest.mark.asyncio
+async def test_trivia_today_no_match_returns_404():
+    from app.main import app
+    from app.database import get_session
+    from unittest.mock import AsyncMock
+
+    mock_session = AsyncMock()
+    mock_session.scalar.return_value = None  # no cache, no match
+
+    async def override():
+        yield mock_session
+
+    app.dependency_overrides[get_session] = override
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.get("/trivia/today")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 404

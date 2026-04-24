@@ -16,7 +16,7 @@ async def get_today_story(session: AsyncSession = Depends(get_session)):
     if cached:
         return cached.data
 
-    match = await session.scalar(select(Match).where(Match.is_today == True))
+    match = await session.scalar(select(Match).where(Match.match_date == date.today()))
     if not match:
         raise HTTPException(status_code=404, detail="No match today")
 

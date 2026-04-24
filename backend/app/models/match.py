@@ -23,4 +23,3 @@ class Match(Base):
     venue: Mapped[str] = mapped_column(String(200))
     match_date: Mapped[datetime.date] = mapped_column(Date)
     match_time: Mapped[str] = mapped_column(String(20))
-    is_today: Mapped[bool] = mapped_column(default=False)
