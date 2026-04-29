@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from ..database import get_session
-from ..models.player import Player, PlayerVsPlayer
+from ..models.player import Player, PlayerVsPlayer, VenueStats
 from ..models.match import Team
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -81,4 +81,45 @@ async def get_pvp(
             {"label": "STRIKE RATE / ECONOMY", "batsman_val": sr, "bowler_val": economy},
             {"label": "DOT BALL %", "batsman_val": dot_pct, "bowler_val": dot_pct},
         ],
+    }
+
+
+class VenueTeamResponse(BaseModel):
+    venue: str
+    team: str
+    matches_played: int
+    win_pct: int
+    avg_score: int
+    chase_win_pct: int
+
+
+@router.get("/venue-team", response_model=VenueTeamResponse)
+async def get_venue_team(
+    venue: str = Query(...),
+    team: str = Query(..., description="Team short name, e.g. MI"),
+    session: AsyncSession = Depends(get_session),
+):
+    team_row = await session.scalar(select(Team).where(Team.short_name == team))
+    if not team_row:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    vs = await session.scalar(
+        select(VenueStats).where(
+            VenueStats.venue == venue,
+            VenueStats.team_id == team_row.id,
+        )
+    )
+    if not vs:
+        raise HTTPException(status_code=404, detail="No venue data for this team")
+
+    win_pct = round((vs.wins / vs.matches) * 100) if vs.matches else 0
+    chase_win_pct = round((vs.chase_wins / vs.chase_attempts) * 100) if vs.chase_attempts else 0
+
+    return {
+        "venue": vs.venue,
+        "team": team,
+        "matches_played": vs.matches,
+        "win_pct": win_pct,
+        "avg_score": round(vs.avg_score),
+        "chase_win_pct": chase_win_pct,
     }
