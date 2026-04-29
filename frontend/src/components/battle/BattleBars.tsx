@@ -14,23 +14,16 @@ export default function BattleBars({ stats, teamAColor, teamBColor }: Props) {
     const tweens: gsap.core.Tween[] = [];
 
     bars.forEach((bar) => {
-      const pct = parseFloat(bar.dataset.bar ?? "50");
       const side = bar.dataset.side;
       const tween = gsap.fromTo(
         bar,
         { scaleX: 0 },
         {
           scaleX: 1,
-          duration: 0.6,
-          ease: "cubic-bezier(0.22, 1, 0.36, 1)",
+          duration: 1,
+          ease: "expo.out",
           transformOrigin: side === "a" ? "right" : "left",
-          scrollTrigger: { trigger: ref.current, start: "top 75%" },
-          onComplete() {
-            if (pct > 50) {
-              const pulseTween = gsap.to(bar, { scaleX: 0.96, duration: 0.1, yoyo: true, repeat: 1 });
-              tweens.push(pulseTween);
-            }
-          },
+          scrollTrigger: { trigger: ref.current, start: "top 80%" },
         }
       );
       tweens.push(tween);
@@ -45,42 +38,48 @@ export default function BattleBars({ stats, teamAColor, teamBColor }: Props) {
   }, []);
 
   return (
-    <div ref={ref} className="flex flex-col gap-6 w-full">
+    <div ref={ref} className="flex flex-col gap-10 w-full max-w-5xl mx-auto">
       {stats.map((s, i) => {
         const maxVal = Math.max(s.batsman_val, s.bowler_val);
         const pctA = maxVal > 0 ? Math.round((s.batsman_val / maxVal) * 100) : 50;
         const pctB = maxVal > 0 ? Math.round((s.bowler_val / maxVal) * 100) : 50;
-        const aWins = s.batsman_val > s.bowler_val;
+        
         return (
-          <div key={i} className="flex flex-col gap-2">
-            <div className="flex justify-between text-micro">
-              <span style={{ color: teamAColor }}>{s.batsman_val}</span>
-              <span>{s.label}</span>
-              <span style={{ color: teamBColor }}>{s.bowler_val}</span>
+          <div key={i} className="flex flex-col gap-4">
+            <div className="flex justify-between items-center px-2">
+              <span className="text-2xl font-bold" style={{ color: "var(--team-a)" }}>{s.batsman_val}</span>
+              <span className="text-micro opacity-60">{s.label}</span>
+              <span className="text-2xl font-bold" style={{ color: "var(--team-b)" }}>{s.bowler_val}</span>
             </div>
-            <div className="flex h-1 gap-px">
+            
+            <div className="flex h-3 gap-2">
+              {/* Left Bar (Batsman) */}
               <div className="flex-1 flex justify-end overflow-hidden">
                 <div
                   data-bar={pctA}
                   data-side="a"
                   style={{
                     width: `${pctA}%`,
-                    background: aWins ? teamAColor : "var(--muted)",
-                    height: "4px",
+                    background: "var(--team-a)",
+                    height: "100%",
                     transformOrigin: "right",
                   }}
+                  className="rounded-l-sm shadow-[0_0_15px_rgba(0,75,160,0.3)]"
                 />
               </div>
+              
+              {/* Right Bar (Bowler) */}
               <div className="flex-1 overflow-hidden">
                 <div
                   data-bar={pctB}
                   data-side="b"
                   style={{
                     width: `${pctB}%`,
-                    background: !aWins ? teamBColor : "var(--muted)",
-                    height: "4px",
+                    background: "var(--team-b)",
+                    height: "100%",
                     transformOrigin: "left",
                   }}
+                  className="rounded-r-sm shadow-[0_0_15px_rgba(255,203,5,0.3)]"
                 />
               </div>
             </div>

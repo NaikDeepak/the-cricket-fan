@@ -10,59 +10,106 @@
   unicode-range: U+0000-00FF;
 }
 
+@font-face {
+  font-family: "Oswald";
+  font-style: normal;
+  font-weight: 200 700;
+  font-display: swap;
+  src: url("https://fonts.gstatic.com/s/oswald/v49/TK3iWkUHHAIjg752FD8Gl-1Kwsc.woff2") format("woff2");
+  unicode-range: U+0000-00FF;
+}
+
 :root {
-  --bg: #0a0a0a;
-  --surface: #141414;
-  --fg: #f0f0f0;
-  --muted: #666666;
-  --border: #222222;
+  --bg: #030303;
+  --surface: #0a0a0a;
+  --fg: #ffffff;
+  --muted: #888888;
+  --border: #1a1a1a;
   --team-a: #004ba0;
   --team-b: #ffcb05;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { background: var(--bg); color: var(--fg); font-family: "Space Grotesk", sans-serif; }
+html { 
+  background: var(--bg); 
+  color: var(--fg); 
+  font-family: "Space Grotesk", sans-serif; 
+  -webkit-font-smoothing: antialiased;
+}
+
 body { margin: 0; overflow-x: hidden; }
 
 /* Typography scale */
+.text-team-logo {
+  font-family: "Oswald", sans-serif;
+  font-size: clamp(120px, 25vw, 280px);
+  font-weight: 700;
+  line-height: 0.8;
+  text-transform: uppercase;
+}
+
 .text-stat-hero {
-  font-size: clamp(96px, 18vw, 200px);
+  font-size: clamp(80px, 15vw, 160px);
   font-weight: 700;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
+
 .text-section-headline {
-  font-size: clamp(40px, 7vw, 80px);
-  font-weight: 600;
+  font-size: clamp(32px, 6vw, 64px);
+  font-weight: 700;
   letter-spacing: -0.02em;
   text-transform: uppercase;
+  line-height: 1.1;
 }
+
 .text-player-name {
-  font-size: clamp(24px, 4vw, 48px);
-  font-weight: 500;
+  font-family: "Oswald", sans-serif;
+  font-size: clamp(24px, 4vw, 44px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
+
 .text-micro {
-  font-size: clamp(12px, 1.2vw, 14px);
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-/* Divider */
+/* UI Elements */
 .divider {
   width: 100%;
   height: 1px;
   background: var(--border);
-  transform-origin: center;
 }
 
-/* Hero radial glow — only allowed gradient */
+.vertical-divider {
+  width: 1px;
+  height: 100%;
+  background: var(--border);
+}
+
+.card-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
 .hero-glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.05), transparent 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03), transparent 70%);
   pointer-events: none;
+}
+
+/* Animations */
+.reveal-up {
+  opacity: 0;
+  transform: translateY(20px);
 }

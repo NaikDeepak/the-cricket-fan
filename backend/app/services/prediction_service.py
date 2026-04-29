@@ -1,47 +1,46 @@
 def calculate_prediction(stats: dict) -> dict:
     """
-    Weighted factor scoring. Three factors, each scored 0-100.
-    Factor weights sum to 1.0.
+    Weighted factor scoring — three factors, each scored 0–100.
+    All inputs come from VenueStats; no team-specific hardcoding.
     """
+    team_a = stats["team_a_short"]
+    team_b = stats["team_b_short"]
+    venue_short = stats["venue"].split(",")[0]
     factors = []
 
-    # Factor 1: Death over economy (lower is better — MI leads)
-    mi_econ = stats["mi_death_economy"]
-    csk_econ = stats["csk_death_economy"]
-    econ_score = 70 if mi_econ < csk_econ else 30
+    # Factor 1: Overall win % at this venue (weight 0.40)
+    a_win = stats["team_a_win_pct"]
+    b_win = stats["team_b_win_pct"]
     factors.append({
-        "label": "DEATH OVER DOMINANCE",
-        "detail": f"Economy {mi_econ} vs CSK · Overs 17–20",
-        "mi_score": econ_score,
-        "weight": 0.35,
-    })
-
-    # Factor 2: Venue chase record
-    mi_chase = stats["mi_chase_win_pct"]
-    csk_chase = stats["csk_chase_win_pct"]
-    chase_score = 75 if mi_chase > csk_chase else 40
-    factors.append({
-        "label": "WANKHEDE CHASE RECORD",
-        "detail": f"{mi_chase}% wins chasing · CSK: {csk_chase}%",
-        "mi_score": chase_score,
+        "label": f"{venue_short.upper()} RECORD",
+        "detail": f"{team_a} win {a_win}% here · {team_b} win {b_win}%",
+        "a_score": 70 if a_win >= b_win else 30,
         "weight": 0.40,
     })
 
-    # Factor 3: Spin weakness
-    csk_spin = stats["csk_vs_spin_avg"]
-    mi_spin = stats["mi_vs_spin_avg"]
-    spin_score = 65 if mi_spin > csk_spin else 45
+    # Factor 2: Chase win % at venue (weight 0.35)
+    a_chase = stats["team_a_chase_pct"]
+    b_chase = stats["team_b_chase_pct"]
     factors.append({
-        "label": "SPIN EXPOSURE",
-        "detail": f"CSK top-3 avg {csk_spin} vs left-arm spin",
-        "mi_score": spin_score,
+        "label": "CHASE RECORD",
+        "detail": f"{team_a} chase {a_chase}% here · {team_b} chase {b_chase}%",
+        "a_score": 70 if a_chase >= b_chase else 30,
+        "weight": 0.35,
+    })
+
+    # Factor 3: Average score at venue — proxy for batting depth (weight 0.25)
+    a_avg = stats["team_a_avg_score"]
+    b_avg = stats["team_b_avg_score"]
+    factors.append({
+        "label": "BATTING FIREPOWER",
+        "detail": f"{team_a} avg {a_avg:.0f} at this ground · {team_b} avg {b_avg:.0f}",
+        "a_score": 65 if a_avg >= b_avg else 40,
         "weight": 0.25,
     })
 
-    probability = round(sum(f["mi_score"] * f["weight"] for f in factors))
-    winning_team = "MI" if probability >= 50 else "CSK"
-    if winning_team == "CSK":
-        probability = 100 - probability
+    team_a_prob = round(sum(f["a_score"] * f["weight"] for f in factors))
+    winning_team = team_a if team_a_prob >= 50 else team_b
+    probability = team_a_prob if winning_team == team_a else 100 - team_a_prob
 
     return {
         "team": winning_team,

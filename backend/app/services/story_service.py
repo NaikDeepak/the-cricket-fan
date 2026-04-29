@@ -1,8 +1,11 @@
+import logging
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
 from fastapi import HTTPException
 from ..config import settings
+
+logger = logging.getLogger(__name__)
 
 gemini_client = genai.Client(api_key=settings.gemini_api_key)
 
@@ -54,13 +57,17 @@ async def generate_story(stats: dict) -> dict:
                 system_instruction=TONE_SYSTEM_PROMPT,
                 response_mime_type="application/json",
                 response_schema=StoryOutput,
-                max_output_tokens=512,
+                max_output_tokens=2048,
             ),
         )
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"AI service unavailable: {e}")
+        logger.error(f"Gemini API error in generate_story: {e}")
+        if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+            raise HTTPException(status_code=503, detail="AI service rate limit reached. Please try again later.")
+        raise HTTPException(status_code=503, detail=f"AI service unavailable: {str(e)}")
 
     if not response.parsed:
+        logger.error(f"Gemini parsing failed. Raw response: {response.text}")
         raise HTTPException(status_code=502, detail="AI returned unexpected response format")
 
     return response.parsed.model_dump()

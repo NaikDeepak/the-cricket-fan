@@ -25,23 +25,28 @@ async def _get_prediction_for_date(target_date: date_type, session: AsyncSession
     if not team_a or not team_b:
         raise HTTPException(status_code=500, detail="Match team data missing")
 
-    mi_v = await session.scalar(
+    team_a_v = await session.scalar(
         select(VenueStats).where(VenueStats.venue == match.venue, VenueStats.team_id == match.team_a_id)
     )
-    csk_v = await session.scalar(
+    team_b_v = await session.scalar(
         select(VenueStats).where(VenueStats.venue == match.venue, VenueStats.team_id == match.team_b_id)
     )
+
+    def win_pct(v, wins_attr: str, denom_attr: str) -> int:
+        if v and getattr(v, denom_attr):
+            return round(getattr(v, wins_attr) / getattr(v, denom_attr) * 100)
+        return 50
 
     stats = {
         "team_a_short": team_a.short_name,
         "team_b_short": team_b.short_name,
         "venue": match.venue,
-        "mi_chase_win_pct": round((mi_v.chase_wins / mi_v.chase_attempts) * 100) if (mi_v and mi_v.chase_attempts) else 50,
-        "csk_chase_win_pct": round((csk_v.chase_wins / csk_v.chase_attempts) * 100) if (csk_v and csk_v.chase_attempts) else 50,
-        "mi_death_economy": 7.2,
-        "csk_death_economy": 8.9,
-        "csk_vs_spin_avg": 18,
-        "mi_vs_spin_avg": 34,
+        "team_a_win_pct": win_pct(team_a_v, "wins", "matches"),
+        "team_b_win_pct": win_pct(team_b_v, "wins", "matches"),
+        "team_a_chase_pct": win_pct(team_a_v, "chase_wins", "chase_attempts"),
+        "team_b_chase_pct": win_pct(team_b_v, "chase_wins", "chase_attempts"),
+        "team_a_avg_score": team_a_v.avg_score if team_a_v else 160.0,
+        "team_b_avg_score": team_b_v.avg_score if team_b_v else 160.0,
     }
 
     result = calculate_prediction(stats)

@@ -45,7 +45,7 @@ async def _top_battle(team_a_id: int, team_b_id: int, session: AsyncSession):
 async def _get_story_for_date(target_date: date_type, session: AsyncSession) -> dict:
     cache_key = f"story_{target_date}"
     cached = await session.scalar(select(DailyCache).where(DailyCache.cache_key == cache_key))
-    if cached:
+    if cached and "featured_batsman" in cached.data:
         return cached.data
 
     match = await session.scalar(select(Match).where(Match.match_date == target_date))
