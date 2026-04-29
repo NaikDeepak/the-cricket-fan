@@ -286,3 +286,47 @@ async def test_matches_includes_headline_when_story_cached():
     data = r.json()
     assert data[0]["has_story"] is True
     assert data[0]["headline"] == "ROHIT OWNS THIS GROUND."
+
+
+@pytest.mark.asyncio
+async def test_players_short_query_returns_empty():
+    from unittest.mock import AsyncMock
+    async def override():
+        yield AsyncMock()
+    app.dependency_overrides[get_session] = override
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.get("/stats/players?q=b")
+    finally:
+        app.dependency_overrides.clear()
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+@pytest.mark.asyncio
+async def test_players_returns_matching():
+    from unittest.mock import AsyncMock, MagicMock
+    mock_player = MagicMock()
+    mock_player.id = 1
+    mock_player.name = "Jasprit Bumrah"
+    mock_player.team_id = 5
+    mock_team = MagicMock()
+    mock_team.short_name = "MI"
+    mock_execute_result = MagicMock()
+    mock_execute_result.scalars.return_value.all.return_value = [mock_player]
+    mock_session = AsyncMock()
+    mock_session.execute.return_value = mock_execute_result
+    mock_session.get.return_value = mock_team
+    async def override():
+        yield mock_session
+    app.dependency_overrides[get_session] = override
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.get("/stats/players?q=bumrah")
+    finally:
+        app.dependency_overrides.clear()
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["name"] == "Jasprit Bumrah"
+    assert data[0]["team"] == "MI"

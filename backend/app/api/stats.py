@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from ..database import get_session
 from ..models.player import Player, PlayerVsPlayer
+from ..models.match import Team
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -20,6 +21,30 @@ class PlayerVsPlayerResponse(BaseModel):
     batsman: str
     bowler: str
     stats: list[StatRow]
+
+
+class PlayerResult(BaseModel):
+    id: int
+    name: str
+    team: str
+
+
+@router.get("/players", response_model=list[PlayerResult])
+async def get_players(
+    q: str = Query("", description="Name substring, min 2 chars"),
+    session: AsyncSession = Depends(get_session),
+):
+    if len(q) < 2:
+        return []
+    result = await session.execute(
+        select(Player).where(Player.name.ilike(f"%{q}%")).limit(10)
+    )
+    players = result.scalars().all()
+    out = []
+    for p in players:
+        team = await session.get(Team, p.team_id)
+        out.append({"id": p.id, "name": p.name, "team": team.short_name if team else ""})
+    return out
 
 
 @router.get("/player-vs-player", response_model=PlayerVsPlayerResponse)
