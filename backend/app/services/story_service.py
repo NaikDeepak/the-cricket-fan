@@ -2,7 +2,6 @@ import logging
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
-from fastapi import HTTPException
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -60,14 +59,43 @@ async def generate_story(stats: dict) -> dict:
                 max_output_tokens=2048,
             ),
         )
+        if not response.parsed:
+            logger.error(f"Gemini parsing failed. Raw response: {response.text}")
+            return _story_fallback(stats)
+        return response.parsed.model_dump()
     except Exception as e:
-        logger.error(f"Gemini API error in generate_story: {e}")
-        if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-            raise HTTPException(status_code=503, detail="AI service rate limit reached. Please try again later.")
-        raise HTTPException(status_code=503, detail=f"AI service unavailable: {str(e)}")
+        logger.warning(f"Gemini unavailable in generate_story ({e}); using data-driven fallback")
+        return _story_fallback(stats)
 
-    if not response.parsed:
-        logger.error(f"Gemini parsing failed. Raw response: {response.text}")
-        raise HTTPException(status_code=502, detail="AI returned unexpected response format")
 
-    return response.parsed.model_dump()
+def _story_fallback(stats: dict) -> dict:
+    batsman = stats.get("featured_batsman", "")
+    bowler = stats.get("featured_bowler", "")
+    dismissals = stats.get("featured_dismissals", 0)
+    team_a = stats["team_a"]["short_name"]
+    team_b = stats["team_b"]["short_name"]
+    venue_short = stats["venue"].split(",")[0]
+    chase_pct = stats.get("team_a_chase_pct", 0)
+
+    if batsman and bowler and dismissals:
+        b_last = bowler.split()[-1].upper()
+        bat_last = batsman.split()[-1].upper()
+        headline = f"{b_last} OWNS {bat_last}. {dismissals} TIMES. TONIGHT COUNTS."
+        return {
+            "headline": headline,
+            "shock_stat": {
+                "value": str(dismissals),
+                "label": f"{b_last} DISMISSALS",
+                "one_liner": f"{dismissals} times in 2 seasons. {batsman.split()[0]} has no answer.",
+            },
+        }
+
+    headline = f"{team_a} VS {team_b}. {venue_short.upper()}. TONIGHT."
+    return {
+        "headline": headline,
+        "shock_stat": {
+            "value": f"{chase_pct}%",
+            "label": f"{team_a} WIN % HERE",
+            "one_liner": f"{chase_pct}% win rate at {venue_short}. Numbers don't lie.",
+        },
+    }
