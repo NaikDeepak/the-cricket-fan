@@ -73,7 +73,7 @@ export default function PlayerPicker({ label, value, onSelect }: Props) {
       </div>
       <input
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onChange={(e) => { setInput(e.target.value); onSelect(e.target.value); }}
         onFocus={() => results.length > 0 && setOpen(true)}
         placeholder="Start typing..."
         style={inputStyle}

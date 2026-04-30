@@ -21,7 +21,7 @@ export default function ExplorerShareCard(props: Props) {
     const dismissals = data.stats.find((s) => s.label === "DISMISSALS")?.batsman_val ?? 0;
     const sr = data.stats.find((s) => s.label === "STRIKE RATE / ECONOMY")?.batsman_val ?? 0;
     bigNumber = String(dismissals);
-    headline = "DISMISSALS. IPL RECORD.";
+    headline = dismissals >= 5 ? "DISMISSALS. MOST IN IPL." : "DISMISSALS IN IPL.";
     oneLiner = `SR ${sr}. No answer.`;
     subjectLine = `${data.bowler} vs ${data.batsman}`;
   } else {
