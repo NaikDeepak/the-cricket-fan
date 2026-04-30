@@ -46,6 +46,17 @@ export type MatchSummary = {
   headline: string | null;
 };
 
+export type PlayerResult = { id: number; name: string; team: string };
+
+export type VenueTeamData = {
+  venue: string;
+  team: string;
+  matches_played: number;
+  win_pct: number;
+  avg_score: number;
+  chase_win_pct: number;
+};
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API}${path}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
@@ -62,4 +73,10 @@ export const api = {
   storyFor: (date: string) => get<StoryData>(`/match-story/${date}`),
   triviaFor: (date: string) => get<TriviaData>(`/trivia/${date}`),
   predictionFor: (date: string) => get<PredictionData>(`/prediction/${date}`),
+  players: (q: string) =>
+    get<PlayerResult[]>(`/stats/players?q=${encodeURIComponent(q)}`),
+  venueTeam: (venue: string, team: string) =>
+    get<VenueTeamData>(
+      `/stats/venue-team?venue=${encodeURIComponent(venue)}&team=${encodeURIComponent(team)}`
+    ),
 };

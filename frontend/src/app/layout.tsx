@@ -15,12 +15,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Link href="/" className="text-white font-bold tracking-tight text-sm">
             The Cricket Fan
           </Link>
-          <Link
-            href="/archive"
-            className="text-zinc-400 hover:text-white text-sm transition-colors"
-          >
-            Past Matches
-          </Link>
+          <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            <Link href="/explore" className="text-zinc-400 hover:text-white text-sm transition-colors">
+              Explore
+            </Link>
+            <Link href="/archive" className="text-zinc-400 hover:text-white text-sm transition-colors">
+              Past Matches
+            </Link>
+          </div>
         </nav>
         <div className="pt-12">{children}</div>
       </body>

@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import MatchHero from "@/components/hero/MatchHero";
+import ExploreQuicklinks from "@/components/explorer/ExploreQuicklinks";
 import PlayerBattle from "@/components/battle/PlayerBattle";
 import TriviaCard from "@/components/trivia/TriviaCard";
 import PredictionCard from "@/components/prediction/PredictionCard";
@@ -42,6 +43,7 @@ export default async function Page() {
     >
       <SectionCounter total={4} />
       <MatchHero data={story} />
+      <ExploreQuicklinks data={story} />
       {battle && <PlayerBattle data={battle} teamA={story.team_a} teamB={story.team_b} />}
       {trivia && <TriviaCard data={trivia} />}
       {prediction && <PredictionCard data={prediction} />}
