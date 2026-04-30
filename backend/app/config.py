@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     gemini_api_key: str
     environment: str = "development"
 
-    model_config = SettingsConfigDict(env_file=".env.local", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()
