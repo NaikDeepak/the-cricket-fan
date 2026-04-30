@@ -82,12 +82,12 @@ async def test_prediction_returns_exactly_3_evidence_items():
         "team_a_short": "MI",
         "team_b_short": "CSK",
         "venue": "Wankhede Stadium",
-        "mi_chase_win_pct": 80,
-        "csk_chase_win_pct": 37,
-        "mi_death_economy": 7.2,
-        "csk_death_economy": 8.9,
-        "csk_vs_spin_avg": 18,
-        "mi_vs_spin_avg": 34,
+        "team_a_win_pct": 62,
+        "team_b_win_pct": 47,
+        "team_a_chase_pct": 80,
+        "team_b_chase_pct": 37,
+        "team_a_avg_score": 182,
+        "team_b_avg_score": 171,
     }
 
     result = calculate_prediction(stats)
