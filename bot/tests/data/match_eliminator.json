@@ -1,0 +1,30 @@
+{
+  "info": {
+    "dates": ["2025-04-10"],
+    "season": "2025",
+    "venue": "M Chinnaswamy Stadium, Bengaluru",
+    "city": "Bengaluru",
+    "teams": ["Royal Challengers Bengaluru", "Chennai Super Kings"],
+    "outcome": {"result": "tie", "eliminator": "Royal Challengers Bengaluru"},
+    "toss": {"winner": "Chennai Super Kings", "decision": "bat"}
+  },
+  "innings": [
+    {"team": "Chennai Super Kings", "overs": [
+      {"over": 0, "deliveries": [
+        {"batter": "A", "bowler": "B", "runs": {"batter": 4, "extras": 0, "total": 4}},
+        {"batter": "A", "bowler": "B", "runs": {"batter": 1, "extras": 0, "total": 1}},
+        {"batter": "C", "bowler": "B", "runs": {"batter": 0, "extras": 0, "total": 0}},
+        {"batter": "C", "bowler": "B", "runs": {"batter": 6, "extras": 0, "total": 6}},
+        {"batter": "C", "bowler": "B", "runs": {"batter": 0, "extras": 0, "total": 0}},
+        {"batter": "C", "bowler": "B", "runs": {"batter": 1, "extras": 0, "total": 1}}
+      ]}
+    ]},
+    {"team": "Royal Challengers Bengaluru", "overs": [
+      {"over": 0, "deliveries": [
+        {"batter": "D", "bowler": "E", "runs": {"batter": 0, "extras": 0, "total": 0}},
+        {"batter": "D", "bowler": "E", "runs": {"batter": 0, "extras": 1, "total": 1}},
+        {"batter": "D", "bowler": "E", "runs": {"batter": 2, "extras": 0, "total": 2}}
+      ]}
+    ]}
+  ]
+}
