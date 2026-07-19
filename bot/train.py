@@ -39,14 +39,19 @@ def build_dataset(df: pd.DataFrame):
     matches = df.copy()
     matches["pair"] = matches.apply(
         lambda r: tuple(sorted([r["team"], r["opponent"]])), axis=1)
+    # Each match has one row per team; only the home team's OWN row carries
+    # home=True. Resolve home_team from BOTH rows before deduping, since
+    # drop_duplicates below keeps an arbitrary (possibly away-team) row.
+    home_lookup = {}
+    for _, r in matches.iterrows():
+        if r["home"]:
+            home_lookup[(r["date"], r["pair"])] = r["team"]
     matches = matches.drop_duplicates(subset=["date", "pair"])
     feats, labels, dts, pairs = [], [], [], []
     for _, m in matches.iterrows():
         team_a, team_b = m["pair"]
         won_a = m["won"] if m["team"] == team_a else not m["won"]
-        home_team = None
-        if m["home"]:
-            home_team = m["team"]
+        home_team = home_lookup.get((m["date"], m["pair"]))
         f = build_features(df, team_a, team_b, m["venue"], m["date"],
                            home_team=home_team)
         feats.append(f)

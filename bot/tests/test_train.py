@@ -46,6 +46,28 @@ def test_build_dataset_shapes_and_no_leakage_column():
     assert "won" not in X.columns
 
 
+def test_build_dataset_home_team_survives_dedup():
+    """Regression: drop_duplicates(subset=["date","pair"]) keeps an arbitrary
+    per-team row. The home flag must be resolved from BOTH rows of the pair,
+    not just whichever row happens to survive dedup."""
+    d = date(2024, 4, 1)
+    df = pd.DataFrame([
+        # away team's row listed FIRST -> it is the one drop_duplicates keeps
+        dict(team="Beta", opponent="Alpha", date=d, season="2024", league="SYN",
+             venue="V0", won=False, dls=False, runs_scored=150.0, overs_faced=20.0,
+             runs_conceded=160.0, overs_bowled=20.0, home=False),
+        # home team's row listed SECOND -> would be dropped as a duplicate
+        dict(team="Alpha", opponent="Beta", date=d, season="2024", league="SYN",
+             venue="V0", won=True, dls=False, runs_scored=160.0, overs_faced=20.0,
+             runs_conceded=150.0, overs_bowled=20.0, home=True),
+    ])
+    X, y, meta = build_dataset(df)
+    assert len(X) == 1
+    # Alpha < Beta alphabetically -> team_a = Alpha, and Alpha is the home team
+    assert X.loc[0, "home_a"] == 1.0
+    assert X.loc[0, "home_b"] == 0.0
+
+
 def test_train_writes_artifact_and_metrics(tmp_path):
     df = synthetic_team_matches(600)
     X, y, meta = build_dataset(df)
