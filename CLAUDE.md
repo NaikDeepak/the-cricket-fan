@@ -55,19 +55,40 @@ the-cricket-fan/
 
 ## COMMANDS
 
-### Backend
+### One-shot dev environment (preferred)
+
+The `feature/mvp` worktree at `.worktrees/mvp/` contains `dev.sh` and `docker-compose.yml`. From that directory:
+
+```bash
+# Start Postgres + seed data + backend (8000) + frontend (3000) in one shot
+bash dev.sh
+```
+
+API docs are available at `http://localhost:8000/docs` while the server is running.
+
+### Backend (manual)
 
 ```bash
 cd backend
+
+# Start local Postgres (required before running the backend)
+docker compose -f ../.worktrees/mvp/docker-compose.yml up -d db
 
 # Create virtual env and install
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
+# Run database migrations
+alembic upgrade head
+
+# Seed dev data (run once after migrations)
+python -m scripts.seed_schedule       # 70 fixtures, 10 teams
+python -m scripts.ingest_cricsheet    # player stats, PvP, venue
+
 # Run dev server
 uvicorn app.main:app --reload --port 8000
 
-# Run all tests
+# Run all tests  (asyncio_mode = "auto" — no @pytest.mark.asyncio needed)
 pytest
 
 # Run a single test file
@@ -112,7 +133,7 @@ npm run lint
 - Dark theme with neon / stadium lighting feel; smooth scroll storytelling
 - `clsx` + `tailwind-merge` for conditional class logic
 
-### Frontend components to build
+### Planned frontend components (not yet built)
 - `MatchHero` — today's match with narrative headline
 - `PlayerBattleCard` — head-to-head player stats
 - `AnimatedStatGraph` — motion-driven stat visualization
@@ -124,10 +145,13 @@ npm run lint
 
 ## ENVIRONMENT VARIABLES
 
-See `.env.example`. Required:
-- `ANTHROPIC_API_KEY`
-- `DATABASE_URL` (asyncpg format: `postgresql+asyncpg://...`)
-- `NEXT_PUBLIC_API_URL` (frontend → backend URL)
+See `.env.example` (root) and `.worktrees/mvp/.env.example` (more complete). Required:
+- `ANTHROPIC_API_KEY` — Anthropic SDK (story/trivia/prediction generation)
+- `GEMINI_API_KEY` — Gemini SDK (also used for AI generation in MVP branch)
+- `DATABASE_URL` (asyncpg format: `postgresql+asyncpg://...`; local default: `postgresql+asyncpg://cricket:cricket@localhost:5433/cricket_fan`)
+- `NEXT_PUBLIC_API_URL` (frontend → backend; local default: `http://localhost:8000`)
+- `ENVIRONMENT` — `development` or `production`
+- `SENTRY_DSN` — optional observability
 
 ---
 
@@ -162,3 +186,4 @@ See `.env.example`. Required:
 | Date | Goal | Key Decisions | Next |
 |---|---|---|---|
 | 2026-04-24 | Project init | FastAPI + Next.js 16 monorepo; Vercel for both; Claude API for story generation; no ML for predictions | Implement Cricsheet parser + `/match-story/today` endpoint |
+| 2026-07-19 | Viability pivot | Fantasy affiliate dead (PROGA + SC ruling). Product = automated X prediction bot: LightGBM (ML rule overridden), GitHub Actions cron, Neon Postgres, CricAPI, X free tier. Web UI parked. Spec + 13-task plan committed in docs/superpowers/ | Execute plan subagent-driven, Task 1 (scaffold+schema) onward |
