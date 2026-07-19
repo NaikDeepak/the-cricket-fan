@@ -52,7 +52,7 @@ New top-level `bot/` package:
 
 | Module | Responsibility |
 |---|---|
-| `bot/fixtures_provider.py` | Adapter interface over a free cricket API (fixtures + results). Provider swappable. |
+| `bot/fixtures_provider.py` | Adapter interface over a free cricket API (fixtures + results). Provider swappable. Owns the entity-resolution alias table mapping API team/venue names to canonical Cricsheet identifiers. |
 | `bot/features.py` | Pre-match feature builder from Postgres aggregates. Leakage-guarded. |
 | `bot/train.py` | Offline training + backtest; writes `model.pkl` + `metrics.json`. |
 | `bot/predict.py` | Load artifact, produce calibrated probability + top-3 SHAP reasons. |
@@ -63,11 +63,39 @@ New top-level `bot/` package:
 Infrastructure: GitHub Actions (cron + manual retrain workflow), Neon free-tier Postgres,
 X API v2 free tier. Zero servers, zero monthly cost.
 
+### Entity Resolution (Cricsheet ↔ live API)
+
+Cricsheet team/venue names are free strings and drift over time ("Royal Challengers
+Bangalore" → "Royal Challengers Bengaluru", venue spelling variants). The live API will use
+its own spellings. `fixtures_provider.py` maintains an alias mapping table (Postgres) that
+translates API names to canonical Cricsheet identifiers before the feature builder runs.
+
+**Hard-fail rule:** if a team or venue cannot be resolved, the match is skipped and logged —
+the bot must never build features through unresolved entities (silent NaNs → garbage
+predictions posted publicly).
+
+### Neon Storage Budget
+
+Neon free tier is 500MB. Postgres holds only tabular aggregates and bot state (predictions,
+posts, alias table, rolling feature tables). Raw Cricsheet JSON and ball-by-ball rows never
+enter Postgres — the retrain workflow downloads Cricsheet fresh into the Actions runner and
+computes aggregates locally, writing only the aggregate tables.
+
 ## ML Engine
 
 - **Features (pre-match only):** rolling team form (last 5/10 matches, recency-weighted),
   head-to-head record, venue win/chase bias, rolling batting run-rate and bowling economy
   aggregates, home-ground flag, league identifier. Toss is excluded (unknown at post time).
+- **Season-boundary decay:** rolling features apply an explicit extra decay factor across
+  season boundaries — T20 franchise squads churn heavily (IPL mega-auctions can replace most
+  of a roster), so prior-season form must carry far less weight than current-season form.
+- **Ties and no-results:** a super-over (eliminator) winner counts as a 1.0 win — the
+  pipeline parses Cricsheet's `outcome.eliminator` field. True ties without eliminator and
+  abandoned/no-result matches are excluded from training labels and voided in the accuracy
+  record.
+- **DLS handling:** innings from DLS-affected matches (`outcome.method` = "D/L") are
+  excluded from rolling run-rate/economy aggregates (rain-shortened chases distort rates);
+  the match result still counts toward win/loss form.
 - **Model:** LightGBM binary classifier with probability calibration (isotonic).
 - **Split:** time-based — train ≤2023, validate 2024, test 2025+. No shuffling.
 - **Metrics:** accuracy, log-loss, Brier score, calibration curve.
@@ -87,10 +115,23 @@ X API v2 free tier. Zero servers, zero monthly cost.
 - **`posts` table:** unique key `(match_id, post_type)`, state `scheduled → posted | failed`.
 - The cron tick is idempotent: re-runs never double-post (unique constraint), failed posts
   retry on subsequent ticks (max 3 attempts, then abandoned with a log entry).
-- **Timing:** prediction posted in the first tick within T-3h of start; trivia within T-1h;
-  result post in the first tick after the result is available from the API.
+- **Timing (window-based, never exact):** GitHub Actions cron is best-effort and can fire
+  late, so all timing is SQL time-window queries against `scheduled` state (e.g.
+  `start_time - now() <= interval '3 hours' AND state = 'scheduled'`), never exact-time
+  assumptions. Prediction posts in the first tick inside the T-3h window; trivia inside
+  T-1h; result post in the first tick after the result is available.
+- **Late-tick guard:** a prediction is never posted after the match's scheduled start time —
+  if every tick misses the window, the prediction is abandoned (logged), not posted stale.
 - **Trivia source:** the existing data-driven trivia path (no LLM cost). Gemini free tier
   optional behind a flag.
+- **Quota circuit breaker:** `poster.py` checks the current month's posted count (from the
+  `posts` table) before sending. At ≥450 posts, trivia posts are dropped; at ≥490, only
+  results post. Priority: prediction > result > trivia. Protects against overlapping
+  tournaments blowing the 500/month X free-tier cap.
+- **Readable reasons:** `compose.py` owns a translation dictionary mapping SHAP feature
+  names to fan-readable phrases (e.g. `rolling_rr_team_a_last_5` → "strong recent batting
+  run-rate"). An untranslated feature falls back to a generic phrase and is logged so the
+  dictionary gets extended.
 
 ## Failure Handling
 
@@ -110,7 +151,9 @@ X API v2 free tier. Zero servers, zero monthly cost.
 1. **Leakage test (critical):** the feature builder, given a match date, must only read rows
    strictly before that date — explicit pytest.
 2. Unit tests: template rendering (≤280 chars, formatting), post state-machine transitions,
-   void/abandoned handling, fixtures-provider parsing against recorded JSON fixtures.
+   void/abandoned handling, fixtures-provider parsing against recorded JSON fixtures,
+   entity-resolution hard-fail on unknown names, super-over/DLS parsing, circuit-breaker
+   thresholds, late-tick guard.
 3. **Backtest gate:** test asserts `metrics.json` shows the model beating both baselines on
    the held-out set.
 4. Integration: a full `bot.run` tick in dry-run mode against a seeded DB asserts the right
