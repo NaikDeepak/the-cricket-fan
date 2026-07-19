@@ -46,3 +46,16 @@ def test_home_flag_city_in_team_name():
     by_team = {r.team: r for r in rows}
     assert by_team["Royal Challengers Bengaluru"].home is True
     assert by_team["Chennai Super Kings"].home is False
+
+
+def test_super_over_uses_main_innings_totals():
+    rows = parse_result(DATA / "match_super_over.json", league="IPL")
+    by_team = {r.team: r for r in rows}
+    csk = by_team["Chennai Super Kings"]
+    rcb = by_team["Royal Challengers Bengaluru"]
+    # Verify main innings figures (12/1.0 for CSK, 3/0.5 for RCB)
+    # not super-over figures (15/1.0 for CSK, 18/1.0 for RCB)
+    assert csk.runs_scored == 12
+    assert csk.overs_faced == 1.0
+    assert rcb.runs_scored == 3
+    assert abs(rcb.overs_faced - 0.5) < 1e-9

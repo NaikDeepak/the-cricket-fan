@@ -27,6 +27,8 @@ def _innings_totals(data: dict) -> dict[str, tuple[float, float]]:
     totals: dict[str, tuple[float, float]] = {}
     for innings in data.get("innings", []):
         team = innings.get("team", "")
+        if team in totals:
+            continue
         runs = 0.0
         balls = 0
         for over in innings.get("overs", []):
@@ -57,7 +59,8 @@ def parse_result(filepath: Path, league: str) -> list[TeamMatchRow]:
     venue = info.get("venue", "Unknown")
     city = info.get("city", "")
     season = str(info.get("season", ""))
-    match_date = date.fromisoformat(info.get("dates", ["1970-01-01"])[0])
+    dates = info.get("dates") or ["1970-01-01"]
+    match_date = date.fromisoformat(dates[0])
     totals = _innings_totals(data)
 
     rows = []
