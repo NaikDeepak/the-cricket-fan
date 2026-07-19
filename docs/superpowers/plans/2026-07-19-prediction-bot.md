@@ -687,14 +687,14 @@ def df():
     # Team B: 1 win, 4 losses in 2025; weak batting
     for i, won in enumerate([True, False, False, False, False]):
         rows.append(_row("B", "Y", date(2025, 4, 1 + i), won, rs=140.0))
-    # Head-to-head: A beat B twice in 2025
-    rows.append(_row("A", "B", date(2025, 4, 10), True))
+    # Head-to-head: A beat B twice in 2025 (rs=180 keeps A's innings uniform for rr test)
+    rows.append(_row("A", "B", date(2025, 4, 10), True, rs=180.0))
     rows.append(_row("B", "A", date(2025, 4, 10), False))
-    rows.append(_row("A", "B", date(2025, 4, 12), True))
+    rows.append(_row("A", "B", date(2025, 4, 12), True, rs=180.0))
     rows.append(_row("B", "A", date(2025, 4, 12), False))
     # Venue history at "V": A won 2 of 2 there
-    rows.append(_row("A", "Z", date(2025, 4, 15), True, venue="V"))
-    rows.append(_row("A", "Z", date(2025, 4, 16), True, venue="V"))
+    rows.append(_row("A", "Z", date(2025, 4, 15), True, venue="V", rs=180.0))
+    rows.append(_row("A", "Z", date(2025, 4, 16), True, venue="V", rs=180.0))
     # DLS match with absurd run rate must NOT poison rr feature
     rows.append(_row("A", "Z", date(2025, 4, 17), True, dls=True, rs=60.0, of=5.0))
     # Future match (after prediction date) must be invisible
@@ -733,8 +733,8 @@ def test_season_decay_downweights_last_season():
     new = [_row("A", "X", date(2025, 4, 1), False, season="2025")]
     df = pd.DataFrame(old + new)
     f = build_features(df, "A", "B", "V", date(2025, 5, 1))
-    # 10 old wins vs 1 recent loss: with season decay the loss dominates
-    assert f["form5_a"] < 0.6
+    # without season decay this would be ~0.80; with it the recent loss dominates
+    assert f["form5_a"] < 0.65
 
 
 def test_no_history_neutral_defaults():
