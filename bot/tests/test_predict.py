@@ -1,8 +1,16 @@
 from pathlib import Path
 
+import pytest
+
 from bot.predict import load_artifact, predict
 from bot.tests.test_train import synthetic_team_matches
 from bot.train import build_dataset, train_and_evaluate
+
+# shap's informational format-change warning for LightGBM binary classifiers;
+# behavior verified by the isinstance branch in predict()
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:LightGBM binary classifier.*:UserWarning"
+)
 
 
 def _artifact(tmp_path) -> Path:
