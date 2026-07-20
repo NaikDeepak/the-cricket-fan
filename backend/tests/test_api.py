@@ -313,10 +313,9 @@ async def test_players_returns_matching():
     mock_team = MagicMock()
     mock_team.short_name = "MI"
     mock_execute_result = MagicMock()
-    mock_execute_result.scalars.return_value.all.return_value = [mock_player]
+    mock_execute_result.all.return_value = [(mock_player, mock_team)]
     mock_session = AsyncMock()
     mock_session.execute.return_value = mock_execute_result
-    mock_session.get.return_value = mock_team
     async def override():
         yield mock_session
     app.dependency_overrides[get_session] = override

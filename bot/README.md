@@ -24,7 +24,7 @@ posts, so worst-case spend ≈ $7.50/month. Idle months cost nothing.
 
 ## Local dev
 
-```
+```bash
 pip install -r bot/requirements.txt
 python -m pytest bot/tests -v
 BOT_DRY_RUN=1 BOT_DATABASE_URL=sqlite:///bot.db python -m bot.run

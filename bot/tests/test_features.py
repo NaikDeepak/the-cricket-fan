@@ -37,7 +37,7 @@ def _row(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def df():
     rows = []
     # Team A: 4 wins then 1 loss in 2025; strong batting

@@ -7,7 +7,7 @@ from bot.aliases import seed_aliases
 from bot.db import fixtures, posts, predictions, team_matches
 from bot.fixtures_provider import Fixture, Result
 from bot.predict import load_artifact
-from bot.run import tick
+from bot.run import _home_team_at_venue, tick
 from bot.tests.test_predict import _artifact
 
 pytestmark = pytest.mark.filterwarnings(
@@ -45,14 +45,14 @@ def _fixture(match_id="m1", hours_from_now=2.5):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def art(tmp_path):
     return load_artifact(_artifact(tmp_path))
 
 
-@pytest.fixture()
+@pytest.fixture
 def conn(engine):
-    with engine.begin() as c:
+    with engine.connect() as c:
         seed_aliases(c)
         # minimal history so features/trivia have data
         for i in range(6):
@@ -103,6 +103,28 @@ def _post_states(conn, match_id="m1"):
     return {r.post_type: r.state for r in rows}
 
 
+def test_home_team_at_venue_infers_from_history():
+    import pandas as pd
+
+    df = pd.DataFrame(
+        [
+            {"team": "Mumbai Indians", "venue": "Wankhede Stadium, Mumbai", "home": True},
+            {"team": "Chennai Super Kings", "venue": "Wankhede Stadium, Mumbai", "home": False},
+        ]
+    )
+    assert (
+        _home_team_at_venue(df, "Wankhede Stadium, Mumbai", "Chennai Super Kings", "Mumbai Indians")
+        == "Mumbai Indians"
+    )
+
+
+def test_home_team_at_venue_neutral_when_no_history():
+    import pandas as pd
+
+    df = pd.DataFrame(columns=["team", "venue", "home"])
+    assert _home_team_at_venue(df, "Some New Stadium", "Team A", "Team B") is None
+
+
 def test_prediction_posted_inside_window(conn, art):
     poster = SpyPoster()
     tick(conn, FakeProvider([_fixture(hours_from_now=2.5)], []), art, poster, NOW)
@@ -114,6 +136,62 @@ def test_prediction_posted_inside_window(conn, art):
         conn.execute(sa.select(sa.func.count()).select_from(predictions)).scalar_one()
         == 1
     )
+
+
+def test_upsert_fixtures_syncs_reschedule(conn, art):
+    """Cricket fixtures get rescheduled (rain, ground changes). A tracked
+    fixture whose venue/start_time changes upstream must not be stuck with
+    stale values forever."""
+    poster = SpyPoster()
+    tick(conn, FakeProvider([_fixture(hours_from_now=5)], []), art, poster, NOW)
+
+    rescheduled = _fixture(hours_from_now=2.5)
+    rescheduled = Fixture(
+        provider_match_id=rescheduled.provider_match_id,
+        team_a=rescheduled.team_a,
+        team_b=rescheduled.team_b,
+        venue="Eden Gardens, Kolkata",
+        league=rescheduled.league,
+        start_time=rescheduled.start_time,
+    )
+    tick(conn, FakeProvider([rescheduled], []), art, poster, NOW + timedelta(minutes=5))
+
+    row = conn.execute(
+        sa.select(fixtures.c.venue, fixtures.c.start_time).where(
+            fixtures.c.provider_match_id == "m1"
+        )
+    ).one()
+    assert row.venue == "Eden Gardens, Kolkata"
+    got = row.start_time.replace(tzinfo=timezone.utc) if not row.start_time.tzinfo else row.start_time
+    assert got == rescheduled.start_time
+
+
+def test_posted_state_survives_later_failure_in_same_tick(conn, art, monkeypatch):
+    """A tweet already sent must not un-send itself if a later step in the same
+    tick raises. The posts.state="posted" write has to be durable independent
+    of the rest of the tick's transaction (see bot/run.py:_try_post commit)."""
+    poster = SpyPoster()
+    tick(conn, FakeProvider([_fixture(hours_from_now=2.5)], []), art, poster, NOW)
+    assert _post_states(conn)["prediction"] == "posted"
+
+    import bot.run as run_mod
+
+    def boom(*a, **k):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(run_mod, "trivia_post", boom)
+    with pytest.raises(RuntimeError):
+        # Same fixture as tick #1 (unchanged start_time == NOW+2.5h); only
+        # `now` advances, so trivia (not due at NOW) becomes due here.
+        tick(
+            conn,
+            FakeProvider([_fixture(hours_from_now=2.5)], []),
+            art,
+            poster,
+            NOW + timedelta(hours=2),
+        )
+    conn.rollback()
+    assert _post_states(conn)["prediction"] == "posted"
 
 
 def test_idempotent_second_tick_no_duplicate(conn, art):

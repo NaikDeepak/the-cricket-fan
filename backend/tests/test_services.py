@@ -98,3 +98,26 @@ async def test_prediction_returns_exactly_3_evidence_items():
     for item in result["evidence"]:
         assert "label" in item
         assert "detail" in item
+
+
+@pytest.mark.asyncio
+async def test_prediction_ties_are_neutral_not_always_team_a():
+    """When every factor is tied (e.g. missing venue stats default both teams
+    to the same neutral value), >= tie-breaking always favored team_a,
+    producing a confidently-wrong ~69% probability for a genuine coin flip."""
+    from app.services.prediction_service import calculate_prediction
+
+    stats = {
+        "team_a_short": "MI",
+        "team_b_short": "CSK",
+        "venue": "Wankhede Stadium",
+        "team_a_win_pct": 50,
+        "team_b_win_pct": 50,
+        "team_a_chase_pct": 50,
+        "team_b_chase_pct": 50,
+        "team_a_avg_score": 160.0,
+        "team_b_avg_score": 160.0,
+    }
+
+    result = calculate_prediction(stats)
+    assert result["probability"] == 50

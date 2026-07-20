@@ -1,5 +1,7 @@
 import logging
+import httpx
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import BaseModel
 from ..config import settings
@@ -63,7 +65,7 @@ async def generate_story(stats: dict) -> dict:
             logger.error(f"Gemini parsing failed. Raw response: {response.text}")
             return _story_fallback(stats)
         return response.parsed.model_dump()
-    except Exception as e:
+    except (genai_errors.APIError, httpx.HTTPError) as e:
         logger.warning(f"Gemini unavailable in generate_story ({e}); using data-driven fallback")
         return _story_fallback(stats)
 

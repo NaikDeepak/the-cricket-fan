@@ -26,21 +26,25 @@ export default function PlayerPicker({ label, value, onSelect }: Props) {
   const [results, setResults] = useState<PlayerResult[]>([]);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setInput(value); }, [value]);
 
   useEffect(() => {
     if (input.length < 2) { setResults([]); setOpen(false); return; }
+    let active = true;
     const timer = setTimeout(async () => {
       try {
         const data = await api.players(input);
+        if (!active) return; // a newer request has since superseded this one
         setResults(data);
-        setOpen(data.length > 0);
+        setOpen(data.length > 0 && document.activeElement === inputRef.current);
       } catch {
+        if (!active) return;
         setResults([]);
       }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => { active = false; clearTimeout(timer); };
   }, [input]);
 
   useEffect(() => {
@@ -72,6 +76,7 @@ export default function PlayerPicker({ label, value, onSelect }: Props) {
         {label}
       </div>
       <input
+        ref={inputRef}
         value={input}
         onChange={(e) => { setInput(e.target.value); onSelect(e.target.value); }}
         onFocus={() => results.length > 0 && setOpen(true)}

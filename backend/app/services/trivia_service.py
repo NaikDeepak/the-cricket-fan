@@ -1,5 +1,7 @@
 import logging
+import httpx
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import BaseModel
 from ..config import settings
@@ -48,7 +50,7 @@ async def generate_trivia(venue: str, team_a: str, team_b: str) -> dict:
             logger.error(f"Gemini parsing failed. Raw response: {response.text}")
             return _trivia_fallback(venue, team_a, team_b)
         return response.parsed.model_dump()
-    except Exception as e:
+    except (genai_errors.APIError, httpx.HTTPError) as e:
         logger.warning(f"Gemini unavailable in generate_trivia ({e}); using data-driven fallback")
         return _trivia_fallback(venue, team_a, team_b)
 

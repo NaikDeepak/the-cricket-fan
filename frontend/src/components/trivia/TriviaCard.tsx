@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { gsap } from "@/lib/gsap";
 import type { TriviaData } from "@/lib/api";
 
@@ -31,8 +33,6 @@ export default function TriviaCard({ data }: { data: TriviaData }) {
   const handleTap = (idx: number) => {
     if (selected !== null) return;
     setSelected(idx);
-    
-    const isCorrect = idx === data.correct_index;
 
     if (revealRef.current) {
       revealRef.current.style.display = "flex";
@@ -65,19 +65,20 @@ export default function TriviaCard({ data }: { data: TriviaData }) {
                 key={i}
                 ref={(el) => { optionRefs.current[i] = el; }}
                 onClick={() => handleTap(i)}
-                className={`p-10 text-4xl font-bold border transition-all duration-300 ${
-                  selected === i 
-                    ? (i === data.correct_index ? "bg-[var(--team-b)] text-black border-[var(--team-b)]" : "bg-red-500/20 border-red-500 text-white opacity-50")
-                    : "bg-zinc-900 border-white/10 text-white hover:border-white/40"
-                }`}
+                className={twMerge(
+                  clsx(
+                    "p-10 text-4xl font-bold border transition-all duration-300",
+                    selected === i
+                      ? i === data.correct_index
+                        ? "bg-[var(--team-b)] text-black border-[var(--team-b)]"
+                        : "bg-red-500/20 border-red-500 text-white opacity-50"
+                      : "bg-zinc-900 border-white/10 text-white hover:border-white/40"
+                  )
+                )}
               >
                 {opt}
               </button>
             ))}
-          </div>
-
-          <div className="flex items-center gap-2 mt-8 text-orange-500 font-bold tracking-tight">
-            <span>🔥 3 STREAK — YOU&apos;RE ON FIRE</span>
           </div>
         </div>
 

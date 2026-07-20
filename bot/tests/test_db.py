@@ -1,3 +1,4 @@
+import pytest
 from sqlalchemy import inspect
 
 from bot.config import Settings
@@ -26,12 +27,9 @@ def test_posts_unique_constraint(engine):
                 fixture_id=1, post_type="prediction", state="scheduled", attempts=0
             )
         )
-        try:
+        with pytest.raises(sa.exc.IntegrityError):
             conn.execute(
                 posts.insert().values(
                     fixture_id=1, post_type="prediction", state="scheduled", attempts=0
                 )
             )
-            assert False, "expected IntegrityError"
-        except sa.exc.IntegrityError:
-            pass

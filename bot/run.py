@@ -38,6 +38,11 @@ def _upsert_fixtures(conn, fixture_list) -> None:
             )
         ).first()
         if exists:
+            conn.execute(
+                fixtures.update()
+                .where(fixtures.c.id == exists.id)
+                .values(venue=f.venue, start_time=f.start_time, league=f.league)
+            )
             continue
         fid = conn.execute(
             fixtures.insert().values(
@@ -88,6 +93,10 @@ def _try_post(conn, poster, post_row, text: str, now: datetime) -> None:
             .where(posts.c.id == post_row.id)
             .values(state="failed", attempts=attempts)
         )
+    # Commit immediately: poster.send() is an irreversible external side effect.
+    # If a later step in this tick raises, only this state update must survive
+    # the rollback — otherwise the next tick would resend an already-posted tweet.
+    conn.commit()
 
 
 def _due(conn, post_type: str, window_h: float, now: datetime):
@@ -137,6 +146,27 @@ def _season_record(conn) -> tuple[int, int]:
     return correct, total
 
 
+def _home_team_at_venue(df: pd.DataFrame, venue: str, team_a: str, team_b: str) -> str | None:
+    """Which of team_a/team_b is historically the home side at this venue.
+
+    The live fixtures feed carries no home/away designation, so this infers it
+    from team_matches.home (populated by cricsheet parsing) rather than
+    hardcoding a second team->city mapping that could drift from cricsheet.py.
+    Returns None for neutral venues / no history, matching training-time
+    behavior where home_a/home_b are both 0.
+    """
+    if not len(df):
+        return None
+    at_venue = df[(df["venue"] == venue) & (df["home"])]
+    if not len(at_venue):
+        return None
+    counts = at_venue["team"].value_counts()
+    for team in (team_a, team_b):
+        if team in counts.index:
+            return team
+    return None
+
+
 def tick(conn, provider, artifact, poster, now: datetime) -> None:
     try:
         fixture_list, result_list = provider.fetch(conn)
@@ -149,8 +179,9 @@ def tick(conn, provider, artifact, poster, now: datetime) -> None:
     # Prediction window
     due, late = _due(conn, "prediction", PREDICTION_WINDOW_H, now)
     for r in due:
+        home_team = _home_team_at_venue(df, r.venue, r.team_a, r.team_b)
         feats = build_features(
-            df, r.team_a, r.team_b, r.venue, now.date(), home_team=None
+            df, r.team_a, r.team_b, r.venue, now.date(), home_team=home_team
         )
         prob, reasons = predict(artifact, feats)
         existing = conn.execute(
@@ -260,11 +291,12 @@ def main() -> None:
 
     settings = get_settings()
     engine = get_engine(settings.database_url)
-    artifact = load_artifact(Path("bot/artifacts/model.pkl"))
+    artifact = load_artifact(Path(__file__).resolve().parent / "artifacts" / "model.pkl")
     provider = CricApiProvider(settings.cricket_api_base, settings.cricket_api_key)
     poster = Poster(settings)
-    with engine.begin() as conn:
+    with engine.connect() as conn:
         tick(conn, provider, artifact, poster, datetime.now(timezone.utc))
+        conn.commit()
 
 
 if __name__ == "__main__":

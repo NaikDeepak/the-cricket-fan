@@ -26,10 +26,14 @@ async def _get_prediction_for_date(target_date: date_type, session: AsyncSession
         raise HTTPException(status_code=500, detail="Match team data missing")
 
     team_a_v = await session.scalar(
-        select(VenueStats).where(VenueStats.venue == match.venue, VenueStats.team_id == match.team_a_id)
+        select(VenueStats).where(
+            VenueStats.venue == match.venue, VenueStats.team_id == match.team_a_id
+        )
     )
     team_b_v = await session.scalar(
-        select(VenueStats).where(VenueStats.venue == match.venue, VenueStats.team_id == match.team_b_id)
+        select(VenueStats).where(
+            VenueStats.venue == match.venue, VenueStats.team_id == match.team_b_id
+        )
     )
 
     def win_pct(v, wins_attr: str, denom_attr: str) -> int:
@@ -50,7 +54,9 @@ async def _get_prediction_for_date(target_date: date_type, session: AsyncSession
     }
 
     result = calculate_prediction(stats)
-    result["team_color"] = team_a.primary_color if result["team"] == team_a.short_name else team_b.primary_color
+    result["team_color"] = (
+        team_a.primary_color if result["team"] == team_a.short_name else team_b.primary_color
+    )
 
     session.add(DailyCache(cache_key=cache_key, data=result))
     await session.commit()

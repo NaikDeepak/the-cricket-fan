@@ -3,9 +3,9 @@ import { useEffect, useRef } from "react";
 import { gsap } from "@/lib/gsap";
 import type { PvPStat } from "@/lib/api";
 
-type Props = { stats: PvPStat[]; teamAColor: string; teamBColor: string };
+type Props = { stats: PvPStat[] };
 
-export default function BattleBars({ stats, teamAColor, teamBColor }: Props) {
+export default function BattleBars({ stats }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,8 +63,9 @@ export default function BattleBars({ stats, teamAColor, teamBColor }: Props) {
                     background: "var(--team-a)",
                     height: "100%",
                     transformOrigin: "right",
+                    boxShadow: "0 0 15px color-mix(in srgb, var(--team-a) 30%, transparent)",
                   }}
-                  className="rounded-l-sm shadow-[0_0_15px_rgba(0,75,160,0.3)]"
+                  className="rounded-l-sm"
                 />
               </div>
               
@@ -78,8 +79,9 @@ export default function BattleBars({ stats, teamAColor, teamBColor }: Props) {
                     background: "var(--team-b)",
                     height: "100%",
                     transformOrigin: "left",
+                    boxShadow: "0 0 15px color-mix(in srgb, var(--team-b) 30%, transparent)",
                   }}
-                  className="rounded-r-sm shadow-[0_0_15px_rgba(255,203,5,0.3)]"
+                  className="rounded-r-sm"
                 />
               </div>
             </div>

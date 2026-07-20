@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Oswald } from "next/font/google";
 import "./globals.css";
+
+const oswald = Oswald({
+  subsets: ["latin"],
+  style: "normal",
+  display: "swap",
+  variable: "--font-oswald",
+});
 
 export const metadata: Metadata = {
   title: "The Cricket Fan",
@@ -9,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={oswald.variable}>
       <body>
         <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 bg-black/80 backdrop-blur border-b border-zinc-900">
           <Link href="/" className="text-white font-bold tracking-tight text-sm">

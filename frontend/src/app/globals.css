@@ -10,15 +10,6 @@
   unicode-range: U+0000-00FF;
 }
 
-@font-face {
-  font-family: "Oswald";
-  font-style: normal;
-  font-weight: 200 700;
-  font-display: swap;
-  src: url("https://fonts.gstatic.com/s/oswald/v49/TK3iWkUHHAIjg752FD8Gl-1Kwsc.woff2") format("woff2");
-  unicode-range: U+0000-00FF;
-}
-
 :root {
   --bg: #030303;
   --surface: #0a0a0a;
@@ -42,7 +33,7 @@ body { margin: 0; overflow-x: hidden; }
 
 /* Typography scale */
 .text-team-logo {
-  font-family: "Oswald", sans-serif;
+  font-family: var(--font-oswald), sans-serif;
   font-size: clamp(120px, 25vw, 280px);
   font-weight: 700;
   line-height: 0.8;
@@ -66,7 +57,7 @@ body { margin: 0; overflow-x: hidden; }
 }
 
 .text-player-name {
-  font-family: "Oswald", sans-serif;
+  font-family: var(--font-oswald), sans-serif;
   font-size: clamp(24px, 4vw, 44px);
   font-weight: 600;
   text-transform: uppercase;

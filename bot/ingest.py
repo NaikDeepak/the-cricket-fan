@@ -28,7 +28,8 @@ def main() -> None:
     with engine.begin() as conn:
         seed_aliases(conn)
         conn.execute(sa.delete(team_matches))
-        conn.execute(team_matches.insert(), df.to_dict(orient="records"))
+        if not df.empty:
+            conn.execute(team_matches.insert(), df.to_dict(orient="records"))
     print(f"loaded {len(df)} team-match rows")
 
 

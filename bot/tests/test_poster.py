@@ -69,3 +69,27 @@ def test_dry_run_prints_and_succeeds(capsys):
     p = Poster(_settings(dry=True))
     assert p.send("hello") is True
     assert "DRY RUN POST:" in capsys.readouterr().out
+
+
+def test_x_client_session_has_finite_request_timeout(monkeypatch):
+    """tweepy.Client has no timeout constructor param, so a stalled
+    create_tweet() would otherwise block a tick indefinitely."""
+    import requests
+
+    captured = {}
+    real_request = requests.Session.request
+
+    def spy_request(self, method, url, **kwargs):
+        captured.update(kwargs)
+        kwargs.setdefault("timeout", 0.001)
+        try:
+            return real_request(self, method, url, **kwargs)
+        except requests.exceptions.RequestException:
+            return None
+
+    monkeypatch.setattr(requests.Session, "request", spy_request)
+
+    p = Poster(_settings(dry=False))
+    client = p._x_client()
+    client.session.request("GET", "https://example.invalid")
+    assert captured.get("timeout") is not None

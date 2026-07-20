@@ -35,7 +35,7 @@ the-cricket-fan/
 
 **Key tables to precompute:** `player_vs_player`, `venue_stats`, `phase_stats` (powerplay / middle / death). All heavy aggregation happens at ingest time via `backend/scripts/`, not at request time.
 
-**Story generation:** `backend/app/services/story_service.py` calls Anthropic Claude API to produce match narratives, trivia questions, and prediction reasoning. This is the only LLM call path — it wraps pre-aggregated stats in a structured prompt and returns typed JSON.
+**Story generation:** `backend/app/services/story_service.py` calls the Gemini API to produce match narratives, trivia questions, and prediction reasoning. This is the only LLM call path — it wraps pre-aggregated stats in a structured prompt and returns typed JSON.
 
 **Prediction engine:** Weighted factor scoring (recent form, venue advantage, player matchups) — no ML. Logic lives in `backend/app/services/prediction_service.py`.
 
@@ -128,7 +128,7 @@ npm run lint
 - **Next.js 16 has breaking changes from prior versions.** Before writing any Next.js code, check `frontend/node_modules/next/dist/docs/` for current API. Do not rely on training-data knowledge of Next.js conventions.
 - App Router only — no `pages/` directory
 - Tailwind CSS v4 — class syntax may differ from v3; check docs
-- Framer Motion for all animations (stats appear progressively, hover micro-interactions)
+- GSAP for all animations (stats appear progressively, hover micro-interactions)
 - No tables in UI — use cards, gradients, motion components
 - Dark theme with neon / stadium lighting feel; smooth scroll storytelling
 - `clsx` + `tailwind-merge` for conditional class logic
@@ -146,8 +146,7 @@ npm run lint
 ## ENVIRONMENT VARIABLES
 
 See `.env.example` (root) and `.worktrees/mvp/.env.example` (more complete). Required:
-- `ANTHROPIC_API_KEY` — Anthropic SDK (story/trivia/prediction generation)
-- `GEMINI_API_KEY` — Gemini SDK (also used for AI generation in MVP branch)
+- `GEMINI_API_KEY` — Gemini SDK (story/trivia generation)
 - `DATABASE_URL` (asyncpg format: `postgresql+asyncpg://...`; local default: `postgresql+asyncpg://cricket:cricket@localhost:5433/cricket_fan`)
 - `NEXT_PUBLIC_API_URL` (frontend → backend; local default: `http://localhost:8000`)
 - `ENVIRONMENT` — `development` or `production`

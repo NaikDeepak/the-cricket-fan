@@ -44,7 +44,7 @@ export default async function Page() {
       <SectionCounter total={4} />
       <MatchHero data={story} />
       <ExploreQuicklinks data={story} />
-      {battle && <PlayerBattle data={battle} teamA={story.team_a} teamB={story.team_b} />}
+      {battle && <PlayerBattle data={battle} />}
       {trivia && <TriviaCard data={trivia} />}
       {prediction && <PredictionCard data={prediction} />}
       {(!battle || !trivia || !prediction) && (

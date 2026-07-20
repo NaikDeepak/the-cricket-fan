@@ -6,6 +6,33 @@ from datetime import date
 from pathlib import Path
 
 
+# Franchises whose home city is not a substring of the team name, so the
+# default `city in team` check misses them. Cricsheet's `info.city` field is
+# checked against these instead.
+_HOME_CITY_OVERRIDES: dict[str, set[str]] = {
+    "Punjab Kings": {"mohali", "chandigarh", "new chandigarh", "dharamsala"},
+    "Kings XI Punjab": {"mohali", "chandigarh", "new chandigarh", "dharamsala"},
+    "Rajasthan Royals": {"jaipur"},
+    "Gujarat Titans": {"ahmedabad"},
+    "Gujarat Lions": {"rajkot"},
+    "Deccan Chargers": {"hyderabad"},
+    "Kochi Tuskers Kerala": {"kochi"},
+    "Pune Warriors India": {"pune"},
+    "Rising Pune Supergiant": {"pune"},
+    "Rising Pune Supergiants": {"pune"},
+}
+
+
+def _is_home(team: str, city: str) -> bool:
+    if not city:
+        return False
+    city_l = city.lower()
+    override = _HOME_CITY_OVERRIDES.get(team)
+    if override is not None:
+        return city_l in override
+    return city_l in team.lower()
+
+
 @dataclass(frozen=True)
 class TeamMatchRow:
     team: str
@@ -83,7 +110,7 @@ def parse_result(filepath: Path, league: str) -> list[TeamMatchRow]:
                 overs_faced=scored[1] if scored else None,
                 runs_conceded=conceded[0] if conceded else None,
                 overs_bowled=conceded[1] if conceded else None,
-                home=bool(city) and city.lower() in team.lower(),
+                home=_is_home(team, city),
             )
         )
     return rows

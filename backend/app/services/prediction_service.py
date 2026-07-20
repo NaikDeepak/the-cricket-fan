@@ -14,7 +14,7 @@ def calculate_prediction(stats: dict) -> dict:
     factors.append({
         "label": f"{venue_short.upper()} RECORD",
         "detail": f"{team_a} win {a_win}% here · {team_b} win {b_win}%",
-        "a_score": 70 if a_win >= b_win else 30,
+        "a_score": 70 if a_win > b_win else (30 if a_win < b_win else 50),
         "weight": 0.40,
     })
 
@@ -24,7 +24,7 @@ def calculate_prediction(stats: dict) -> dict:
     factors.append({
         "label": "CHASE RECORD",
         "detail": f"{team_a} chase {a_chase}% here · {team_b} chase {b_chase}%",
-        "a_score": 70 if a_chase >= b_chase else 30,
+        "a_score": 70 if a_chase > b_chase else (30 if a_chase < b_chase else 50),
         "weight": 0.35,
     })
 
@@ -34,7 +34,7 @@ def calculate_prediction(stats: dict) -> dict:
     factors.append({
         "label": "BATTING FIREPOWER",
         "detail": f"{team_a} avg {a_avg:.0f} at this ground · {team_b} avg {b_avg:.0f}",
-        "a_score": 65 if a_avg >= b_avg else 40,
+        "a_score": 65 if a_avg > b_avg else (40 if a_avg < b_avg else 50),
         "weight": 0.25,
     })
 

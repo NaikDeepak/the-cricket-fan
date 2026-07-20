@@ -48,6 +48,13 @@ def test_home_flag_city_in_team_name():
     assert by_team["Chennai Super Kings"].home is False
 
 
+def test_home_flag_uses_explicit_lookup_when_city_not_in_team_name():
+    rows = parse_result(DATA / "match_city_not_in_name.json", league="IPL")
+    by_team = {r.team: r for r in rows}
+    assert by_team["Punjab Kings"].home is True
+    assert by_team["Rajasthan Royals"].home is False
+
+
 def test_super_over_uses_main_innings_totals():
     rows = parse_result(DATA / "match_super_over.json", league="IPL")
     by_team = {r.team: r for r in rows}

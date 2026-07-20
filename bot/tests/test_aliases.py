@@ -4,7 +4,7 @@ from bot.aliases import UnresolvedEntityError, resolve, seed_aliases
 from bot.db import aliases
 
 
-@pytest.fixture()
+@pytest.fixture
 def conn(engine):
     with engine.begin() as c:
         yield c

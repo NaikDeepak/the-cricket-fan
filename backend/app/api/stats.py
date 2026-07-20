@@ -37,14 +37,15 @@ async def get_players(
     if len(q) < 2:
         return []
     result = await session.execute(
-        select(Player).where(Player.name.ilike(f"%{q}%")).limit(10)
+        select(Player, Team)
+        .outerjoin(Team, Player.team_id == Team.id)
+        .where(Player.name.ilike(f"%{q}%"))
+        .limit(10)
     )
-    players = result.scalars().all()
-    out = []
-    for p in players:
-        team = await session.get(Team, p.team_id)
-        out.append({"id": p.id, "name": p.name, "team": team.short_name if team else ""})
-    return out
+    return [
+        {"id": p.id, "name": p.name, "team": t.short_name if t else ""}
+        for p, t in result.all()
+    ]
 
 
 @router.get("/player-vs-player", response_model=PlayerVsPlayerResponse)

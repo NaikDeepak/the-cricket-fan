@@ -5,8 +5,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-# Mocking settings
-GEMINI_API_KEY = "AIzaSyB9wA0d2Jxe1g66fAEqKbi6I0hYJdRp6lI"
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 
 class ShockStat(BaseModel):
     value: str
@@ -48,8 +47,8 @@ Rules:
             contents=user_content,
             config=types.GenerateContentConfig(
                 system_instruction=TONE_SYSTEM_PROMPT,
-                # response_mime_type="application/json",
-                # response_schema=StoryOutput,
+                response_mime_type="application/json",
+                response_schema=StoryOutput,
                 max_output_tokens=512,
             ),
         )

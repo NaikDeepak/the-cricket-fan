@@ -4,6 +4,8 @@ jobs:
   retrain:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,14 +31,16 @@ jobs:
            "cpl": "CPL", "hnd": "The Hundred", "t20s": "T20I"}
           EOF
       - name: Refresh feature store
-        run: python -m bot.ingest --cricsheet-dir /tmp/cricsheet
-               --league-map /tmp/league_map.json
-               --database-url "$BOT_DATABASE_URL"
+        run: |
+          python -m bot.ingest --cricsheet-dir /tmp/cricsheet \
+            --league-map /tmp/league_map.json \
+            --database-url "$BOT_DATABASE_URL"
         env:
           BOT_DATABASE_URL: ${{ secrets.BOT_DATABASE_URL }}
       - name: Train
-        run: python -m bot.train --cricsheet-dir /tmp/cricsheet
-               --league-map /tmp/league_map.json --out bot/artifacts
+        run: |
+          python -m bot.train --cricsheet-dir /tmp/cricsheet \
+            --league-map /tmp/league_map.json --out bot/artifacts
       - name: Commit artifact
         run: |
           git config user.name "bot-retrain"

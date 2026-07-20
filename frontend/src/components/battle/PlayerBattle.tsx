@@ -3,11 +3,11 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { gsap } from "@/lib/gsap";
 import BattleBars from "./BattleBars";
-import type { BattleData, TeamInfo } from "@/lib/api";
+import type { BattleData } from "@/lib/api";
 
-type Props = { data: BattleData; teamA: TeamInfo; teamB: TeamInfo };
+type Props = { data: BattleData };
 
-export default function PlayerBattle({ data, teamA, teamB }: Props) {
+export default function PlayerBattle({ data }: Props) {
   const sectionRef = useRef<HTMLElement>(null);
   const playerARef = useRef<HTMLDivElement>(null);
   const playerBRef = useRef<HTMLDivElement>(null);
@@ -77,7 +77,7 @@ export default function PlayerBattle({ data, teamA, teamB }: Props) {
 
       <div className="divider mb-12 opacity-30" />
 
-      <BattleBars stats={data.stats} teamAColor={teamA.color} teamBColor={teamB.color} />
+      <BattleBars stats={data.stats} />
 
       <div className="divider mt-16 mb-8 opacity-30" />
 

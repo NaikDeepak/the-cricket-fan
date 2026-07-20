@@ -13,7 +13,7 @@ DATA = json.loads(
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def provider():
     def handler(request):
         return httpx.Response(200, json=DATA)
@@ -22,7 +22,7 @@ def provider():
     return CricApiProvider("https://api.example.com/v1", "k", client=client)
 
 
-@pytest.fixture()
+@pytest.fixture
 def conn(engine):
     with engine.begin() as c:
         seed_aliases(c)

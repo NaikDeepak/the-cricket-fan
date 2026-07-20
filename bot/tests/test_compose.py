@@ -8,7 +8,7 @@ from bot.features import FEATURE_NAMES
 BANNED = ["bet", "odds", "stake", "wager", "gamble"]
 
 
-def _tm(team, opp, won, venue="Wankhede Stadium, Mumbai", d=date(2025, 4, 1)):
+def _tm(team, opp, *, won, venue="Wankhede Stadium, Mumbai", d=date(2025, 4, 1)):
     return dict(
         team=team,
         opponent=opp,
@@ -50,23 +50,47 @@ def test_prediction_post_unknown_feature_falls_back():
 
 def test_trivia_h2h_when_enough_meetings():
     rows = [
-        _tm("A", "B", True),
-        _tm("A", "B", True),
-        _tm("A", "B", False),
-        _tm("B", "A", False),
-        _tm("B", "A", False),
-        _tm("B", "A", True),
+        _tm("A", "B", won=True),
+        _tm("A", "B", won=True),
+        _tm("A", "B", won=False),
+        _tm("B", "A", won=False),
+        _tm("B", "A", won=False),
+        _tm("B", "A", won=True),
     ]
     text = trivia_post(pd.DataFrame(rows), "A", "B", "Somewhere")
     assert "2" in text and len(text) <= 280  # A leads 2-1
 
 
+def test_trivia_venue_stat_uses_home_win_rate_not_all_rows():
+    """team_matches has two rows per match (one per team's perspective), so
+    naively averaging `won` over all venue rows is tautologically ~50% (every
+    match contributes exactly one win and one loss). The stat must be
+    computed over one side per match (home) to be meaningful."""
+    venue = "Eden Gardens, Kolkata"
+    rows = []
+    for _ in range(4):
+        rows.append(_tm("Home Team", "Away Team", won=True, venue=venue))
+        rows[-1]["home"] = True
+        rows.append(_tm("Away Team", "Home Team", won=False, venue=venue))
+    rows.append(_tm("Home Team", "Away Team", won=False, venue=venue))
+    rows[-1]["home"] = True
+    rows.append(_tm("Away Team", "Home Team", won=True, venue=venue))
+    # Naive all-rows average: 5 wins / 10 rows = 50%. Home-only: 4/5 = 80%.
+    text = trivia_post(pd.DataFrame(rows), "X", "Y", venue)
+    assert "80%" in text
+    assert "50%" not in text
+
+
 def test_trivia_falls_back_to_venue_then_generic():
-    venue_rows = [_tm("C", "D", True) for _ in range(6)]
+    venue_rows = []
+    for _ in range(6):
+        venue_rows.append(_tm("C", "D", won=True))
+        venue_rows[-1]["home"] = True
     text = trivia_post(pd.DataFrame(venue_rows), "A", "B", "Wankhede Stadium, Mumbai")
     assert len(text) <= 280
+    assert "100%" in text  # exercises the venue branch, not the generic fallback
     empty = trivia_post(
-        pd.DataFrame([], columns=list(_tm("x", "y", True))), "A", "B", "Nowhere"
+        pd.DataFrame([], columns=list(_tm("x", "y", won=True))), "A", "B", "Nowhere"
     )
     assert len(empty) <= 280 and "A" in empty
 

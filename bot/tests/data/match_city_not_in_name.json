@@ -1,0 +1,25 @@
+{
+    "info": {
+        "dates": [
+            "2025-04-12"
+        ],
+        "season": "2025",
+        "venue": "IS Bindra Stadium, Mohali",
+        "city": "Mohali",
+        "teams": [
+            "Punjab Kings",
+            "Rajasthan Royals"
+        ],
+        "outcome": {
+            "winner": "Punjab Kings",
+            "by": {
+                "runs": 5
+            }
+        },
+        "toss": {
+            "winner": "Punjab Kings",
+            "decision": "bat"
+        }
+    },
+    "innings": []
+}

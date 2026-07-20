@@ -62,12 +62,16 @@ def trivia_post(df: pd.DataFrame, team_a: str, team_b: str, venue: str) -> str:
             )
             return _truncate(text)
         at_venue = df[df["venue"] == venue]
-        if len(at_venue) >= 5:
-            win_rate = at_venue["won"].mean()
+        # team_matches has one row per team per match; average over all rows
+        # is tautologically ~50% (each match contributes one win, one loss).
+        # Filter to the home side so the stat reflects one row per match.
+        home_rows = at_venue[at_venue["home"]]
+        if len(home_rows) >= 5:
+            win_rate = home_rows["won"].mean()
             first = venue.split(",")[0]
             text = (
-                f"📊 {first}: teams batting here have won "
-                f"{round(win_rate * 100)}% of recent matches.\n"
+                f"📊 {first}: home teams have won "
+                f"{round(win_rate * 100)}% of recent matches here.\n"
                 f"{team_a} vs {team_b} today. #Cricket"
             )
             return _truncate(text)

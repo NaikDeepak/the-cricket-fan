@@ -5,16 +5,31 @@ Priority when near quota: prediction > result > trivia.
 
 import logging
 from datetime import datetime
+from typing import TYPE_CHECKING
 
+import requests
 import sqlalchemy as sa
 
 from .config import Settings
 from .db import posts
 
+if TYPE_CHECKING:
+    import tweepy
+
 logger = logging.getLogger(__name__)
 
 TRIVIA_CUTOFF = 450  # at/above: stop trivia
 RESULTS_ONLY_CUTOFF = 490  # at/above: results only
+X_REQUEST_TIMEOUT_S = 10
+
+
+class _TimeoutSession(requests.Session):
+    """tweepy.Client takes no timeout parameter; without one a stalled
+    create_tweet() call can block a tick indefinitely."""
+
+    def request(self, *args, **kwargs):
+        kwargs.setdefault("timeout", X_REQUEST_TIMEOUT_S)
+        return super().request(*args, **kwargs)
 
 
 def month_post_count(conn, now: datetime) -> int:
@@ -39,7 +54,7 @@ class Poster:
         self.settings = settings
         self._client = None
 
-    def _x_client(self):
+    def _x_client(self) -> "tweepy.Client":
         if self._client is None:
             import tweepy
 
@@ -49,6 +64,7 @@ class Poster:
                 access_token=self.settings.x_access_token,
                 access_token_secret=self.settings.x_access_token_secret,
             )
+            self._client.session = _TimeoutSession()
         return self._client
 
     def send(self, text: str) -> bool:

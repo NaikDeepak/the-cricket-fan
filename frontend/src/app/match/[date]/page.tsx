@@ -29,7 +29,7 @@ export default async function MatchPage({
     >
       <SectionCounter total={4} />
       <MatchHero data={story} />
-      <PlayerBattle data={battle} teamA={story.team_a} teamB={story.team_b} />
+      <PlayerBattle data={battle} />
       <TriviaCard data={trivia} />
       <PredictionCard data={prediction} />
     </main>
