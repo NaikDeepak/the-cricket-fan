@@ -1,0 +1,19 @@
+name: bot-ci
+on:
+  push:
+    paths: ["bot/**", ".github/workflows/bot-*.yml"]
+  pull_request:
+    paths: ["bot/**"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r bot/requirements.txt
+      - run: python -m pytest bot/tests -v
+        env:
+          BOT_DRY_RUN: "1"

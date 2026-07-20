@@ -1,0 +1,37 @@
+"""Refresh the Neon feature store: create tables, seed aliases, reload team_matches.
+
+Raw Cricsheet JSON stays local to the runner — only aggregates enter Postgres
+(Neon 500MB free-tier budget).
+"""
+import argparse
+import json
+from pathlib import Path
+
+import sqlalchemy as sa
+
+from .aliases import seed_aliases
+from .db import get_engine, metadata, team_matches
+from .train import build_team_matches
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--cricsheet-dir", type=Path, required=True)
+    ap.add_argument("--league-map", type=Path, required=True)
+    ap.add_argument("--database-url", required=True)
+    args = ap.parse_args()
+
+    df = build_team_matches(args.cricsheet_dir,
+                            json.loads(args.league_map.read_text()))
+    engine = get_engine(args.database_url)
+    metadata.create_all(engine)
+    with engine.begin() as conn:
+        seed_aliases(conn)
+        conn.execute(sa.delete(team_matches))
+        conn.execute(team_matches.insert(),
+                     df.to_dict(orient="records"))
+    print(f"loaded {len(df)} team-match rows")
+
+
+if __name__ == "__main__":
+    main()
