@@ -1,0 +1,66 @@
+{
+  "status": "success",
+  "data": [
+    {
+      "id": "up-1",
+      "name": "Royal Challengers Bangalore vs Chennai Super Kings",
+      "matchType": "t20",
+      "status": "Match not started",
+      "venue": "M.Chinnaswamy Stadium",
+      "dateTimeGMT": "2026-07-20T14:00:00",
+      "teams": ["Royal Challengers Bangalore", "Chennai Super Kings"],
+      "series": "Indian Premier League",
+      "matchStarted": false,
+      "matchEnded": false
+    },
+    {
+      "id": "done-1",
+      "name": "Mumbai Indians vs Kolkata Knight Riders",
+      "matchType": "t20",
+      "status": "Mumbai Indians won by 5 wkts",
+      "venue": "M.Chinnaswamy Stadium",
+      "dateTimeGMT": "2026-07-18T14:00:00",
+      "teams": ["Mumbai Indians", "Kolkata Knight Riders"],
+      "series": "Indian Premier League",
+      "matchStarted": true,
+      "matchEnded": true,
+      "matchWinner": "Mumbai Indians"
+    },
+    {
+      "id": "nr-1",
+      "name": "Delhi Capitals vs Punjab Kings",
+      "matchType": "t20",
+      "status": "Match abandoned due to rain",
+      "venue": "M.Chinnaswamy Stadium",
+      "dateTimeGMT": "2026-07-18T10:00:00",
+      "teams": ["Delhi Capitals", "Punjab Kings"],
+      "series": "Indian Premier League",
+      "matchStarted": true,
+      "matchEnded": true
+    },
+    {
+      "id": "unknown-1",
+      "name": "Gotham Galacticos vs Chennai Super Kings",
+      "matchType": "t20",
+      "status": "Match not started",
+      "venue": "M.Chinnaswamy Stadium",
+      "dateTimeGMT": "2026-07-21T14:00:00",
+      "teams": ["Gotham Galacticos", "Chennai Super Kings"],
+      "series": "Indian Premier League",
+      "matchStarted": false,
+      "matchEnded": false
+    },
+    {
+      "id": "odi-1",
+      "name": "India vs Australia",
+      "matchType": "odi",
+      "status": "Match not started",
+      "venue": "M.Chinnaswamy Stadium",
+      "dateTimeGMT": "2026-07-22T09:00:00",
+      "teams": ["India", "Australia"],
+      "series": "ODI Series",
+      "matchStarted": false,
+      "matchEnded": false
+    }
+  ]
+}
