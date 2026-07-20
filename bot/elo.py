@@ -1,4 +1,5 @@
 """Standard Elo baseline. The trained model must beat this on held-out data to ship."""
+
 from collections import defaultdict
 
 K = 20

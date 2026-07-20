@@ -2,6 +2,7 @@
 
 Hard-fail rule applied here: unresolved team/venue -> match skipped + logged.
 """
+
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -33,15 +34,18 @@ class Result:
 
 
 class CricApiProvider:
-    def __init__(self, base_url: str, api_key: str,
-                 client: httpx.Client | None = None) -> None:
+    def __init__(
+        self, base_url: str, api_key: str, client: httpx.Client | None = None
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.client = client or httpx.Client(timeout=20)
 
     def fetch(self, conn) -> tuple[list[Fixture], list[Result]]:
-        resp = self.client.get(f"{self.base_url}/currentMatches",
-                               params={"apikey": self.api_key, "offset": 0})
+        resp = self.client.get(
+            f"{self.base_url}/currentMatches",
+            params={"apikey": self.api_key, "offset": 0},
+        )
         resp.raise_for_status()
         payload = resp.json()
         fixtures: list[Fixture] = []
@@ -58,13 +62,18 @@ class CricApiProvider:
             if len(teams) != 2:
                 continue
             if not m.get("matchEnded"):
-                fixtures.append(Fixture(
-                    provider_match_id=str(m["id"]),
-                    team_a=teams[0], team_b=teams[1], venue=venue,
-                    league=m.get("series", "T20"),
-                    start_time=datetime.fromisoformat(
-                        m["dateTimeGMT"]).replace(tzinfo=timezone.utc),
-                ))
+                fixtures.append(
+                    Fixture(
+                        provider_match_id=str(m["id"]),
+                        team_a=teams[0],
+                        team_b=teams[1],
+                        venue=venue,
+                        league=m.get("series", "T20"),
+                        start_time=datetime.fromisoformat(m["dateTimeGMT"]).replace(
+                            tzinfo=timezone.utc
+                        ),
+                    )
+                )
             else:
                 status = m.get("status", "").lower()
                 no_result = any(k in status for k in ABANDONED_MARKERS)
@@ -74,10 +83,14 @@ class CricApiProvider:
                     try:
                         winner = resolve(conn, "team", winner_raw)
                     except UnresolvedEntityError:
-                        no_result = True   # can't attribute -> treat as void
+                        no_result = True  # can't attribute -> treat as void
                 elif not no_result:
-                    no_result = True       # ended without winner info -> void
-                results.append(Result(
-                    provider_match_id=str(m["id"]),
-                    winner=winner, no_result=no_result))
+                    no_result = True  # ended without winner info -> void
+                results.append(
+                    Result(
+                        provider_match_id=str(m["id"]),
+                        winner=winner,
+                        no_result=no_result,
+                    )
+                )
         return fixtures, results

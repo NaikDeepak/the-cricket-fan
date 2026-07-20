@@ -21,13 +21,23 @@ def synthetic_team_matches(n_matches=600, seed=7) -> pd.DataFrame:
         p_a = 1 / (1 + np.exp(-(b - a) * 0.55))
         a_won = rng.random() < p_a
         for team_i, opp_i, won in [(a, b, a_won), (b, a, not a_won)]:
-            rows.append(dict(
-                team=TEAMS[team_i], opponent=TEAMS[opp_i], date=d,
-                season=str(d.year), league="SYN", venue=f"V{team_i % 3}",
-                won=bool(won), dls=False,
-                runs_scored=150.0 + (5 - team_i) * 6 + rng.normal(0, 8),
-                overs_faced=20.0, runs_conceded=150.0 + (5 - opp_i) * 6,
-                overs_bowled=20.0, home=False))
+            rows.append(
+                dict(
+                    team=TEAMS[team_i],
+                    opponent=TEAMS[opp_i],
+                    date=d,
+                    season=str(d.year),
+                    league="SYN",
+                    venue=f"V{team_i % 3}",
+                    won=bool(won),
+                    dls=False,
+                    runs_scored=150.0 + (5 - team_i) * 6 + rng.normal(0, 8),
+                    overs_faced=20.0,
+                    runs_conceded=150.0 + (5 - opp_i) * 6,
+                    overs_bowled=20.0,
+                    home=False,
+                )
+            )
     return pd.DataFrame(rows)
 
 
@@ -51,16 +61,42 @@ def test_build_dataset_home_team_survives_dedup():
     per-team row. The home flag must be resolved from BOTH rows of the pair,
     not just whichever row happens to survive dedup."""
     d = date(2024, 4, 1)
-    df = pd.DataFrame([
-        # away team's row listed FIRST -> it is the one drop_duplicates keeps
-        dict(team="Beta", opponent="Alpha", date=d, season="2024", league="SYN",
-             venue="V0", won=False, dls=False, runs_scored=150.0, overs_faced=20.0,
-             runs_conceded=160.0, overs_bowled=20.0, home=False),
-        # home team's row listed SECOND -> would be dropped as a duplicate
-        dict(team="Alpha", opponent="Beta", date=d, season="2024", league="SYN",
-             venue="V0", won=True, dls=False, runs_scored=160.0, overs_faced=20.0,
-             runs_conceded=150.0, overs_bowled=20.0, home=True),
-    ])
+    df = pd.DataFrame(
+        [
+            # away team's row listed FIRST -> it is the one drop_duplicates keeps
+            dict(
+                team="Beta",
+                opponent="Alpha",
+                date=d,
+                season="2024",
+                league="SYN",
+                venue="V0",
+                won=False,
+                dls=False,
+                runs_scored=150.0,
+                overs_faced=20.0,
+                runs_conceded=160.0,
+                overs_bowled=20.0,
+                home=False,
+            ),
+            # home team's row listed SECOND -> would be dropped as a duplicate
+            dict(
+                team="Alpha",
+                opponent="Beta",
+                date=d,
+                season="2024",
+                league="SYN",
+                venue="V0",
+                won=True,
+                dls=False,
+                runs_scored=160.0,
+                overs_faced=20.0,
+                runs_conceded=150.0,
+                overs_bowled=20.0,
+                home=True,
+            ),
+        ]
+    )
     X, y, meta = build_dataset(df)
     assert len(X) == 1
     # Alpha < Beta alphabetically -> team_a = Alpha, and Alpha is the home team
@@ -74,8 +110,15 @@ def test_train_writes_artifact_and_metrics(tmp_path):
     metrics = train_and_evaluate(X, y, meta, out_dir=tmp_path)
     assert (tmp_path / "model.pkl").exists()
     saved = json.loads((tmp_path / "metrics.json").read_text())
-    for key in ["model", "elo", "always_home_accuracy", "gate_passed",
-                "n_train", "n_test", "test_period"]:
+    for key in [
+        "model",
+        "elo",
+        "always_home_accuracy",
+        "gate_passed",
+        "n_train",
+        "n_test",
+        "test_period",
+    ]:
         assert key in saved
     assert 0.0 < metrics["model"]["log_loss"] < 1.5
     # synthetic league is learnable: model should beat coin flip clearly

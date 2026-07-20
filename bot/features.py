@@ -4,6 +4,7 @@ All aggregates read rows with date STRICTLY BEFORE the target match date.
 Weights: RECENCY_DECAY^k over match recency, times SEASON_DECAY^(seasons back)
 to downweight prior-season form (squad churn).
 """
+
 from datetime import date
 
 import numpy as np
@@ -11,15 +12,23 @@ import pandas as pd
 
 RECENCY_DECAY = 0.9
 SEASON_DECAY = 0.5
-GLOBAL_RR_PRIOR = 7.8   # long-run T20 run rate, used when no history
+GLOBAL_RR_PRIOR = 7.8  # long-run T20 run rate, used when no history
 NEUTRAL = 0.5
 
 FEATURE_NAMES = [
-    "form5_a", "form5_b", "form10_a", "form10_b",
+    "form5_a",
+    "form5_b",
+    "form10_a",
+    "form10_b",
     "h2h_a_rate",
-    "venue_a_rate", "venue_b_rate",
-    "bat_rr_a", "bat_rr_b", "bowl_econ_a", "bowl_econ_b",
-    "home_a", "home_b",
+    "venue_a_rate",
+    "venue_b_rate",
+    "bat_rr_a",
+    "bat_rr_b",
+    "bowl_econ_a",
+    "bowl_econ_b",
+    "home_a",
+    "home_b",
 ]
 
 
@@ -35,8 +44,7 @@ def _weights(sub: pd.DataFrame, target_season: int) -> np.ndarray:
     return recency * (SEASON_DECAY ** seasons_back.to_numpy())
 
 
-def _weighted_rate(sub: pd.DataFrame, target_season: int,
-                   last: int | None) -> float:
+def _weighted_rate(sub: pd.DataFrame, target_season: int, last: int | None) -> float:
     if sub.empty:
         return NEUTRAL
     sub = sub.sort_values("date")
@@ -56,9 +64,14 @@ def _run_rate(sub: pd.DataFrame, runs_col: str, overs_col: str) -> float:
     return float(sub[runs_col].sum() / sub[overs_col].sum())
 
 
-def build_features(df: pd.DataFrame, team_a: str, team_b: str, venue: str,
-                   match_date: date, home_team: str | None = None
-                   ) -> dict[str, float]:
+def build_features(
+    df: pd.DataFrame,
+    team_a: str,
+    team_b: str,
+    venue: str,
+    match_date: date,
+    home_team: str | None = None,
+) -> dict[str, float]:
     past = df[pd.to_datetime(df["date"]).dt.date < match_date] if len(df) else df
     season = match_date.year
     a = past[past["team"] == team_a] if len(past) else past
@@ -70,17 +83,23 @@ def build_features(df: pd.DataFrame, team_a: str, team_b: str, venue: str,
         "form10_a": _weighted_rate(a, season, 10),
         "form10_b": _weighted_rate(b, season, 10),
         "h2h_a_rate": _weighted_rate(h2h, season, None),
-        "venue_a_rate": _weighted_rate(a[a["venue"] == venue] if len(a) else a,
-                                       season, None),
-        "venue_b_rate": _weighted_rate(b[b["venue"] == venue] if len(b) else b,
-                                       season, None),
-        "bat_rr_a": _run_rate(a, "runs_scored", "overs_faced") if len(a)
+        "venue_a_rate": _weighted_rate(
+            a[a["venue"] == venue] if len(a) else a, season, None
+        ),
+        "venue_b_rate": _weighted_rate(
+            b[b["venue"] == venue] if len(b) else b, season, None
+        ),
+        "bat_rr_a": _run_rate(a, "runs_scored", "overs_faced")
+        if len(a)
         else GLOBAL_RR_PRIOR,
-        "bat_rr_b": _run_rate(b, "runs_scored", "overs_faced") if len(b)
+        "bat_rr_b": _run_rate(b, "runs_scored", "overs_faced")
+        if len(b)
         else GLOBAL_RR_PRIOR,
-        "bowl_econ_a": _run_rate(a, "runs_conceded", "overs_bowled") if len(a)
+        "bowl_econ_a": _run_rate(a, "runs_conceded", "overs_bowled")
+        if len(a)
         else GLOBAL_RR_PRIOR,
-        "bowl_econ_b": _run_rate(b, "runs_conceded", "overs_bowled") if len(b)
+        "bowl_econ_b": _run_rate(b, "runs_conceded", "overs_bowled")
+        if len(b)
         else GLOBAL_RR_PRIOR,
         "home_a": 1.0 if home_team == team_a else 0.0,
         "home_b": 1.0 if home_team == team_b else 0.0,

@@ -3,6 +3,7 @@
 Hard-fail rule: unresolved name raises UnresolvedEntityError; callers must skip
 the match and log — never predict through unresolved entities.
 """
+
 import sqlalchemy as sa
 
 from .db import aliases
@@ -59,8 +60,10 @@ def seed_aliases(conn) -> None:
     for kind, alias, canonical in SEED:
         exists = conn.execute(
             sa.select(aliases.c.id).where(
-                aliases.c.kind == kind, aliases.c.alias == alias)
+                aliases.c.kind == kind, aliases.c.alias == alias
+            )
         ).first()
         if not exists:
-            conn.execute(aliases.insert().values(
-                kind=kind, alias=alias, canonical=canonical))
+            conn.execute(
+                aliases.insert().values(kind=kind, alias=alias, canonical=canonical)
+            )

@@ -11,7 +11,8 @@ from bot.run import tick
 from bot.tests.test_predict import _artifact
 
 pytestmark = pytest.mark.filterwarnings(
-    "ignore:LightGBM binary classifier.*:UserWarning")
+    "ignore:LightGBM binary classifier.*:UserWarning"
+)
 
 NOW = datetime(2026, 7, 19, 12, 0, tzinfo=timezone.utc)
 
@@ -34,9 +35,14 @@ class SpyPoster:
 
 
 def _fixture(match_id="m1", hours_from_now=2.5):
-    return Fixture(provider_match_id=match_id, team_a="Chennai Super Kings",
-                   team_b="Mumbai Indians", venue="Wankhede Stadium, Mumbai",
-                   league="IPL", start_time=NOW + timedelta(hours=hours_from_now))
+    return Fixture(
+        provider_match_id=match_id,
+        team_a="Chennai Super Kings",
+        team_b="Mumbai Indians",
+        venue="Wankhede Stadium, Mumbai",
+        league="IPL",
+        start_time=NOW + timedelta(hours=hours_from_now),
+    )
 
 
 @pytest.fixture()
@@ -50,26 +56,50 @@ def conn(engine):
         seed_aliases(c)
         # minimal history so features/trivia have data
         for i in range(6):
-            c.execute(team_matches.insert().values(
-                team="Chennai Super Kings", opponent="Mumbai Indians",
-                date=date(2026, 6, 1 + i), season="2026", league="IPL",
-                venue="Wankhede Stadium, Mumbai", won=i % 2 == 0, dls=False,
-                runs_scored=160.0, overs_faced=20.0, runs_conceded=155.0,
-                overs_bowled=20.0, home=False))
-            c.execute(team_matches.insert().values(
-                team="Mumbai Indians", opponent="Chennai Super Kings",
-                date=date(2026, 6, 1 + i), season="2026", league="IPL",
-                venue="Wankhede Stadium, Mumbai", won=i % 2 == 1, dls=False,
-                runs_scored=155.0, overs_faced=20.0, runs_conceded=160.0,
-                overs_bowled=20.0, home=True))
+            c.execute(
+                team_matches.insert().values(
+                    team="Chennai Super Kings",
+                    opponent="Mumbai Indians",
+                    date=date(2026, 6, 1 + i),
+                    season="2026",
+                    league="IPL",
+                    venue="Wankhede Stadium, Mumbai",
+                    won=i % 2 == 0,
+                    dls=False,
+                    runs_scored=160.0,
+                    overs_faced=20.0,
+                    runs_conceded=155.0,
+                    overs_bowled=20.0,
+                    home=False,
+                )
+            )
+            c.execute(
+                team_matches.insert().values(
+                    team="Mumbai Indians",
+                    opponent="Chennai Super Kings",
+                    date=date(2026, 6, 1 + i),
+                    season="2026",
+                    league="IPL",
+                    venue="Wankhede Stadium, Mumbai",
+                    won=i % 2 == 1,
+                    dls=False,
+                    runs_scored=155.0,
+                    overs_faced=20.0,
+                    runs_conceded=160.0,
+                    overs_bowled=20.0,
+                    home=True,
+                )
+            )
         yield c
 
 
 def _post_states(conn, match_id="m1"):
-    fid = conn.execute(sa.select(fixtures.c.id).where(
-        fixtures.c.provider_match_id == match_id)).scalar_one()
-    rows = conn.execute(sa.select(posts.c.post_type, posts.c.state).where(
-        posts.c.fixture_id == fid)).all()
+    fid = conn.execute(
+        sa.select(fixtures.c.id).where(fixtures.c.provider_match_id == match_id)
+    ).scalar_one()
+    rows = conn.execute(
+        sa.select(posts.c.post_type, posts.c.state).where(posts.c.fixture_id == fid)
+    ).all()
     return {r.post_type: r.state for r in rows}
 
 
@@ -80,8 +110,10 @@ def test_prediction_posted_inside_window(conn, art):
     assert states["prediction"] == "posted"
     assert states.get("trivia", "scheduled") == "scheduled"  # T-1h not reached
     assert len(poster.sent) == 1 and "%" in poster.sent[0]
-    assert conn.execute(sa.select(sa.func.count()).select_from(
-        predictions)).scalar_one() == 1
+    assert (
+        conn.execute(sa.select(sa.func.count()).select_from(predictions)).scalar_one()
+        == 1
+    )
 
 
 def test_idempotent_second_tick_no_duplicate(conn, art):
@@ -114,7 +146,7 @@ def test_failed_post_retries_then_abandons(conn, art):
         tick(conn, provider, art, bad, NOW + timedelta(minutes=i))
     states = _post_states(conn)
     assert states["prediction"] == "abandoned"
-    assert len(bad.sent) == 3   # MAX_ATTEMPTS
+    assert len(bad.sent) == 3  # MAX_ATTEMPTS
 
 
 def test_result_flow_correct_and_record(conn, art):

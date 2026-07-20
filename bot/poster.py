@@ -2,6 +2,7 @@
 
 Priority when near quota: prediction > result > trivia.
 """
+
 import logging
 from datetime import datetime
 
@@ -12,15 +13,16 @@ from .db import posts
 
 logger = logging.getLogger(__name__)
 
-TRIVIA_CUTOFF = 450        # at/above: stop trivia
+TRIVIA_CUTOFF = 450  # at/above: stop trivia
 RESULTS_ONLY_CUTOFF = 490  # at/above: results only
 
 
 def month_post_count(conn, now: datetime) -> int:
     start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     return conn.execute(
-        sa.select(sa.func.count()).select_from(posts).where(
-            posts.c.state == "posted", posts.c.posted_at >= start)
+        sa.select(sa.func.count())
+        .select_from(posts)
+        .where(posts.c.state == "posted", posts.c.posted_at >= start)
     ).scalar_one()
 
 
@@ -40,6 +42,7 @@ class Poster:
     def _x_client(self):
         if self._client is None:
             import tweepy
+
             self._client = tweepy.Client(
                 consumer_key=self.settings.x_api_key,
                 consumer_secret=self.settings.x_api_secret,

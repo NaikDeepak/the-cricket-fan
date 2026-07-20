@@ -6,11 +6,35 @@ import pytest
 from bot.features import FEATURE_NAMES, build_features
 
 
-def _row(team, opp, d, won, season="2025", venue="V", dls=False,
-         rs=160.0, of=20.0, rc=150.0, ob=20.0, home=False):
-    return dict(team=team, opponent=opp, date=d, season=season, league="IPL",
-                venue=venue, won=won, dls=dls, runs_scored=rs, overs_faced=of,
-                runs_conceded=rc, overs_bowled=ob, home=home)
+def _row(
+    team,
+    opp,
+    d,
+    won,
+    season="2025",
+    venue="V",
+    dls=False,
+    rs=160.0,
+    of=20.0,
+    rc=150.0,
+    ob=20.0,
+    home=False,
+):
+    return dict(
+        team=team,
+        opponent=opp,
+        date=d,
+        season=season,
+        league="IPL",
+        venue=venue,
+        won=won,
+        dls=dls,
+        runs_scored=rs,
+        overs_faced=of,
+        runs_conceded=rc,
+        overs_bowled=ob,
+        home=home,
+    )
 
 
 @pytest.fixture()
@@ -73,9 +97,23 @@ def test_season_decay_downweights_last_season():
 
 
 def test_no_history_neutral_defaults():
-    df = pd.DataFrame(columns=["team", "opponent", "date", "season", "league",
-                               "venue", "won", "dls", "runs_scored", "overs_faced",
-                               "runs_conceded", "overs_bowled", "home"])
+    df = pd.DataFrame(
+        columns=[
+            "team",
+            "opponent",
+            "date",
+            "season",
+            "league",
+            "venue",
+            "won",
+            "dls",
+            "runs_scored",
+            "overs_faced",
+            "runs_conceded",
+            "overs_bowled",
+            "home",
+        ]
+    )
     f = build_features(df, "A", "B", "V", date(2025, 5, 1))
     assert f["form5_a"] == 0.5 and f["h2h_a_rate"] == 0.5
     assert f["bat_rr_a"] == pytest.approx(7.8)  # global T20 prior

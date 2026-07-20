@@ -1,4 +1,5 @@
 """Result-level Cricsheet parser. One match file -> two TeamMatchRow (or [] if no result)."""
+
 import json
 from dataclasses import dataclass
 from datetime import date
@@ -68,19 +69,21 @@ def parse_result(filepath: Path, league: str) -> list[TeamMatchRow]:
         opponent = next(t for t in teams if t != team)
         scored = totals.get(team)
         conceded = totals.get(opponent)
-        rows.append(TeamMatchRow(
-            team=team,
-            opponent=opponent,
-            date=match_date,
-            season=season,
-            league=league,
-            venue=venue,
-            won=(team == winner),
-            dls=dls,
-            runs_scored=scored[0] if scored else None,
-            overs_faced=scored[1] if scored else None,
-            runs_conceded=conceded[0] if conceded else None,
-            overs_bowled=conceded[1] if conceded else None,
-            home=bool(city) and city.lower() in team.lower(),
-        ))
+        rows.append(
+            TeamMatchRow(
+                team=team,
+                opponent=opponent,
+                date=match_date,
+                season=season,
+                league=league,
+                venue=venue,
+                won=(team == winner),
+                dls=dls,
+                runs_scored=scored[0] if scored else None,
+                overs_faced=scored[1] if scored else None,
+                runs_conceded=conceded[0] if conceded else None,
+                overs_bowled=conceded[1] if conceded else None,
+                home=bool(city) and city.lower() in team.lower(),
+            )
+        )
     return rows

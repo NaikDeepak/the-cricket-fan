@@ -1,4 +1,5 @@
 """Post text composition. Everything <=280 chars, statistical language only."""
+
 import logging
 
 import pandas as pd
@@ -34,14 +35,18 @@ def _truncate(text: str) -> str:
     return text if len(text) <= 280 else text[:277] + "..."
 
 
-def prediction_post(team_a: str, team_b: str, prob_a: float,
-                    reasons: list[str], league: str) -> str:
-    fav, other, p = (team_a, team_b, prob_a) if prob_a >= 0.5 else \
-        (team_b, team_a, 1 - prob_a)
+def prediction_post(
+    team_a: str, team_b: str, prob_a: float, reasons: list[str], league: str
+) -> str:
+    fav, other, p = (
+        (team_a, team_b, prob_a) if prob_a >= 0.5 else (team_b, team_a, 1 - prob_a)
+    )
     why = ", ".join(dict.fromkeys(_phrase(r) for r in reasons))
-    text = (f"🔮 {league}: {fav} {round(p * 100)}% to beat {other}.\n"
-            f"Why: {why}.\n"
-            f"Model pick, publicly tracked. #Cricket")
+    text = (
+        f"🔮 {league}: {fav} {round(p * 100)}% to beat {other}.\n"
+        f"Why: {why}.\n"
+        f"Model pick, publicly tracked. #Cricket"
+    )
     return _truncate(text)
 
 
@@ -50,30 +55,44 @@ def trivia_post(df: pd.DataFrame, team_a: str, team_b: str, venue: str) -> str:
         h2h = df[(df["team"] == team_a) & (df["opponent"] == team_b)]
         if len(h2h) >= 3:
             wins_a = int(h2h["won"].sum())
-            text = (f"📊 {team_a} vs {team_b}: {team_a} lead {wins_a}-"
-                    f"{len(h2h) - wins_a} in their last {len(h2h)} meetings.\n"
-                    f"Today's chapter starts soon. #Cricket")
+            text = (
+                f"📊 {team_a} vs {team_b}: {team_a} lead {wins_a}-"
+                f"{len(h2h) - wins_a} in their last {len(h2h)} meetings.\n"
+                f"Today's chapter starts soon. #Cricket"
+            )
             return _truncate(text)
         at_venue = df[df["venue"] == venue]
         if len(at_venue) >= 5:
             win_rate = at_venue["won"].mean()
             first = venue.split(",")[0]
-            text = (f"📊 {first}: teams batting here have won "
-                    f"{round(win_rate * 100)}% of recent matches.\n"
-                    f"{team_a} vs {team_b} today. #Cricket")
+            text = (
+                f"📊 {first}: teams batting here have won "
+                f"{round(win_rate * 100)}% of recent matches.\n"
+                f"{team_a} vs {team_b} today. #Cricket"
+            )
             return _truncate(text)
-    return _truncate(f"📊 {team_a} vs {team_b} today. "
-                     f"Two lineups, one result. Numbers at stumps. #Cricket")
+    return _truncate(
+        f"📊 {team_a} vs {team_b} today. "
+        f"Two lineups, one result. Numbers at stumps. #Cricket"
+    )
 
 
-def result_post(team_a: str, team_b: str, prob_a: float, winner: str,
-                season_correct: int, season_total: int) -> str:
+def result_post(
+    team_a: str,
+    team_b: str,
+    prob_a: float,
+    winner: str,
+    season_correct: int,
+    season_total: int,
+) -> str:
     fav = team_a if prob_a >= 0.5 else team_b
     p = max(prob_a, 1 - prob_a)
     hit = winner == fav
     mark = "✅" if hit else "❌"
     verdict = "Called it" if hit else "Missed"
-    text = (f"{mark} {verdict}: {fav} {round(p * 100)}% — {winner} won.\n"
-            f"Season record: {season_correct}/{season_total}. "
-            f"Every pick tracked, hits and misses. #Cricket")
+    text = (
+        f"{mark} {verdict}: {fav} {round(p * 100)}% — {winner} won.\n"
+        f"Season record: {season_correct}/{season_total}. "
+        f"Every pick tracked, hits and misses. #Cricket"
+    )
     return _truncate(text)

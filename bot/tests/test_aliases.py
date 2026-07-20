@@ -11,16 +11,25 @@ def conn(engine):
 
 
 def test_resolve_via_alias(conn):
-    conn.execute(aliases.insert().values(
-        kind="team", alias="royal challengers bangalore",
-        canonical="Royal Challengers Bengaluru"))
-    assert resolve(conn, "team", "Royal Challengers Bangalore") == \
-        "Royal Challengers Bengaluru"
+    conn.execute(
+        aliases.insert().values(
+            kind="team",
+            alias="royal challengers bangalore",
+            canonical="Royal Challengers Bengaluru",
+        )
+    )
+    assert (
+        resolve(conn, "team", "Royal Challengers Bangalore")
+        == "Royal Challengers Bengaluru"
+    )
 
 
 def test_resolve_canonical_passthrough(conn):
-    conn.execute(aliases.insert().values(
-        kind="team", alias="csk", canonical="Chennai Super Kings"))
+    conn.execute(
+        aliases.insert().values(
+            kind="team", alias="csk", canonical="Chennai Super Kings"
+        )
+    )
     # canonical names resolve to themselves even without an explicit self-alias
     assert resolve(conn, "team", "Chennai Super Kings ") == "Chennai Super Kings"
 

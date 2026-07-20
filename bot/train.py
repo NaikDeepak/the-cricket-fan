@@ -1,6 +1,7 @@
 """Offline training: Cricsheet dir -> team_matches df -> features -> LightGBM
 + isotonic calibration -> artifacts (model.pkl, metrics.json) with baseline gate.
 """
+
 import argparse
 import json
 from pathlib import Path
@@ -38,7 +39,8 @@ def build_dataset(df: pd.DataFrame):
     """
     matches = df.copy()
     matches["pair"] = matches.apply(
-        lambda r: tuple(sorted([r["team"], r["opponent"]])), axis=1)
+        lambda r: tuple(sorted([r["team"], r["opponent"]])), axis=1
+    )
     # Each match has one row per team; only the home team's OWN row carries
     # home=True. Resolve home_team from BOTH rows before deduping, since
     # drop_duplicates below keeps an arbitrary (possibly away-team) row.
@@ -52,16 +54,18 @@ def build_dataset(df: pd.DataFrame):
         team_a, team_b = m["pair"]
         won_a = m["won"] if m["team"] == team_a else not m["won"]
         home_team = home_lookup.get((m["date"], m["pair"]))
-        f = build_features(df, team_a, team_b, m["venue"], m["date"],
-                           home_team=home_team)
+        f = build_features(
+            df, team_a, team_b, m["venue"], m["date"], home_team=home_team
+        )
         feats.append(f)
         labels.append(1 if won_a else 0)
         dts.append(m["date"])
         pairs.append((team_a, team_b))
     X = pd.DataFrame(feats, columns=FEATURE_NAMES)
     y = pd.Series(labels, name="y")
-    meta = pd.DataFrame({"date": dts, "team_a": [p[0] for p in pairs],
-                         "team_b": [p[1] for p in pairs]})
+    meta = pd.DataFrame(
+        {"date": dts, "team_a": [p[0] for p in pairs], "team_b": [p[1] for p in pairs]}
+    )
     return X, y, meta
 
 
@@ -69,8 +73,9 @@ def _year(s: pd.Series) -> pd.Series:
     return pd.to_datetime(s).dt.year
 
 
-def train_and_evaluate(X: pd.DataFrame, y: pd.Series, meta: pd.DataFrame,
-                       out_dir: Path) -> dict:
+def train_and_evaluate(
+    X: pd.DataFrame, y: pd.Series, meta: pd.DataFrame, out_dir: Path
+) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     years = _year(meta["date"])
     max_year = int(years.max())
@@ -79,14 +84,18 @@ def train_and_evaluate(X: pd.DataFrame, y: pd.Series, meta: pd.DataFrame,
     te = years == max_year
 
     model = lgb.LGBMClassifier(
-        n_estimators=300, learning_rate=0.05, num_leaves=15,
-        min_child_samples=20, random_state=42, verbose=-1)
+        n_estimators=300,
+        learning_rate=0.05,
+        num_leaves=15,
+        min_child_samples=20,
+        random_state=42,
+        verbose=-1,
+    )
     model.fit(X[tr], y[tr])
 
     calibrator = IsotonicRegression(out_of_bounds="clip")
     calibrator.fit(model.predict_proba(X[va])[:, 1], y[va])
-    p_test = np.clip(calibrator.predict(model.predict_proba(X[te])[:, 1]),
-                     0.01, 0.99)
+    p_test = np.clip(calibrator.predict(model.predict_proba(X[te])[:, 1]), 0.01, 0.99)
     y_test = y[te].to_numpy()
 
     # Elo baseline: replayed chronologically over all matches (train+val+test),
@@ -115,23 +124,31 @@ def train_and_evaluate(X: pd.DataFrame, y: pd.Series, meta: pd.DataFrame,
             "brier": float(brier_score_loss(y_test, elo_test)),
         },
         "always_home_accuracy": float(accuracy_score(y_test, home_pred)),
-        "n_train": int(tr.sum()), "n_test": int(te.sum()),
+        "n_train": int(tr.sum()),
+        "n_test": int(te.sum()),
         "test_period": str(max_year),
     }
     metrics["gate_passed"] = bool(
         metrics["model"]["log_loss"] < metrics["elo"]["log_loss"]
-        and metrics["model"]["brier"] < metrics["elo"]["brier"])
+        and metrics["model"]["brier"] < metrics["elo"]["brier"]
+    )
     (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
-    joblib.dump({"model": model, "calibrator": calibrator,
-                 "feature_names": FEATURE_NAMES}, out_dir / "model.pkl")
+    joblib.dump(
+        {"model": model, "calibrator": calibrator, "feature_names": FEATURE_NAMES},
+        out_dir / "model.pkl",
+    )
     return metrics
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cricsheet-dir", type=Path, required=True)
-    ap.add_argument("--league-map", type=Path, required=True,
-                    help="JSON file: file-stem/prefix -> league label")
+    ap.add_argument(
+        "--league-map",
+        type=Path,
+        required=True,
+        help="JSON file: file-stem/prefix -> league label",
+    )
     ap.add_argument("--out", type=Path, default=Path("bot/artifacts"))
     args = ap.parse_args()
     league_map = json.loads(args.league_map.read_text())
