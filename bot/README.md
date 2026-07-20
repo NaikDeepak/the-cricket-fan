@@ -8,11 +8,19 @@ data-driven trivia, public accuracy record. See
 
 1. Neon free-tier Postgres → set `BOT_DATABASE_URL` (postgresql+psycopg://...).
 2. CricAPI key (free tier) → `CRICKET_API_KEY`.
-3. X developer app (free tier, OAuth1 user context, write) → 4 X_* secrets.
+3. X developer app (OAuth1 user context, read+write) → 4 X_* secrets.
+   X API is pay-per-use ($0.015/post write; no free tier) — buy credits in the
+   X Developer Console first. Posts contain no links, so no link surcharge.
 4. Add all six as GitHub Actions secrets.
 5. Run the `bot-retrain` workflow once: fills Neon + commits `bot/artifacts/`.
 6. `bot-run` cron then posts automatically. Test first with
    `workflow_dispatch` + `dry_run=1`.
+
+## Running cost
+
+3 posts/match × $0.015 ≈ $0.045/match; busy month (~150 T20 matches) ≈ $7.
+The quota circuit breaker (450: drop trivia, 490: results only) caps monthly
+posts, so worst-case spend ≈ $7.50/month. Idle months cost nothing.
 
 ## Local dev
 
