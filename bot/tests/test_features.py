@@ -177,3 +177,27 @@ def test_venue_avg_first_innings_and_chase_rate():
     assert f["venue_avg_1st_innings"] == pytest.approx(190.0)
     # both batted-first==False rows WON (chased successfully) -> chase win rate 1.0
     assert f["venue_chase_win_rate"] == pytest.approx(1.0)
+
+
+def test_phase_rates_distinct_from_whole_innings_rate():
+    rows = [
+        _row(
+            "A",
+            "X",
+            date(2025, 4, 1),
+            True,
+            rs=160.0,
+            of=20.0,  # whole-innings rr = 8.0
+            pp_rs=60.0,
+            pp_of=6.0,  # powerplay rr = 10.0 -- distinct from whole-innings
+            rc=150.0,
+            ob=20.0,
+            death_rc=40.0,
+            death_ob=5.0,  # death econ = 8.0
+        )
+    ]
+    df = pd.DataFrame(rows)
+    f = build_features(df, "A", "B", "V", date(2025, 5, 1))
+    assert f["bat_pp_rr_a"] == pytest.approx(10.0)
+    assert f["bowl_death_econ_a"] == pytest.approx(8.0)
+    assert f["bat_pp_rr_a"] != pytest.approx(f["bat_rr_a"])

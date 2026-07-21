@@ -20,6 +20,10 @@ FEATURE_PHRASES: dict[str, str] = {
     "bat_rr_b": "opponent's batting run-rate",
     "bowl_econ_a": "bowling economy trend",
     "bowl_econ_b": "opponent's bowling economy",
+    "bat_pp_rr_a": "powerplay batting tempo",
+    "bat_pp_rr_b": "opponent's powerplay batting tempo",
+    "bowl_death_econ_a": "death-overs bowling economy",
+    "bowl_death_econ_b": "opponent's death-overs bowling economy",
     "home_a": "home advantage",
     "home_b": "opponent's home advantage",
 }

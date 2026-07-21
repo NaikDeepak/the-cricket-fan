@@ -29,6 +29,10 @@ FEATURE_NAMES = [
     "bat_rr_b",
     "bowl_econ_a",
     "bowl_econ_b",
+    "bat_pp_rr_a",
+    "bat_pp_rr_b",
+    "bowl_death_econ_a",
+    "bowl_death_econ_b",
     "home_a",
     "home_b",
 ]
@@ -117,6 +121,18 @@ def build_features(
         if len(a)
         else GLOBAL_RR_PRIOR,
         "bowl_econ_b": _run_rate(b, "runs_conceded", "overs_bowled")
+        if len(b)
+        else GLOBAL_RR_PRIOR,
+        "bat_pp_rr_a": _run_rate(a, "pp_runs_scored", "pp_overs_faced")
+        if len(a)
+        else GLOBAL_RR_PRIOR,
+        "bat_pp_rr_b": _run_rate(b, "pp_runs_scored", "pp_overs_faced")
+        if len(b)
+        else GLOBAL_RR_PRIOR,
+        "bowl_death_econ_a": _run_rate(a, "death_runs_conceded", "death_overs_bowled")
+        if len(a)
+        else GLOBAL_RR_PRIOR,
+        "bowl_death_econ_b": _run_rate(b, "death_runs_conceded", "death_overs_bowled")
         if len(b)
         else GLOBAL_RR_PRIOR,
         "home_a": 1.0 if home_team == team_a else 0.0,
