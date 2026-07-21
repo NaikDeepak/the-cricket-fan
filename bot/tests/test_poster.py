@@ -65,6 +65,12 @@ def test_circuit_breaker_thresholds():
     assert allowed("result", RESULTS_ONLY_CUTOFF) is True
 
 
+def test_circuit_breaker_treats_standalone_trivia_like_trivia():
+    assert allowed("standalone_trivia", TRIVIA_CUTOFF - 1) is True
+    assert allowed("standalone_trivia", TRIVIA_CUTOFF) is False
+    assert allowed("standalone_trivia", RESULTS_ONLY_CUTOFF) is False
+
+
 def test_dry_run_prints_and_succeeds(capsys):
     p = Poster(_settings(dry=True))
     assert p.send("hello") is True
