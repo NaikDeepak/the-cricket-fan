@@ -24,12 +24,15 @@ def main() -> None:
 
     df = build_team_matches(args.cricsheet_dir, json.loads(args.league_map.read_text()))
     engine = get_engine(args.database_url)
-    # Schema change: team_matches is a fully rebuildable cache (deleted + reinserted
-    # below on every run), so a one-time drop is safe and picks up new columns that
-    # create_all() alone would not add to an already-existing table.
-    team_matches.drop(engine, checkfirst=True)
-    metadata.create_all(engine)
     with engine.begin() as conn:
+        # Schema change: team_matches is a fully rebuildable cache (deleted + reinserted
+        # below on every run), so dropping and recreating it inside this single
+        # transaction is safe and picks up new columns that create_all() alone would
+        # not add to an already-existing table -- and keeps the table never missing
+        # or empty to any concurrent reader (e.g. the live prediction cron tick),
+        # since nothing commits until this whole block finishes.
+        team_matches.drop(conn, checkfirst=True)
+        metadata.create_all(conn)
         seed_aliases(conn)
         conn.execute(sa.delete(team_matches))
         if not df.empty:
