@@ -1,0 +1,17 @@
+{
+  "model": {
+    "accuracy": 0.6469816272965879,
+    "log_loss": 0.6120703971475474,
+    "brier": 0.21294593311355814
+  },
+  "elo": {
+    "accuracy": 0.6272965879265092,
+    "log_loss": 0.6425330685006005,
+    "brier": 0.22552285906205372
+  },
+  "always_home_accuracy": 0.536745406824147,
+  "n_train": 6326,
+  "n_test": 762,
+  "test_period": "2026",
+  "gate_passed": true
+}
