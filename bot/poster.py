@@ -4,6 +4,7 @@ Priority when near quota: prediction > result > trivia.
 """
 
 import logging
+import os
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -70,6 +71,10 @@ class Poster:
     def send(self, text: str) -> bool:
         if self.settings.dry_run:
             print(f"DRY RUN POST:\n{text}\n")
+            summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+            if summary_path:
+                with open(summary_path, "a") as f:
+                    f.write(f"### Tweet (copy/paste)\n```\n{text}\n```\n\n")
             return True
         try:
             self._x_client().create_tweet(text=text)
