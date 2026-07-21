@@ -48,25 +48,50 @@ class TeamMatchRow:
     runs_conceded: float | None
     overs_bowled: float | None
     home: bool
+    batted_first: bool
+    pp_runs_scored: float | None
+    pp_overs_faced: float | None
+    death_runs_conceded: float | None
+    death_overs_bowled: float | None
 
 
-def _innings_totals(data: dict) -> dict[str, tuple[float, float]]:
-    """team -> (total runs incl extras, overs faced as decimal overs)."""
-    totals: dict[str, tuple[float, float]] = {}
+def _innings_stats(data: dict) -> dict[str, dict[str, float]]:
+    """team -> {runs, balls, pp_runs, pp_balls, death_runs, death_balls}.
+    Powerplay = Cricsheet overs 0-5 (0-indexed); death = overs 15-19."""
+    stats: dict[str, dict[str, float]] = {}
     for innings in data.get("innings", []):
         team = innings.get("team", "")
-        if team in totals:
+        if team in stats:
             continue
-        runs = 0.0
-        balls = 0
+        runs = balls = pp_runs = pp_balls = death_runs = death_balls = 0.0
         for over in innings.get("overs", []):
+            over_num = over.get("over", 0)
+            is_pp = over_num < 6
+            is_death = over_num >= 15
             for d in over.get("deliveries", []):
-                runs += d.get("runs", {}).get("total", 0)
+                total = d.get("runs", {}).get("total", 0)
                 extras = d.get("extras", {})
-                if "wides" not in extras and "noballs" not in extras:
+                legal = "wides" not in extras and "noballs" not in extras
+                runs += total
+                if legal:
                     balls += 1
-        totals[team] = (runs, balls / 6.0)
-    return totals
+                if is_pp:
+                    pp_runs += total
+                    if legal:
+                        pp_balls += 1
+                if is_death:
+                    death_runs += total
+                    if legal:
+                        death_balls += 1
+        stats[team] = {
+            "runs": runs,
+            "balls": balls,
+            "pp_runs": pp_runs,
+            "pp_balls": pp_balls,
+            "death_runs": death_runs,
+            "death_balls": death_balls,
+        }
+    return stats
 
 
 def parse_result(filepath: Path, league: str) -> list[TeamMatchRow]:
@@ -89,13 +114,15 @@ def parse_result(filepath: Path, league: str) -> list[TeamMatchRow]:
     season = str(info.get("season", ""))
     dates = info.get("dates") or ["1970-01-01"]
     match_date = date.fromisoformat(dates[0])
-    totals = _innings_totals(data)
+    stats = _innings_stats(data)
+    innings_list = data.get("innings", [])
+    first_batting_team = innings_list[0]["team"] if innings_list else None
 
     rows = []
     for team in teams:
         opponent = next(t for t in teams if t != team)
-        scored = totals.get(team)
-        conceded = totals.get(opponent)
+        scored = stats.get(team)
+        conceded = stats.get(opponent)
         rows.append(
             TeamMatchRow(
                 team=team,
@@ -106,11 +133,16 @@ def parse_result(filepath: Path, league: str) -> list[TeamMatchRow]:
                 venue=venue,
                 won=(team == winner),
                 dls=dls,
-                runs_scored=scored[0] if scored else None,
-                overs_faced=scored[1] if scored else None,
-                runs_conceded=conceded[0] if conceded else None,
-                overs_bowled=conceded[1] if conceded else None,
+                runs_scored=scored["runs"] if scored else None,
+                overs_faced=scored["balls"] / 6.0 if scored else None,
+                runs_conceded=conceded["runs"] if conceded else None,
+                overs_bowled=conceded["balls"] / 6.0 if conceded else None,
                 home=_is_home(team, city),
+                batted_first=(team == first_batting_team),
+                pp_runs_scored=scored["pp_runs"] if scored else None,
+                pp_overs_faced=scored["pp_balls"] / 6.0 if scored else None,
+                death_runs_conceded=conceded["death_runs"] if conceded else None,
+                death_overs_bowled=conceded["death_balls"] / 6.0 if conceded else None,
             )
         )
     return rows

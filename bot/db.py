@@ -20,6 +20,11 @@ team_matches = sa.Table(
     sa.Column("runs_conceded", sa.Float, nullable=True),
     sa.Column("overs_bowled", sa.Float, nullable=True),
     sa.Column("home", sa.Boolean, nullable=False, default=False),
+    sa.Column("batted_first", sa.Boolean, nullable=False, default=False),
+    sa.Column("pp_runs_scored", sa.Float, nullable=True),
+    sa.Column("pp_overs_faced", sa.Float, nullable=True),
+    sa.Column("death_runs_conceded", sa.Float, nullable=True),
+    sa.Column("death_overs_bowled", sa.Float, nullable=True),
 )
 
 aliases = sa.Table(

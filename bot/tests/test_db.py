@@ -33,3 +33,16 @@ def test_posts_unique_constraint(engine):
                     fixture_id=1, post_type="prediction", state="scheduled", attempts=0
                 )
             )
+
+
+def test_team_matches_has_phase_columns():
+    from bot.db import team_matches
+
+    cols = {c.name for c in team_matches.columns}
+    assert {
+        "batted_first",
+        "pp_runs_scored",
+        "pp_overs_faced",
+        "death_runs_conceded",
+        "death_overs_bowled",
+    } <= cols
