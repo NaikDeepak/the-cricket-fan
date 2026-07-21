@@ -19,6 +19,11 @@ def _row(
     rc=150.0,
     ob=20.0,
     home=False,
+    batted_first=True,
+    pp_rs=None,
+    pp_of=None,
+    death_rc=None,
+    death_ob=None,
 ):
     return dict(
         team=team,
@@ -34,6 +39,11 @@ def _row(
         runs_conceded=rc,
         overs_bowled=ob,
         home=home,
+        batted_first=batted_first,
+        pp_runs_scored=pp_rs if pp_rs is not None else rs * 0.3,
+        pp_overs_faced=pp_of if pp_of is not None else min(of, 6.0),
+        death_runs_conceded=death_rc if death_rc is not None else rc * 0.3,
+        death_overs_bowled=death_ob if death_ob is not None else min(ob, 5.0),
     )
 
 
@@ -112,8 +122,46 @@ def test_no_history_neutral_defaults():
             "runs_conceded",
             "overs_bowled",
             "home",
+            "batted_first",
+            "pp_runs_scored",
+            "pp_overs_faced",
+            "death_runs_conceded",
+            "death_overs_bowled",
         ]
     )
     f = build_features(df, "A", "B", "V", date(2025, 5, 1))
     assert f["form5_a"] == 0.5 and f["h2h_a_rate"] == 0.5
     assert f["bat_rr_a"] == pytest.approx(7.8)  # global T20 prior
+    assert f["venue_chase_win_rate"] == 0.5
+    assert f["venue_avg_1st_innings"] == pytest.approx(156.0)  # 7.8 rr * 20 overs
+
+
+def test_venue_avg_first_innings_and_chase_rate():
+    rows = [
+        _row(
+            "P",
+            "Q",
+            date(2025, 1, 1),
+            True,
+            venue="Chinnaswamy",
+            rs=180.0,
+            batted_first=True,
+        ),
+        _row("Q", "P", date(2025, 1, 1), True, venue="Chinnaswamy", batted_first=False),
+        _row(
+            "R",
+            "S",
+            date(2025, 1, 5),
+            False,
+            venue="Chinnaswamy",
+            rs=200.0,
+            batted_first=True,
+        ),
+        _row("S", "R", date(2025, 1, 5), True, venue="Chinnaswamy", batted_first=False),
+    ]
+    df = pd.DataFrame(rows)
+    f = build_features(df, "A", "B", "Chinnaswamy", date(2025, 2, 1))
+    # avg of the two batted-first innings: (180 + 200) / 2 = 190
+    assert f["venue_avg_1st_innings"] == pytest.approx(190.0)
+    # both batted-first==False rows WON (chased successfully) -> chase win rate 1.0
+    assert f["venue_chase_win_rate"] == pytest.approx(1.0)

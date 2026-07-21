@@ -21,6 +21,8 @@ def synthetic_team_matches(n_matches=600, seed=7) -> pd.DataFrame:
         p_a = 1 / (1 + np.exp(-(b - a) * 0.55))
         a_won = rng.random() < p_a
         for team_i, opp_i, won in [(a, b, a_won), (b, a, not a_won)]:
+            runs_scored = 150.0 + (5 - team_i) * 6 + rng.normal(0, 8)
+            runs_conceded = 150.0 + (5 - opp_i) * 6
             rows.append(
                 dict(
                     team=TEAMS[team_i],
@@ -31,11 +33,16 @@ def synthetic_team_matches(n_matches=600, seed=7) -> pd.DataFrame:
                     venue=f"V{team_i % 3}",
                     won=bool(won),
                     dls=False,
-                    runs_scored=150.0 + (5 - team_i) * 6 + rng.normal(0, 8),
+                    runs_scored=runs_scored,
                     overs_faced=20.0,
-                    runs_conceded=150.0 + (5 - opp_i) * 6,
+                    runs_conceded=runs_conceded,
                     overs_bowled=20.0,
                     home=False,
+                    batted_first=rng.choice([True, False]),
+                    pp_runs_scored=runs_scored * 0.3,
+                    pp_overs_faced=6.0,
+                    death_runs_conceded=runs_conceded * 0.3,
+                    death_overs_bowled=5.0,
                 )
             )
     return pd.DataFrame(rows)
@@ -78,6 +85,11 @@ def test_build_dataset_home_team_survives_dedup():
                 runs_conceded=160.0,
                 overs_bowled=20.0,
                 home=False,
+                batted_first=True,
+                pp_runs_scored=45.0,
+                pp_overs_faced=6.0,
+                death_runs_conceded=48.0,
+                death_overs_bowled=5.0,
             ),
             # home team's row listed SECOND -> would be dropped as a duplicate
             dict(
@@ -94,6 +106,11 @@ def test_build_dataset_home_team_survives_dedup():
                 runs_conceded=150.0,
                 overs_bowled=20.0,
                 home=True,
+                batted_first=False,
+                pp_runs_scored=48.0,
+                pp_overs_faced=6.0,
+                death_runs_conceded=45.0,
+                death_overs_bowled=5.0,
             ),
         ]
     )

@@ -23,6 +23,8 @@ FEATURE_NAMES = [
     "h2h_a_rate",
     "venue_a_rate",
     "venue_b_rate",
+    "venue_avg_1st_innings",
+    "venue_chase_win_rate",
     "bat_rr_a",
     "bat_rr_b",
     "bowl_econ_a",
@@ -64,6 +66,14 @@ def _run_rate(sub: pd.DataFrame, runs_col: str, overs_col: str) -> float:
     return float(sub[runs_col].sum() / sub[overs_col].sum())
 
 
+def _venue_avg_first_innings(past: pd.DataFrame, venue: str) -> float:
+    sub = past[(past["venue"] == venue) & past["batted_first"] & ~past["dls"]]
+    sub = sub.dropna(subset=["runs_scored"])
+    if sub.empty:
+        return GLOBAL_RR_PRIOR * 20
+    return float(sub["runs_scored"].mean())
+
+
 def build_features(
     df: pd.DataFrame,
     team_a: str,
@@ -88,6 +98,14 @@ def build_features(
         ),
         "venue_b_rate": _weighted_rate(
             b[b["venue"] == venue] if len(b) else b, season, None
+        ),
+        "venue_avg_1st_innings": _venue_avg_first_innings(past, venue),
+        "venue_chase_win_rate": _weighted_rate(
+            past[(past["venue"] == venue) & ~past["batted_first"]]
+            if len(past)
+            else past,
+            season,
+            None,
         ),
         "bat_rr_a": _run_rate(a, "runs_scored", "overs_faced")
         if len(a)

@@ -146,7 +146,9 @@ def _season_record(conn) -> tuple[int, int]:
     return correct, total
 
 
-def _home_team_at_venue(df: pd.DataFrame, venue: str, team_a: str, team_b: str) -> str | None:
+def _home_team_at_venue(
+    df: pd.DataFrame, venue: str, team_a: str, team_b: str
+) -> str | None:
     """Which of team_a/team_b is historically the home side at this venue.
 
     The live fixtures feed carries no home/away designation, so this infers it
@@ -291,7 +293,9 @@ def main() -> None:
 
     settings = get_settings()
     engine = get_engine(settings.database_url)
-    artifact = load_artifact(Path(__file__).resolve().parent / "artifacts" / "model.pkl")
+    artifact = load_artifact(
+        Path(__file__).resolve().parent / "artifacts" / "model.pkl"
+    )
     provider = CricApiProvider(settings.cricket_api_base, settings.cricket_api_key)
     poster = Poster(settings)
     with engine.connect() as conn:

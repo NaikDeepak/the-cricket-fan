@@ -14,6 +14,8 @@ FEATURE_PHRASES: dict[str, str] = {
     "h2h_a_rate": "head-to-head record",
     "venue_a_rate": "record at this venue",
     "venue_b_rate": "opponent's record at this venue",
+    "venue_avg_1st_innings": "venue's typical first-innings total",
+    "venue_chase_win_rate": "venue's chase-success rate",
     "bat_rr_a": "batting run-rate trend",
     "bat_rr_b": "opponent's batting run-rate",
     "bowl_econ_a": "bowling economy trend",
