@@ -142,7 +142,7 @@ def test_venue_avg_first_innings_and_chase_rate():
             "P",
             "Q",
             date(2025, 1, 1),
-            True,
+            False,
             venue="Chinnaswamy",
             rs=180.0,
             batted_first=True,
@@ -158,10 +158,22 @@ def test_venue_avg_first_innings_and_chase_rate():
             batted_first=True,
         ),
         _row("S", "R", date(2025, 1, 5), True, venue="Chinnaswamy", batted_first=False),
+        # DLS match with distinctive runs_scored must NOT be included in average
+        _row(
+            "T",
+            "U",
+            date(2025, 1, 10),
+            True,
+            venue="Chinnaswamy",
+            rs=300.0,
+            dls=True,
+            batted_first=True,
+        ),
     ]
     df = pd.DataFrame(rows)
     f = build_features(df, "A", "B", "Chinnaswamy", date(2025, 2, 1))
-    # avg of the two batted-first innings: (180 + 200) / 2 = 190
+    # avg of the two batted-first non-DLS innings: (180 + 200) / 2 = 190
+    # (DLS row with 300 runs excluded)
     assert f["venue_avg_1st_innings"] == pytest.approx(190.0)
     # both batted-first==False rows WON (chased successfully) -> chase win rate 1.0
     assert f["venue_chase_win_rate"] == pytest.approx(1.0)

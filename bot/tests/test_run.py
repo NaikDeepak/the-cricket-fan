@@ -108,22 +108,12 @@ def test_home_team_at_venue_infers_from_history():
 
     df = pd.DataFrame(
         [
-            {
-                "team": "Mumbai Indians",
-                "venue": "Wankhede Stadium, Mumbai",
-                "home": True,
-            },
-            {
-                "team": "Chennai Super Kings",
-                "venue": "Wankhede Stadium, Mumbai",
-                "home": False,
-            },
+            {"team": "Mumbai Indians", "venue": "Wankhede Stadium, Mumbai", "home": True},
+            {"team": "Chennai Super Kings", "venue": "Wankhede Stadium, Mumbai", "home": False},
         ]
     )
     assert (
-        _home_team_at_venue(
-            df, "Wankhede Stadium, Mumbai", "Chennai Super Kings", "Mumbai Indians"
-        )
+        _home_team_at_venue(df, "Wankhede Stadium, Mumbai", "Chennai Super Kings", "Mumbai Indians")
         == "Mumbai Indians"
     )
 
@@ -172,11 +162,7 @@ def test_upsert_fixtures_syncs_reschedule(conn, art):
         )
     ).one()
     assert row.venue == "Eden Gardens, Kolkata"
-    got = (
-        row.start_time.replace(tzinfo=timezone.utc)
-        if not row.start_time.tzinfo
-        else row.start_time
-    )
+    got = row.start_time.replace(tzinfo=timezone.utc) if not row.start_time.tzinfo else row.start_time
     assert got == rescheduled.start_time
 
 
