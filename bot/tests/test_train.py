@@ -39,6 +39,10 @@ def synthetic_team_matches(n_matches=600, seed=7) -> pd.DataFrame:
                     overs_bowled=20.0,
                     home=False,
                     batted_first=rng.choice([True, False]),
+                    pp_runs_scored=runs_scored * 0.3,
+                    pp_overs_faced=6.0,
+                    death_runs_conceded=runs_conceded * 0.25,
+                    death_overs_bowled=5.0,
                 )
             )
     return pd.DataFrame(rows)
@@ -82,6 +86,10 @@ def test_build_dataset_home_team_survives_dedup():
                 overs_bowled=20.0,
                 home=False,
                 batted_first=True,
+                pp_runs_scored=45.0,
+                pp_overs_faced=6.0,
+                death_runs_conceded=40.0,
+                death_overs_bowled=5.0,
             ),
             # home team's row listed SECOND -> would be dropped as a duplicate
             dict(
@@ -99,6 +107,10 @@ def test_build_dataset_home_team_survives_dedup():
                 overs_bowled=20.0,
                 home=True,
                 batted_first=False,
+                pp_runs_scored=45.0,
+                pp_overs_faced=6.0,
+                death_runs_conceded=40.0,
+                death_overs_bowled=5.0,
             ),
         ]
     )
