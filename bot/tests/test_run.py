@@ -224,6 +224,9 @@ def test_trivia_posted_inside_one_hour(conn, art):
 
 
 def test_late_tick_guard_abandons_prediction(conn, art):
+    from bot.db import trivia_log
+
+    conn.execute(trivia_log.insert().values(content_key="k", posted_at=NOW))
     poster = SpyPoster()
     tick(conn, FakeProvider([_fixture(hours_from_now=-0.5)], []), art, poster, NOW)
     states = _post_states(conn)
@@ -242,6 +245,13 @@ def test_failed_post_retries_then_abandons(conn, art):
 
 
 def test_result_flow_correct_and_record(conn, art):
+    from bot.db import trivia_log
+
+    conn.execute(
+        trivia_log.insert().values(
+            content_key="k", posted_at=NOW + timedelta(hours=2)
+        )
+    )
     poster = SpyPoster()
     provider = FakeProvider([_fixture(hours_from_now=2.5)], [])
     tick(conn, provider, art, poster, NOW)
@@ -264,9 +274,9 @@ def test_abandoned_match_voids_prediction(conn, art):
     assert _post_states(conn).get("result", "scheduled") != "posted"
 
 
-def test_standalone_trivia_posts_when_no_fixture_and_trigger_hour(conn, art):
+def test_standalone_trivia_posts_when_no_fixture_and_no_recent_post(conn, art):
     poster = SpyPoster()
-    now = datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc)  # 08:00 UTC trigger hour
+    now = datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc)  # any hour; never posted before
     tick(conn, FakeProvider([], []), art, poster, now)
     assert len(poster.sent) == 1
     row = conn.execute(
@@ -277,11 +287,57 @@ def test_standalone_trivia_posts_when_no_fixture_and_trigger_hour(conn, art):
     assert row.state == "posted"
 
 
-def test_standalone_trivia_skipped_outside_trigger_hours(conn, art):
+def test_standalone_trivia_skipped_before_gap_elapses(conn, art):
+    """Windowed gate, not exact-hour: scheduled ticks drift under GH Actions
+    load, so a lone required hour would silently starve this path for days."""
+    from bot.db import trivia_log
+
+    conn.execute(
+        trivia_log.insert().values(
+            content_key="h2h:a:b",
+            posted_at=datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc),
+        )
+    )
     poster = SpyPoster()
-    now = datetime(2026, 7, 19, 9, 0, tzinfo=timezone.utc)  # not in {8, 14, 20}
+    now = datetime(2026, 7, 19, 9, 0, tzinfo=timezone.utc)  # only 1h since last post
     tick(conn, FakeProvider([], []), art, poster, now)
     assert poster.sent == []
+
+
+def test_standalone_trivia_force_bypasses_cooldown(conn, art):
+    """Manual workflow_dispatch (BOT_FORCE_TRIVIA=1) must be able to post
+    on-demand even mid-cooldown -- e.g. to backfill after an outage."""
+    from bot.db import trivia_log
+
+    conn.execute(
+        trivia_log.insert().values(
+            content_key="h2h:a:b",
+            posted_at=datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc),
+        )
+    )
+    poster = SpyPoster()
+    now = datetime(2026, 7, 19, 9, 0, tzinfo=timezone.utc)  # only 1h since last post
+    tick(conn, FakeProvider([], []), art, poster, now, force_trivia=True)
+    assert len(poster.sent) == 1
+
+
+def test_standalone_trivia_force_still_skipped_when_fixture_within_24h(conn, art):
+    poster = SpyPoster()
+    now = datetime(2026, 7, 19, 9, 0, tzinfo=timezone.utc)
+    tick(
+        conn,
+        FakeProvider([_fixture(hours_from_now=5)], []),
+        art,
+        poster,
+        now,
+        force_trivia=True,
+    )
+    count = conn.execute(
+        sa.select(sa.func.count())
+        .select_from(posts)
+        .where(posts.c.post_type == "standalone_trivia")
+    ).scalar_one()
+    assert count == 0
 
 
 def test_standalone_trivia_skipped_when_fixture_within_24h(conn, art):

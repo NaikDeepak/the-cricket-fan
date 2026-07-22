@@ -6,6 +6,7 @@ from dataclasses import dataclass
 class Settings:
     database_url: str
     dry_run: bool
+    force_trivia: bool
     cricket_api_key: str
     cricket_api_base: str
     x_api_key: str
@@ -18,6 +19,7 @@ class Settings:
         return cls(
             database_url=os.environ.get("BOT_DATABASE_URL", ""),
             dry_run=os.environ.get("BOT_DRY_RUN", "0") == "1",
+            force_trivia=os.environ.get("BOT_FORCE_TRIVIA", "0") == "1",
             cricket_api_key=os.environ.get("CRICKET_API_KEY", ""),
             cricket_api_base=os.environ.get(
                 "CRICKET_API_BASE", "https://api.cricapi.com/v1"

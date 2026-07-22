@@ -7,6 +7,9 @@ on:
       dry_run:
         description: "1 = dry run, 0 = real post (scheduled cron ticks post live)"
         default: "1"
+      force_trivia:
+        description: "1 = ignore cooldown, force standalone trivia this tick (still skipped if a fixture is due within 24h)"
+        default: "0"
 jobs:
   tick:
     runs-on: ubuntu-latest
@@ -24,6 +27,7 @@ jobs:
         env:
           BOT_DATABASE_URL: ${{ secrets.BOT_DATABASE_URL }}
           BOT_DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+          BOT_FORCE_TRIVIA: ${{ github.event.inputs.force_trivia || '0' }}
           CRICKET_API_KEY: ${{ secrets.CRICKET_API_KEY }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}

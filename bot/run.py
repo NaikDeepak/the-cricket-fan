@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 PREDICTION_WINDOW_H = 3
 TRIVIA_WINDOW_H = 1
 MAX_ATTEMPTS = 3
-STANDALONE_TRIVIA_HOURS = {8, 14, 20}
+STANDALONE_TRIVIA_MIN_GAP_H = 5  # ~3x/day cadence; window (not exact hour) survives cron drift
 TRIVIA_LOG_LOOKBACK_DAYS = 30
 
 
@@ -162,6 +162,20 @@ def _recent_trivia_keys(conn, now: datetime) -> set[str]:
     return {r.content_key for r in rows}
 
 
+def _standalone_trivia_due(conn, now: datetime) -> bool:
+    """Windowed, not exact-hour: scheduled cron ticks drift/skip under GH Actions
+    load, so requiring now.hour to land on a specific value silently starves
+    this path for days. Firing once the gap since the last post clears the
+    threshold is robust to that drift and still idempotent via slot_key.
+    """
+    last = conn.execute(sa.select(sa.func.max(trivia_log.c.posted_at))).scalar_one()
+    if last is None:
+        return True
+    if last.tzinfo is None:
+        last = last.replace(tzinfo=timezone.utc)
+    return now - last >= timedelta(hours=STANDALONE_TRIVIA_MIN_GAP_H)
+
+
 def _season_record(conn) -> tuple[int, int]:
     total = conn.execute(
         sa.select(sa.func.count())
@@ -199,7 +213,9 @@ def _home_team_at_venue(
     return None
 
 
-def tick(conn, provider, artifact, poster, now: datetime) -> None:
+def tick(
+    conn, provider, artifact, poster, now: datetime, *, force_trivia: bool = False
+) -> None:
     try:
         fixture_list, result_list = provider.fetch(conn)
     except Exception:
@@ -313,8 +329,8 @@ def tick(conn, provider, artifact, poster, now: datetime) -> None:
             _try_post(conn, poster, prow, text, now)
 
     # Standalone trivia (quiet-day filler, no fixture involved)
-    if now.hour in STANDALONE_TRIVIA_HOURS and not _has_upcoming_fixture_within_24h(
-        conn, now
+    if (force_trivia or _standalone_trivia_due(conn, now)) and not (
+        _has_upcoming_fixture_within_24h(conn, now)
     ):
         slot_key = now.strftime("%Y-%m-%d-%H")
         existing_slot = conn.execute(
@@ -373,7 +389,14 @@ def main() -> None:
     with engine.connect() as conn:
         ensure_schema(conn)
         conn.commit()
-        tick(conn, provider, artifact, poster, datetime.now(timezone.utc))
+        tick(
+            conn,
+            provider,
+            artifact,
+            poster,
+            datetime.now(timezone.utc),
+            force_trivia=settings.force_trivia,
+        )
         conn.commit()
 
 

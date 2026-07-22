@@ -15,6 +15,7 @@ def _settings(dry=True):
     return Settings(
         database_url="",
         dry_run=dry,
+        force_trivia=False,
         cricket_api_key="",
         cricket_api_base="",
         x_api_key="",
