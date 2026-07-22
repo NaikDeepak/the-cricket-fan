@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "1 = dry run (default: real posting is opt-in only)"
+        description: "1 = dry run, 0 = real post (scheduled cron ticks post live)"
         default: "1"
 jobs:
   tick:
@@ -23,7 +23,7 @@ jobs:
       - run: python -m bot.run
         env:
           BOT_DATABASE_URL: ${{ secrets.BOT_DATABASE_URL }}
-          BOT_DRY_RUN: ${{ github.event.inputs.dry_run || '1' }}
+          BOT_DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
           CRICKET_API_KEY: ${{ secrets.CRICKET_API_KEY }}
           X_API_KEY: ${{ secrets.X_API_KEY }}
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
