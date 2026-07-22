@@ -6,11 +6,14 @@ db.trivia_log). Two styles, mirroring compose.trivia_post's existing
 H2H/venue shape plus a season records/extremes pool.
 """
 
+import json
 import random
 
 import pandas as pd
+import sqlalchemy as sa
 
 from .compose import _truncate
+from .db import content_bank
 
 MIN_H2H_MEETINGS = 3
 MIN_VENUE_HOME_MATCHES = 5
@@ -128,6 +131,20 @@ def _record_candidates(df: pd.DataFrame) -> list[tuple[str, str]]:
     return out
 
 
+def _content_bank_candidates(conn) -> list[tuple[str, str, list[str]]]:
+    """Wikipedia-sourced records + hand-authored anecdotes/stories. Same
+    (content_key, format, segments) shape as build_candidates, feeding the
+    same 30-day trivia_log dedup."""
+    rows = conn.execute(
+        sa.select(
+            content_bank.c.content_key,
+            content_bank.c.format,
+            content_bank.c.segments_json,
+        )
+    ).all()
+    return [(r.content_key, r.format, json.loads(r.segments_json)) for r in rows]
+
+
 def build_candidates(df: pd.DataFrame) -> list[tuple[str, str, list[str]]]:
     """Cricsheet-derived candidates, all single-tweet. Widened to the
     (content_key, format, segments) shape so content_bank threads can share
@@ -138,10 +155,15 @@ def build_candidates(df: pd.DataFrame) -> list[tuple[str, str, list[str]]]:
 
 
 def pick_standalone_trivia(
-    df: pd.DataFrame, recent_keys: set[str], rng: random.Random | None = None
-) -> tuple[str, str] | None:
+    df: pd.DataFrame,
+    recent_keys: set[str],
+    conn=None,
+    rng: random.Random | None = None,
+) -> tuple[str, str, list[str]] | None:
     rng = rng or random.Random()
     candidates = build_candidates(df)
+    if conn is not None:
+        candidates = candidates + _content_bank_candidates(conn)
     if not candidates:
         return None
     pool = [c for c in candidates if c[0] not in recent_keys]

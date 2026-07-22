@@ -165,3 +165,83 @@ def test_pick_returns_none_when_no_candidates_at_all():
     import random
 
     assert pick_standalone_trivia(pd.DataFrame(), set(), rng=random.Random(0)) is None
+
+
+def _seed_content_bank(conn):
+    from datetime import datetime, timezone
+
+    from bot.db import content_bank
+
+    conn.execute(
+        content_bank.insert().values(
+            category="wiki_record",
+            format="single",
+            segments_json='["\\ud83c\\udfcf 800 Test wickets \\u2014 Muralitharan. #Cricket"]',
+            content_key="wiki_record:test:most-wickets",
+            source="wikipedia:List_of_Test_cricket_records",
+            created_at=datetime(2026, 7, 23, tzinfo=timezone.utc),
+        )
+    )
+    conn.execute(
+        content_bank.insert().values(
+            category="story",
+            format="thread",
+            segments_json='["Bodyline, part 1", "part 2", "part 3"]',
+            content_key="story:bodyline",
+            source="wikipedia:Bodyline",
+            created_at=datetime(2026, 7, 23, tzinfo=timezone.utc),
+        )
+    )
+
+
+def test_content_bank_candidates_returns_parsed_tuples(engine):
+    from bot.trivia_standalone import _content_bank_candidates
+
+    with engine.begin() as conn:
+        _seed_content_bank(conn)
+        cands = _content_bank_candidates(conn)
+    by_key = {c[0]: c for c in cands}
+    assert by_key["story:bodyline"][1] == "thread"
+    assert by_key["story:bodyline"][2] == ["Bodyline, part 1", "part 2", "part 3"]
+    assert by_key["wiki_record:test:most-wickets"][1] == "single"
+    assert len(by_key["wiki_record:test:most-wickets"][2]) == 1
+
+
+def test_pick_merges_content_bank_pool(engine):
+    import random
+
+    from bot.trivia_standalone import pick_standalone_trivia
+
+    with engine.begin() as conn:
+        _seed_content_bank(conn)
+        # empty df -> only content_bank candidates remain
+        picked = pick_standalone_trivia(
+            pd.DataFrame(), set(), conn=conn, rng=random.Random(0)
+        )
+    assert picked is not None
+    assert picked[0] in ("wiki_record:test:most-wickets", "story:bodyline")
+
+
+def test_pick_excludes_recent_content_bank_keys(engine):
+    import random
+
+    from bot.trivia_standalone import pick_standalone_trivia
+
+    with engine.begin() as conn:
+        _seed_content_bank(conn)
+        picked = pick_standalone_trivia(
+            pd.DataFrame(),
+            {"story:bodyline"},
+            conn=conn,
+            rng=random.Random(0),
+        )
+    assert picked[0] == "wiki_record:test:most-wickets"
+
+
+def test_pick_without_conn_ignores_content_bank(engine):
+    import random
+
+    from bot.trivia_standalone import pick_standalone_trivia
+
+    # df empty AND no conn -> no candidates at all
+    assert pick_standalone_trivia(pd.DataFrame(), set(), rng=random.Random(0)) is None
