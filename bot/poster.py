@@ -81,4 +81,8 @@ class Poster:
             return True
         except Exception:
             logger.exception("X post failed")
+            summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+            if summary_path:
+                with open(summary_path, "a") as f:
+                    f.write(f"### Post FAILED — copy/paste manually\n```\n{text}\n```\n\n")
             return False

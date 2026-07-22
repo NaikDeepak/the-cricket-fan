@@ -86,7 +86,7 @@ def _try_post(conn, poster, post_row, text: str, now: datetime) -> bool:
         conn.execute(
             posts.update()
             .where(posts.c.id == post_row.id)
-            .values(state="abandoned", attempts=attempts)
+            .values(state="abandoned", attempts=attempts, text=text)
         )
         logger.error(
             "abandoning %s post after %d attempts", post_row.post_type, attempts
@@ -96,7 +96,7 @@ def _try_post(conn, poster, post_row, text: str, now: datetime) -> bool:
         conn.execute(
             posts.update()
             .where(posts.c.id == post_row.id)
-            .values(state="failed", attempts=attempts)
+            .values(state="failed", attempts=attempts, text=text)
         )
         posted = False
     # Commit immediately: poster.send() is an irreversible external side effect.
