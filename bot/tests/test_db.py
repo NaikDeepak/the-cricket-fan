@@ -38,7 +38,7 @@ def test_posts_unique_constraint(engine):
 
 
 def test_team_matches_has_phase_columns():
-    from bot.db import team_matches  # noqa: F811
+    from bot.db import team_matches
 
     cols = {c.name for c in team_matches.columns}
     assert {
@@ -87,7 +87,7 @@ def test_posts_slot_key_unique(engine):
 
 
 def test_trivia_log_table_roundtrip(engine):
-    from bot.db import trivia_log  # noqa: F811
+    from bot.db import trivia_log
 
     with engine.begin() as conn:
         conn.execute(
@@ -104,7 +104,7 @@ def test_ensure_schema_idempotent_on_sqlite(engine):
     """ensure_schema() must not run Postgres-only DDL (ALTER COLUMN ... DROP
     NOT NULL) against the sqlite test engine — that syntax doesn't exist in
     sqlite and would raise OperationalError."""
-    from bot.db import ensure_schema  # noqa: F811
+    from bot.db import ensure_schema
 
     with engine.begin() as conn:
         ensure_schema(conn)

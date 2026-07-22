@@ -114,6 +114,8 @@ def commit_reviewed(conn, path: Path, now: datetime) -> int:
             continue
         if e["content_key"] in existing:
             continue
+        if any(len(seg) > 280 for seg in e["segments"]):  # over the post limit
+            continue
         conn.execute(
             content_bank.insert().values(
                 category=e["category"],

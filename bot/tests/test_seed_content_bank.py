@@ -83,3 +83,27 @@ def test_commit_skips_unauthored_skeletons(engine, tmp_path):
         ).scalar_one()
     assert n == 0  # empty-segments skeletons are never inserted
     assert count == 0
+
+
+def test_commit_skips_oversized_segment(engine, tmp_path):
+    review = {
+        "entries": [
+            {
+                "category": "story",
+                "format": "thread",
+                "content_key": "story:too-long",
+                "source": "wikipedia:Bodyline",
+                "segments": ["x" * 281],  # over the 280-char post limit
+            }
+        ]
+    }
+    f = tmp_path / "reviewed.json"
+    f.write_text(json.dumps(review))
+    now = datetime(2026, 7, 23, tzinfo=timezone.utc)
+    with engine.begin() as conn:
+        n = commit_reviewed(conn, f, now)
+        count = conn.execute(
+            sa.select(sa.func.count()).select_from(content_bank)
+        ).scalar_one()
+    assert n == 0  # any segment >280 chars must never be inserted
+    assert count == 0
