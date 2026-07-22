@@ -325,26 +325,34 @@ def tick(conn, provider, artifact, poster, now: datetime) -> None:
             picked = pick_standalone_trivia(df, recent_keys)
             if picked:
                 content_key, text = picked
-                post_id = conn.execute(
-                    posts.insert().values(
-                        fixture_id=None,
-                        post_type="standalone_trivia",
-                        state="scheduled",
-                        attempts=0,
-                        slot_key=slot_key,
+                post_id = None
+                try:
+                    with conn.begin_nested():
+                        post_id = conn.execute(
+                            posts.insert().values(
+                                fixture_id=None,
+                                post_type="standalone_trivia",
+                                state="scheduled",
+                                attempts=0,
+                                slot_key=slot_key,
+                            )
+                        ).inserted_primary_key[0]
+                except sa.exc.IntegrityError:
+                    logger.info(
+                        "standalone trivia slot %s already claimed; skipping", slot_key
                     )
-                ).inserted_primary_key[0]
-                post_row = conn.execute(
-                    sa.select(posts).where(posts.c.id == post_id)
-                ).one()
-                posted = _try_post(conn, poster, post_row, text, now)
-                if posted:
-                    conn.execute(
-                        trivia_log.insert().values(
-                            content_key=content_key, posted_at=now
+                if post_id is not None:
+                    post_row = conn.execute(
+                        sa.select(posts).where(posts.c.id == post_id)
+                    ).one()
+                    posted = _try_post(conn, poster, post_row, text, now)
+                    if posted:
+                        conn.execute(
+                            trivia_log.insert().values(
+                                content_key=content_key, posted_at=now
+                            )
                         )
-                    )
-                    conn.commit()
+                        conn.commit()
 
 
 def main() -> None:

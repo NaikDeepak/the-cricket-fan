@@ -76,7 +76,7 @@ posts = sa.Table(
     metadata,
     sa.Column("id", sa.Integer, primary_key=True),
     sa.Column("fixture_id", sa.Integer, nullable=True),
-    sa.Column("post_type", sa.String(16), nullable=False),
+    sa.Column("post_type", sa.String(20), nullable=False),
     # 'prediction' | 'trivia' | 'result' | 'standalone_trivia'
     sa.Column("state", sa.String(16), nullable=False, default="scheduled"),
     # 'scheduled' | 'posted' | 'failed' | 'abandoned'
@@ -121,3 +121,4 @@ def ensure_schema(conn: sa.Connection) -> None:
                 "CREATE UNIQUE INDEX IF NOT EXISTS uq_posts_slot_key ON posts(slot_key)"
             )
         )
+        conn.execute(sa.text("ALTER TABLE posts ALTER COLUMN post_type TYPE VARCHAR(20)"))

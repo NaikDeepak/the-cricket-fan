@@ -110,10 +110,12 @@ already-existing Neon `posts` table to add `slot_key` or drop the
   by `if conn.dialect.name == "postgresql"` so it never runs against the
   test suite's `sqlite:///:memory:` engine (SQLite has no
   `ALTER COLUMN ... DROP NOT NULL`):
+
   ```sql
   ALTER TABLE posts ADD COLUMN IF NOT EXISTS slot_key VARCHAR(32);
   ALTER TABLE posts ALTER COLUMN fixture_id DROP NOT NULL;
   CREATE UNIQUE INDEX IF NOT EXISTS uq_posts_slot_key ON posts(slot_key);
+  ALTER TABLE posts ALTER COLUMN post_type TYPE VARCHAR(20);
   ```
 
 `ensure_schema(conn)` is called from both `ingest.py` (already runs schema
