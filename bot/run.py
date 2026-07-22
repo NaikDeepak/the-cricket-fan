@@ -108,6 +108,37 @@ def _try_post(conn, poster, post_row, text: str, now: datetime) -> bool:
     return posted
 
 
+def _post_standalone(conn, poster, post_row, fmt: str, segments: list[str], now) -> int:
+    """Post a standalone single or thread. Returns tweets_sent (0 == nothing
+    posted). Sets state posted/partial/failed and, when any tweet lands,
+    tweet_count + posted_at. No retry/abandon: standalone rows are slot-keyed
+    and single-attempt, matching the existing quiet-day design."""
+    count = month_post_count(conn, now)
+    if not allowed(post_row.post_type, count):
+        logger.warning(
+            "quota breaker: skipping %s (month count %d)", post_row.post_type, count
+        )
+        return 0
+    if fmt == "thread":
+        all_ok, tweets_sent = poster.send_thread(segments)
+    else:
+        all_ok = poster.send(segments[0])
+        tweets_sent = 1 if all_ok else 0
+    if tweets_sent == 0:
+        state = "failed"
+    elif all_ok:
+        state = "posted"
+    else:
+        state = "partial"
+    values = {"state": state, "attempts": post_row.attempts + 1, "text": segments[0]}
+    if tweets_sent > 0:
+        values["posted_at"] = now
+        values["tweet_count"] = tweets_sent
+    conn.execute(posts.update().where(posts.c.id == post_row.id).values(**values))
+    conn.commit()  # irreversible external side effect must survive a later raise
+    return tweets_sent
+
+
 def _due(conn, post_type: str, window_h: float, now: datetime):
     """Scheduled/failed posts of type whose fixture starts within window (not started)."""
     rows = conn.execute(
@@ -340,10 +371,9 @@ def tick(
         ).first()
         if not existing_slot:
             recent_keys = _recent_trivia_keys(conn, now)
-            picked = pick_standalone_trivia(df, recent_keys)
+            picked = pick_standalone_trivia(df, recent_keys, conn)
             if picked:
-                content_key, _fmt, segs = picked
-                text = segs[0]
+                content_key, fmt, segments = picked
                 post_id = None
                 try:
                     with conn.begin_nested():
@@ -364,8 +394,10 @@ def tick(
                     post_row = conn.execute(
                         sa.select(posts).where(posts.c.id == post_id)
                     ).one()
-                    posted = _try_post(conn, poster, post_row, text, now)
-                    if posted:
+                    tweets_sent = _post_standalone(
+                        conn, poster, post_row, fmt, segments, now
+                    )
+                    if tweets_sent > 0:
                         conn.execute(
                             trivia_log.insert().values(
                                 content_key=content_key, posted_at=now
