@@ -75,17 +75,50 @@ posts = sa.Table(
     "posts",
     metadata,
     sa.Column("id", sa.Integer, primary_key=True),
-    sa.Column("fixture_id", sa.Integer, nullable=False),
-    sa.Column("post_type", sa.String(16), nullable=False),
-    # 'prediction' | 'trivia' | 'result'
+    sa.Column("fixture_id", sa.Integer, nullable=True),
+    sa.Column("post_type", sa.String(20), nullable=False),
+    # 'prediction' | 'trivia' | 'result' | 'standalone_trivia'
     sa.Column("state", sa.String(16), nullable=False, default="scheduled"),
     # 'scheduled' | 'posted' | 'failed' | 'abandoned'
     sa.Column("attempts", sa.Integer, nullable=False, default=0),
     sa.Column("text", sa.Text, nullable=True),
     sa.Column("posted_at", sa.DateTime(timezone=True), nullable=True),
+    sa.Column("slot_key", sa.String(32), nullable=True, unique=True),
     sa.UniqueConstraint("fixture_id", "post_type", name="uq_post"),
+)
+
+
+trivia_log = sa.Table(
+    "trivia_log",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("content_key", sa.String(128), nullable=False, index=True),
+    sa.Column("posted_at", sa.DateTime(timezone=True), nullable=False, index=True),
 )
 
 
 def get_engine(url: str) -> sa.Engine:
     return sa.create_engine(url, pool_pre_ping=True)
+
+
+def ensure_schema(conn: sa.Connection) -> None:
+    """Idempotent, safe to call every tick. New tables (e.g. trivia_log) are
+    created via create_all on any dialect. The already-existing `posts`
+    table on the live Neon DB needs explicit migration DDL to pick up
+    `slot_key` and the relaxed `fixture_id` constraint -- create_all() does
+    not alter existing tables. That DDL is Postgres-only syntax
+    (ALTER COLUMN ... DROP NOT NULL doesn't exist in SQLite), so it's
+    guarded by dialect: the test suite's sqlite engine must skip it.
+    """
+    metadata.create_all(conn)
+    if conn.dialect.name == "postgresql":
+        conn.execute(
+            sa.text("ALTER TABLE posts ADD COLUMN IF NOT EXISTS slot_key VARCHAR(32)")
+        )
+        conn.execute(sa.text("ALTER TABLE posts ALTER COLUMN fixture_id DROP NOT NULL"))
+        conn.execute(
+            sa.text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_posts_slot_key ON posts(slot_key)"
+            )
+        )
+        conn.execute(sa.text("ALTER TABLE posts ALTER COLUMN post_type TYPE VARCHAR(20)"))

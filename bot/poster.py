@@ -46,7 +46,7 @@ def allowed(post_type: str, count: int) -> bool:
     if count >= RESULTS_ONLY_CUTOFF:
         return post_type == "result"
     if count >= TRIVIA_CUTOFF:
-        return post_type != "trivia"
+        return post_type not in ("trivia", "standalone_trivia")
     return True
 
 

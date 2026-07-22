@@ -108,12 +108,22 @@ def test_home_team_at_venue_infers_from_history():
 
     df = pd.DataFrame(
         [
-            {"team": "Mumbai Indians", "venue": "Wankhede Stadium, Mumbai", "home": True},
-            {"team": "Chennai Super Kings", "venue": "Wankhede Stadium, Mumbai", "home": False},
+            {
+                "team": "Mumbai Indians",
+                "venue": "Wankhede Stadium, Mumbai",
+                "home": True,
+            },
+            {
+                "team": "Chennai Super Kings",
+                "venue": "Wankhede Stadium, Mumbai",
+                "home": False,
+            },
         ]
     )
     assert (
-        _home_team_at_venue(df, "Wankhede Stadium, Mumbai", "Chennai Super Kings", "Mumbai Indians")
+        _home_team_at_venue(
+            df, "Wankhede Stadium, Mumbai", "Chennai Super Kings", "Mumbai Indians"
+        )
         == "Mumbai Indians"
     )
 
@@ -162,7 +172,11 @@ def test_upsert_fixtures_syncs_reschedule(conn, art):
         )
     ).one()
     assert row.venue == "Eden Gardens, Kolkata"
-    got = row.start_time.replace(tzinfo=timezone.utc) if not row.start_time.tzinfo else row.start_time
+    got = (
+        row.start_time.replace(tzinfo=timezone.utc)
+        if not row.start_time.tzinfo
+        else row.start_time
+    )
     assert got == rescheduled.start_time
 
 
@@ -248,3 +262,104 @@ def test_abandoned_match_voids_prediction(conn, art):
     tick(conn, void, art, poster, NOW + timedelta(hours=6))
     assert conn.execute(sa.select(predictions.c.outcome)).scalar_one() == "void"
     assert _post_states(conn).get("result", "scheduled") != "posted"
+
+
+def test_standalone_trivia_posts_when_no_fixture_and_trigger_hour(conn, art):
+    poster = SpyPoster()
+    now = datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc)  # 08:00 UTC trigger hour
+    tick(conn, FakeProvider([], []), art, poster, now)
+    assert len(poster.sent) == 1
+    row = conn.execute(
+        sa.select(posts.c.post_type, posts.c.slot_key, posts.c.state)
+    ).one()
+    assert row.post_type == "standalone_trivia"
+    assert row.slot_key == "2026-07-19-08"
+    assert row.state == "posted"
+
+
+def test_standalone_trivia_skipped_outside_trigger_hours(conn, art):
+    poster = SpyPoster()
+    now = datetime(2026, 7, 19, 9, 0, tzinfo=timezone.utc)  # not in {8, 14, 20}
+    tick(conn, FakeProvider([], []), art, poster, now)
+    assert poster.sent == []
+
+
+def test_standalone_trivia_skipped_when_fixture_within_24h(conn, art):
+    """_post_states() is scoped to one fixture's posts via a fixture_id join,
+    so it can never see standalone rows (fixture_id is always NULL for
+    those) -- query the posts table directly for this check."""
+    poster = SpyPoster()
+    now = datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc)
+    tick(conn, FakeProvider([_fixture(hours_from_now=5)], []), art, poster, now)
+    count = conn.execute(
+        sa.select(sa.func.count())
+        .select_from(posts)
+        .where(posts.c.post_type == "standalone_trivia")
+    ).scalar_one()
+    assert count == 0
+
+
+def test_standalone_trivia_idempotent_within_same_slot(conn, art):
+    poster = SpyPoster()
+    now = datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc)
+    tick(conn, FakeProvider([], []), art, poster, now)
+    tick(conn, FakeProvider([], []), art, poster, now + timedelta(minutes=5))
+    assert len(poster.sent) == 1
+
+
+def test_standalone_trivia_logs_content_key_on_success(conn, art):
+    from bot.db import trivia_log
+    from bot.run import _load_team_matches
+    from bot.trivia_standalone import build_candidates
+
+    valid_keys = {k for k, _ in build_candidates(_load_team_matches(conn))}
+    poster = SpyPoster()
+    now = datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc)
+    tick(conn, FakeProvider([], []), art, poster, now)
+    keys = conn.execute(sa.select(trivia_log.c.content_key)).scalars().all()
+    assert len(keys) == 1
+    assert keys[0] in valid_keys
+
+
+def test_standalone_trivia_not_logged_on_send_failure(conn, art):
+    from bot.db import trivia_log
+
+    bad = SpyPoster(ok=False)
+    now = datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc)
+    tick(conn, FakeProvider([], []), art, bad, now)
+    count = conn.execute(
+        sa.select(sa.func.count()).select_from(trivia_log)
+    ).scalar_one()
+    assert count == 0
+
+
+def test_standalone_trivia_respects_30_day_dedup(conn, art):
+    from bot.db import trivia_log
+    from bot.run import _load_team_matches
+    from bot.trivia_standalone import build_candidates
+
+    all_keys = {k for k, _ in build_candidates(_load_team_matches(conn))}
+    assert (
+        len(all_keys) >= 2
+    )  # fixture must offer >1 candidate for this test to prove anything
+    kept, *excluded = sorted(
+        all_keys
+    )  # deterministic: keep exactly one candidate available
+    for key in excluded:
+        conn.execute(
+            trivia_log.insert().values(
+                content_key=key,
+                posted_at=datetime(2026, 7, 15, tzinfo=timezone.utc),
+            )
+        )
+    poster = SpyPoster()
+    now = datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc)
+    tick(conn, FakeProvider([], []), art, poster, now)
+    keys = (
+        conn.execute(
+            sa.select(trivia_log.c.content_key).where(trivia_log.c.posted_at == now)
+        )
+        .scalars()
+        .all()
+    )
+    assert keys == [kept]  # the only non-excluded candidate must be the one picked

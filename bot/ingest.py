@@ -11,7 +11,7 @@ from pathlib import Path
 import sqlalchemy as sa
 
 from .aliases import seed_aliases
-from .db import get_engine, metadata, team_matches
+from .db import ensure_schema, get_engine, team_matches
 from .train import build_team_matches
 
 
@@ -32,7 +32,7 @@ def main() -> None:
         # or empty to any concurrent reader (e.g. the live prediction cron tick),
         # since nothing commits until this whole block finishes.
         team_matches.drop(conn, checkfirst=True)
-        metadata.create_all(conn)
+        ensure_schema(conn)
         seed_aliases(conn)
         conn.execute(sa.delete(team_matches))
         if not df.empty:

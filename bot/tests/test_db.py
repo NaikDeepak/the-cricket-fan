@@ -46,3 +46,72 @@ def test_team_matches_has_phase_columns():
         "death_runs_conceded",
         "death_overs_bowled",
     } <= cols
+
+
+def test_posts_fixture_id_nullable_for_standalone(engine):
+    from bot.db import posts
+
+    with engine.begin() as conn:
+        conn.execute(
+            posts.insert().values(
+                fixture_id=None,
+                post_type="standalone_trivia",
+                state="scheduled",
+                attempts=0,
+                slot_key="2026-07-22-08",
+            )
+        )
+
+
+def test_posts_slot_key_unique(engine):
+    import sqlalchemy as sa
+    from bot.db import posts
+
+    with engine.begin() as conn:
+        conn.execute(
+            posts.insert().values(
+                fixture_id=None,
+                post_type="standalone_trivia",
+                state="scheduled",
+                attempts=0,
+                slot_key="2026-07-22-08",
+            )
+        )
+        with pytest.raises(sa.exc.IntegrityError):
+            conn.execute(
+                posts.insert().values(
+                    fixture_id=None,
+                    post_type="standalone_trivia",
+                    state="scheduled",
+                    attempts=0,
+                    slot_key="2026-07-22-08",
+                )
+            )
+
+
+def test_trivia_log_table_roundtrip(engine):
+    from datetime import datetime, timezone
+
+    import sqlalchemy as sa
+    from bot.db import trivia_log
+
+    with engine.begin() as conn:
+        conn.execute(
+            trivia_log.insert().values(
+                content_key="h2h:CSK:MI",
+                posted_at=datetime(2026, 7, 21, tzinfo=timezone.utc),
+            )
+        )
+        got = conn.execute(sa.select(trivia_log.c.content_key)).scalar_one()
+        assert got == "h2h:CSK:MI"
+
+
+def test_ensure_schema_idempotent_on_sqlite(engine):
+    """ensure_schema() must not run Postgres-only DDL (ALTER COLUMN ... DROP
+    NOT NULL) against the sqlite test engine — that syntax doesn't exist in
+    sqlite and would raise OperationalError."""
+    from bot.db import ensure_schema
+
+    with engine.begin() as conn:
+        ensure_schema(conn)
+        ensure_schema(conn)  # second call must also be a no-op, not an error

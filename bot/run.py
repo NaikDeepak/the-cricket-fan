@@ -13,16 +13,19 @@ import pandas as pd
 import sqlalchemy as sa
 
 from .compose import prediction_post, result_post, trivia_post
-from .db import fixtures, posts, predictions, team_matches
+from .db import fixtures, posts, predictions, team_matches, trivia_log
 from .features import build_features
 from .poster import allowed, month_post_count
 from .predict import predict
+from .trivia_standalone import pick_standalone_trivia
 
 logger = logging.getLogger(__name__)
 
 PREDICTION_WINDOW_H = 3
 TRIVIA_WINDOW_H = 1
 MAX_ATTEMPTS = 3
+STANDALONE_TRIVIA_HOURS = {8, 14, 20}
+TRIVIA_LOG_LOOKBACK_DAYS = 30
 
 
 def _load_team_matches(conn) -> pd.DataFrame:
@@ -63,13 +66,13 @@ def _upsert_fixtures(conn, fixture_list) -> None:
             )
 
 
-def _try_post(conn, poster, post_row, text: str, now: datetime) -> None:
+def _try_post(conn, poster, post_row, text: str, now: datetime) -> bool:
     count = month_post_count(conn, now)
     if not allowed(post_row.post_type, count):
         logger.warning(
             "quota breaker: skipping %s (month count %d)", post_row.post_type, count
         )
-        return
+        return False
     ok = poster.send(text)
     attempts = post_row.attempts + 1
     if ok:
@@ -78,6 +81,7 @@ def _try_post(conn, poster, post_row, text: str, now: datetime) -> None:
             .where(posts.c.id == post_row.id)
             .values(state="posted", attempts=attempts, text=text, posted_at=now)
         )
+        posted = True
     elif attempts >= MAX_ATTEMPTS:
         conn.execute(
             posts.update()
@@ -87,16 +91,19 @@ def _try_post(conn, poster, post_row, text: str, now: datetime) -> None:
         logger.error(
             "abandoning %s post after %d attempts", post_row.post_type, attempts
         )
+        posted = False
     else:
         conn.execute(
             posts.update()
             .where(posts.c.id == post_row.id)
             .values(state="failed", attempts=attempts)
         )
+        posted = False
     # Commit immediately: poster.send() is an irreversible external side effect.
     # If a later step in this tick raises, only this state update must survive
-    # the rollback — otherwise the next tick would resend an already-posted tweet.
+    # the rollback -- otherwise the next tick would resend an already-posted tweet.
     conn.commit()
+    return posted
 
 
 def _due(conn, post_type: str, window_h: float, now: datetime):
@@ -132,6 +139,29 @@ def _due(conn, post_type: str, window_h: float, now: datetime):
     return due, late
 
 
+def _has_upcoming_fixture_within_24h(conn, now: datetime) -> bool:
+    rows = conn.execute(
+        sa.select(fixtures.c.start_time).where(fixtures.c.status == "upcoming")
+    ).all()
+    for r in rows:
+        start = (
+            r.start_time
+            if r.start_time.tzinfo
+            else r.start_time.replace(tzinfo=timezone.utc)
+        )
+        if now <= start <= now + timedelta(hours=24):
+            return True
+    return False
+
+
+def _recent_trivia_keys(conn, now: datetime) -> set[str]:
+    cutoff = now - timedelta(days=TRIVIA_LOG_LOOKBACK_DAYS)
+    rows = conn.execute(
+        sa.select(trivia_log.c.content_key).where(trivia_log.c.posted_at >= cutoff)
+    ).all()
+    return {r.content_key for r in rows}
+
+
 def _season_record(conn) -> tuple[int, int]:
     total = conn.execute(
         sa.select(sa.func.count())
@@ -146,7 +176,9 @@ def _season_record(conn) -> tuple[int, int]:
     return correct, total
 
 
-def _home_team_at_venue(df: pd.DataFrame, venue: str, team_a: str, team_b: str) -> str | None:
+def _home_team_at_venue(
+    df: pd.DataFrame, venue: str, team_a: str, team_b: str
+) -> str | None:
     """Which of team_a/team_b is historically the home side at this venue.
 
     The live fixtures feed carries no home/away designation, so this infers it
@@ -280,21 +312,67 @@ def tick(conn, provider, artifact, poster, now: datetime) -> None:
             )
             _try_post(conn, poster, prow, text, now)
 
+    # Standalone trivia (quiet-day filler, no fixture involved)
+    if now.hour in STANDALONE_TRIVIA_HOURS and not _has_upcoming_fixture_within_24h(
+        conn, now
+    ):
+        slot_key = now.strftime("%Y-%m-%d-%H")
+        existing_slot = conn.execute(
+            sa.select(posts.c.id).where(posts.c.slot_key == slot_key)
+        ).first()
+        if not existing_slot:
+            recent_keys = _recent_trivia_keys(conn, now)
+            picked = pick_standalone_trivia(df, recent_keys)
+            if picked:
+                content_key, text = picked
+                post_id = None
+                try:
+                    with conn.begin_nested():
+                        post_id = conn.execute(
+                            posts.insert().values(
+                                fixture_id=None,
+                                post_type="standalone_trivia",
+                                state="scheduled",
+                                attempts=0,
+                                slot_key=slot_key,
+                            )
+                        ).inserted_primary_key[0]
+                except sa.exc.IntegrityError:
+                    logger.info(
+                        "standalone trivia slot %s already claimed; skipping", slot_key
+                    )
+                if post_id is not None:
+                    post_row = conn.execute(
+                        sa.select(posts).where(posts.c.id == post_id)
+                    ).one()
+                    posted = _try_post(conn, poster, post_row, text, now)
+                    if posted:
+                        conn.execute(
+                            trivia_log.insert().values(
+                                content_key=content_key, posted_at=now
+                            )
+                        )
+                        conn.commit()
+
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     from .config import get_settings
-    from .db import get_engine
+    from .db import ensure_schema, get_engine
     from .fixtures_provider import CricApiProvider
     from .poster import Poster
     from .predict import load_artifact
 
     settings = get_settings()
     engine = get_engine(settings.database_url)
-    artifact = load_artifact(Path(__file__).resolve().parent / "artifacts" / "model.pkl")
+    artifact = load_artifact(
+        Path(__file__).resolve().parent / "artifacts" / "model.pkl"
+    )
     provider = CricApiProvider(settings.cricket_api_base, settings.cricket_api_key)
     poster = Poster(settings)
     with engine.connect() as conn:
+        ensure_schema(conn)
+        conn.commit()
         tick(conn, provider, artifact, poster, datetime.now(timezone.utc))
         conn.commit()
 
