@@ -128,8 +128,13 @@ def _record_candidates(df: pd.DataFrame) -> list[tuple[str, str]]:
     return out
 
 
-def build_candidates(df: pd.DataFrame) -> list[tuple[str, str]]:
-    return _h2h_candidates(df) + _venue_candidates(df) + _record_candidates(df)
+def build_candidates(df: pd.DataFrame) -> list[tuple[str, str, list[str]]]:
+    """Cricsheet-derived candidates, all single-tweet. Widened to the
+    (content_key, format, segments) shape so content_bank threads can share
+    the same pool -- every candidate here is format='single', segments=[text].
+    """
+    singles = _h2h_candidates(df) + _venue_candidates(df) + _record_candidates(df)
+    return [(key, "single", [text]) for key, text in singles]
 
 
 def pick_standalone_trivia(

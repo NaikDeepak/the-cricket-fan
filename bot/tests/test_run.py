@@ -248,9 +248,7 @@ def test_result_flow_correct_and_record(conn, art):
     from bot.db import trivia_log
 
     conn.execute(
-        trivia_log.insert().values(
-            content_key="k", posted_at=NOW + timedelta(hours=2)
-        )
+        trivia_log.insert().values(content_key="k", posted_at=NOW + timedelta(hours=2))
     )
     poster = SpyPoster()
     provider = FakeProvider([_fixture(hours_from_now=2.5)], [])
@@ -276,7 +274,9 @@ def test_abandoned_match_voids_prediction(conn, art):
 
 def test_standalone_trivia_posts_when_no_fixture_and_no_recent_post(conn, art):
     poster = SpyPoster()
-    now = datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc)  # any hour; never posted before
+    now = datetime(
+        2026, 7, 19, 8, 0, tzinfo=timezone.utc
+    )  # any hour; never posted before
     tick(conn, FakeProvider([], []), art, poster, now)
     assert len(poster.sent) == 1
     row = conn.execute(
@@ -368,7 +368,7 @@ def test_standalone_trivia_logs_content_key_on_success(conn, art):
     from bot.run import _load_team_matches
     from bot.trivia_standalone import build_candidates
 
-    valid_keys = {k for k, _ in build_candidates(_load_team_matches(conn))}
+    valid_keys = {c[0] for c in build_candidates(_load_team_matches(conn))}
     poster = SpyPoster()
     now = datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc)
     tick(conn, FakeProvider([], []), art, poster, now)
@@ -394,7 +394,7 @@ def test_standalone_trivia_respects_30_day_dedup(conn, art):
     from bot.run import _load_team_matches
     from bot.trivia_standalone import build_candidates
 
-    all_keys = {k for k, _ in build_candidates(_load_team_matches(conn))}
+    all_keys = {c[0] for c in build_candidates(_load_team_matches(conn))}
     assert (
         len(all_keys) >= 2
     )  # fixture must offer >1 candidate for this test to prove anything

@@ -24,7 +24,9 @@ logger = logging.getLogger(__name__)
 PREDICTION_WINDOW_H = 3
 TRIVIA_WINDOW_H = 1
 MAX_ATTEMPTS = 3
-STANDALONE_TRIVIA_MIN_GAP_H = 5  # ~3x/day cadence; window (not exact hour) survives cron drift
+STANDALONE_TRIVIA_MIN_GAP_H = (
+    5  # ~3x/day cadence; window (not exact hour) survives cron drift
+)
 TRIVIA_LOG_LOOKBACK_DAYS = 30
 
 
@@ -340,7 +342,8 @@ def tick(
             recent_keys = _recent_trivia_keys(conn, now)
             picked = pick_standalone_trivia(df, recent_keys)
             if picked:
-                content_key, text = picked
+                content_key, _fmt, segs = picked
+                text = segs[0]
                 post_id = None
                 try:
                     with conn.begin_nested():
