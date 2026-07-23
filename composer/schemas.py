@@ -68,6 +68,32 @@ class AnalyticsOut(BaseModel):
     prediction_record: dict[str, int]
 
 
+class PredictionOut(BaseModel):
+    id: int
+    fixture_id: int
+    team_a: str
+    team_b: str
+    venue: str
+    league: str
+    start_time: object
+    prob_team_a: float
+    reasons: list[str]
+    outcome: str
+    created_at: object
+
+
+class PostOut(BaseModel):
+    id: int
+    fixture_id: int | None
+    post_type: str
+    state: str
+    text: str | None
+    tweet_count: int
+    posted_at: object
+    team_a: str | None = None
+    team_b: str | None = None
+
+
 def row_to_out(row) -> DraftOut:
     return DraftOut(
         id=row.id,

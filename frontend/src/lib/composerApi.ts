@@ -31,6 +31,32 @@ export type Analytics = {
   prediction_record: { correct: number; total: number };
 };
 
+export type Prediction = {
+  id: number;
+  fixture_id: number;
+  team_a: string;
+  team_b: string;
+  venue: string;
+  league: string;
+  start_time: string;
+  prob_team_a: number;
+  reasons: string[];
+  outcome: "pending" | "correct" | "incorrect" | "void";
+  created_at: string;
+};
+
+export type Post = {
+  id: number;
+  fixture_id: number | null;
+  post_type: "prediction" | "trivia" | "result" | "standalone_trivia";
+  state: "scheduled" | "posted" | "partial" | "failed" | "abandoned";
+  text: string | null;
+  tweet_count: number;
+  posted_at: string | null;
+  team_a: string | null;
+  team_b: string | null;
+};
+
 export type DraftIn = {
   source: Draft["source"];
   category?: string | null;
@@ -80,6 +106,7 @@ export const composerApi = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+  deleteDraft: (id: number) => req<void>(`/drafts/${id}`, { method: "DELETE" }),
   logEvent: (id: number, body: EventIn) =>
     req<void>(`/drafts/${id}/event`, {
       method: "POST",
@@ -100,4 +127,12 @@ export const composerApi = {
       body: JSON.stringify(body),
     }),
   analytics: () => req<Analytics>("/analytics"),
+  predictions: (q: { outcome?: string } = {}) => {
+    const p = new URLSearchParams(q as Record<string, string>).toString();
+    return req<Prediction[]>(`/predictions${p ? `?${p}` : ""}`);
+  },
+  posts: (q: { state?: string; post_type?: string } = {}) => {
+    const p = new URLSearchParams(q as Record<string, string>).toString();
+    return req<Post[]>(`/posts${p ? `?${p}` : ""}`);
+  },
 };

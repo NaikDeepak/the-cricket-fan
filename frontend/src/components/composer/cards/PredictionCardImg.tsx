@@ -1,4 +1,5 @@
 import type { Draft } from "@/lib/composerApi";
+import { teamLogoPath } from "@/lib/teamLogo";
 
 export default function PredictionCardImg({
   draft,
@@ -13,6 +14,8 @@ export default function PredictionCardImg({
   const probA = typeof meta.prob_a === "number" ? meta.prob_a : 0.5;
   const probAStr = Math.round(probA * 100);
   const probBStr = 100 - probAStr;
+  const logoA = teamLogoPath(teamA);
+  const logoB = teamLogoPath(teamB);
 
   const dims =
     aspect === "16:9"
@@ -77,7 +80,13 @@ export default function PredictionCardImg({
             marginBottom: 16,
           }}
         >
-          <span style={{ fontSize: 44, fontWeight: 700 }}>{teamA}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {logoA && (
+              // eslint-disable-next-line @next/next/no-img-element -- captured by html-to-image, needs a plain <img>
+              <img src={logoA} alt="" width={56} height={56} style={{ borderRadius: "50%" }} />
+            )}
+            <span style={{ fontSize: 44, fontWeight: 700 }}>{teamA}</span>
+          </div>
           <span style={{ fontSize: 56, fontWeight: 800, color: "#38bdf8" }}>
             {probAStr}%
           </span>
@@ -116,7 +125,13 @@ export default function PredictionCardImg({
             marginTop: 16,
           }}
         >
-          <span style={{ fontSize: 44, fontWeight: 700 }}>{teamB}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {logoB && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoB} alt="" width={56} height={56} style={{ borderRadius: "50%" }} />
+            )}
+            <span style={{ fontSize: 44, fontWeight: 700 }}>{teamB}</span>
+          </div>
           <span style={{ fontSize: 56, fontWeight: 800, color: "#fb7185" }}>
             {probBStr}%
           </span>

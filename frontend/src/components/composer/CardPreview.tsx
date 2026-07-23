@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { composerApi, type Draft } from "@/lib/composerApi";
 import { captureCard, copyImageToClipboard, downloadCard } from "@/lib/share";
 import PredictionCardImg from "./cards/PredictionCardImg";
@@ -11,15 +11,24 @@ type AspectRatio = "1:1" | "16:9" | "4:5";
 export default function CardPreview({
   draft,
   onUpdate,
+  onDelete,
 }: {
   draft: Draft;
   onUpdate?: (d: Draft) => void;
+  onDelete?: (id: number) => void;
 }) {
   const [aspect, setAspect] = useState<AspectRatio>("1:1");
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const captureRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!confirmingDelete) return;
+    const id = setTimeout(() => setConfirmingDelete(false), 3000);
+    return () => clearTimeout(id);
+  }, [confirmingDelete]);
 
   const cardType = draft.card_type ?? "record";
 
@@ -78,6 +87,21 @@ export default function CardPreview({
     onUpdate?.(updated);
     setFeedback("Marked as posted!");
     setTimeout(() => setFeedback(null), 2500);
+  }
+
+  async function handleDelete() {
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+    try {
+      await composerApi.deleteDraft(draft.id);
+      onDelete?.(draft.id);
+    } catch {
+      setConfirmingDelete(false);
+      setFeedback("Failed to delete. Try again.");
+      setTimeout(() => setFeedback(null), 2500);
+    }
   }
 
   return (
@@ -200,12 +224,28 @@ export default function CardPreview({
         >
           {draft.status === "posted" ? "Posted" : "Mark Posted"}
         </button>
+        <button
+          onClick={handleDelete}
+          className="ds-btn-secondary"
+          style={{
+            marginLeft: "auto",
+            color: confirmingDelete ? "var(--wire-red)" : "var(--muted)",
+            borderColor: confirmingDelete ? "var(--wire-red)" : undefined,
+          }}
+        >
+          {confirmingDelete ? "Confirm Delete?" : "Delete"}
+        </button>
       </div>
 
       {feedback && (
         <p
           className="text-micro"
-          style={{ color: "var(--floodlight-cyan)", margin: 0 }}
+          style={{
+            color: feedback.startsWith("Failed")
+              ? "var(--wire-red)"
+              : "var(--floodlight-cyan)",
+            margin: 0,
+          }}
         >
           {feedback}
         </p>

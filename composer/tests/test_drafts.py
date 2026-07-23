@@ -85,3 +85,15 @@ def test_bank_draft_roundtrips_content_key(client):
 def test_freeform_draft_has_null_content_key(client):
     out = client.post("/drafts", json={"source": "freeform", "text": "x"}).json()
     assert out["content_key"] is None
+
+
+def test_delete_draft_removes_it_from_list(client):
+    did = client.post("/drafts", json={"source": "freeform", "text": "x"}).json()["id"]
+    r = client.delete(f"/drafts/{did}")
+    assert r.status_code == 204
+    assert client.get("/drafts").json() == []
+
+
+def test_delete_missing_draft_404s(client):
+    r = client.delete("/drafts/999")
+    assert r.status_code == 404

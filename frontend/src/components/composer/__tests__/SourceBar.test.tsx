@@ -15,6 +15,7 @@ const draft = {
   status: "draft",
   created_at: "t",
   posted_at: null,
+  content_key: null,
 } as const;
 
 describe("SourceBar", () => {

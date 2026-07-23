@@ -1,6 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
-import { composerApi, type Draft } from "@/lib/composerApi";
+import { type Draft } from "@/lib/composerApi";
 import SourceBar from "./SourceBar";
 
 const SOURCE_LABEL: Record<Draft["source"], string> = {
@@ -11,45 +10,34 @@ const SOURCE_LABEL: Record<Draft["source"], string> = {
 };
 
 export default function Feed({
+  drafts,
+  loading,
+  loadError,
+  onCreated,
   onSelect,
   selectedId,
 }: {
+  drafts: Draft[];
+  loading: boolean;
+  loadError: string | null;
+  onCreated: (d: Draft) => void;
   onSelect: (d: Draft) => void;
   selectedId?: number;
 }) {
-  const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    composerApi
-      .listDrafts()
-      .then((d) => {
-        setDrafts(d);
-        setLoadError(null);
-      })
-      .catch(() =>
-        setLoadError(
-          "Could not reach the composer API. Is it running (uvicorn composer.app:app) on the URL in NEXT_PUBLIC_API_URL?"
-        )
-      );
-  }, []);
-
-  function handleCreated(d: Draft) {
-    setDrafts((prev) => [d, ...prev]);
-    onSelect(d);
-  }
-
   return (
     <div
       style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}
     >
-      <SourceBar onCreated={handleCreated} />
+      <SourceBar onCreated={onCreated} />
       {loadError && (
         <p style={{ color: "var(--wire-red)", fontSize: 13, margin: 0 }}>
           {loadError}
         </p>
       )}
-      {!loadError && drafts.length === 0 && (
+      {loading && (
+        <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading drafts…</p>
+      )}
+      {!loading && !loadError && drafts.length === 0 && (
         <p style={{ color: "var(--muted)", fontSize: 14 }}>
           No drafts yet — create one above.
         </p>

@@ -93,6 +93,16 @@ def patch_draft(draft_id: int, body: DraftPatch, conn=Depends(get_conn)) -> Draf
     return row_to_out(row)
 
 
+@router.delete("/drafts/{draft_id}", status_code=204)
+def delete_draft(draft_id: int, conn=Depends(get_conn)) -> Response:
+    row = conn.execute(sa.select(drafts.c.id).where(drafts.c.id == draft_id)).first()
+    if row is None:
+        raise HTTPException(404, "draft not found")
+    conn.execute(drafts.delete().where(drafts.c.id == draft_id))
+    conn.commit()
+    return Response(status_code=204)
+
+
 @router.post("/drafts/{draft_id}/event", status_code=204)
 def post_event(draft_id: int, body: EventIn, conn=Depends(get_conn)) -> Response:
     row = conn.execute(sa.select(drafts.c.id).where(drafts.c.id == draft_id)).first()

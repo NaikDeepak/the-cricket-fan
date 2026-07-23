@@ -15,6 +15,7 @@ const draft = {
   status: "draft",
   created_at: "t",
   posted_at: null,
+  content_key: null,
 } as const;
 
 describe("CardPreview", () => {
@@ -44,5 +45,41 @@ describe("CardPreview", () => {
       expect(writeTextMock).toHaveBeenCalledWith("Great cricket moment");
       expect(spy).toHaveBeenCalledWith(12, { action: "copied" });
     });
+  });
+
+  it("Delete requires a second confirming click before calling the API", async () => {
+    const deleteSpy = vi
+      .spyOn(composerApi, "deleteDraft")
+      .mockResolvedValue(undefined);
+    const onDelete = vi.fn();
+    render(<CardPreview draft={{ ...draft }} onDelete={onDelete} />);
+
+    const btn = screen.getByRole("button", { name: /delete/i });
+    fireEvent.click(btn);
+    expect(deleteSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /confirm delete/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /confirm delete/i }));
+    await waitFor(() => {
+      expect(deleteSpy).toHaveBeenCalledWith(12);
+      expect(onDelete).toHaveBeenCalledWith(12);
+    });
+  });
+
+  it("Delete failure shows an error and resets the confirm state, doesn't call onDelete", async () => {
+    vi.spyOn(composerApi, "deleteDraft").mockRejectedValue(
+      new Error("API /drafts/12 → 503")
+    );
+    const onDelete = vi.fn();
+    render(<CardPreview draft={{ ...draft }} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+    fireEvent.click(screen.getByRole("button", { name: /confirm delete/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/failed to delete/i)).toBeInTheDocument();
+    });
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
   });
 });
