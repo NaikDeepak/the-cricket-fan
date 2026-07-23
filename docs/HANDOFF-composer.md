@@ -74,3 +74,14 @@ FK `ondelete="CASCADE"` on content_events.draft_id; `card_meta` JSON boundary (d
 ## Reference: Gemini API key
 
 The LLM path (`/generate/llm`) reuses `GEMINI_API_KEY` (already configured for the parked web app's story service — see `backend/.env`). Composer adds its OWN thin Gemini client (`composer/gemini.py`), not a dependency on `backend/app/services`. With no key, `/generate/llm` returns 503 and the UI shows the source disabled — the other three sources still work.
+
+---
+
+## SEPARATE bot task (not composer) — upcoming-fixtures provider fix
+
+Live bug found 2026-07-23: the bot reads only CricAPI `/currentMatches`, so it never sees UPCOMING scheduled matches (missed the Ind-Zim T20I) — no prediction until a match goes live, past the T-3h window. Team resolution for internationals already fixed & merged (commit `be327df`). Remaining work speced here:
+
+- Spec: `docs/superpowers/specs/2026-07-23-upcoming-fixtures-provider-design.md`
+- Branch: `feature/mvp` (live bot — NOT the composer branch).
+- Gist: add upcoming-fixture fetch from `/cricScore` (ms==fixture, t20, 48h horizon, skip-existing to stay under the 100 hits/day budget) + `/match_info` for venue; add a venue trailing-city strip fallback in `resolve()`.
+- Also noted (separate, unfixed): standalone trivia posts defunct-team H2H ("Delhi Daredevils vs Gujarat Lions") — candidates drawn from all-time history; needs a recency/active-team filter.
