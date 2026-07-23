@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import CardPreview from "@/components/composer/CardPreview";
 import Editor from "@/components/composer/Editor";
 import Feed from "@/components/composer/Feed";
 import type { Draft } from "@/lib/composerApi";
@@ -15,12 +16,13 @@ export default function ComposerPage() {
         </h2>
         <Feed onSelect={setSelected} />
       </div>
-      <div>
-        <h2 className="text-micro" style={{ marginBottom: 16 }}>
-          EDITOR & PREVIEW
-        </h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <h2 className="text-micro">EDITOR & PREVIEW</h2>
         {selected ? (
-          <Editor draft={selected} onChange={setSelected} />
+          <>
+            <Editor draft={selected} onChange={setSelected} />
+            <CardPreview draft={selected} onUpdate={setSelected} />
+          </>
         ) : (
           <p className="text-micro" style={{ color: "var(--muted)" }}>
             Select or create a draft to start editing.
