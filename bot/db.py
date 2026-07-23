@@ -79,9 +79,10 @@ posts = sa.Table(
     sa.Column("post_type", sa.String(20), nullable=False),
     # 'prediction' | 'trivia' | 'result' | 'standalone_trivia'
     sa.Column("state", sa.String(16), nullable=False, default="scheduled"),
-    # 'scheduled' | 'posted' | 'failed' | 'abandoned'
+    # 'scheduled' | 'posted' | 'partial' | 'failed' | 'abandoned'
     sa.Column("attempts", sa.Integer, nullable=False, default=0),
     sa.Column("text", sa.Text, nullable=True),
+    sa.Column("tweet_count", sa.Integer, nullable=False, server_default=sa.text("1")),
     sa.Column("posted_at", sa.DateTime(timezone=True), nullable=True),
     sa.Column("slot_key", sa.String(32), nullable=True, unique=True),
     sa.UniqueConstraint("fixture_id", "post_type", name="uq_post"),
@@ -94,6 +95,22 @@ trivia_log = sa.Table(
     sa.Column("id", sa.Integer, primary_key=True),
     sa.Column("content_key", sa.String(128), nullable=False, index=True),
     sa.Column("posted_at", sa.DateTime(timezone=True), nullable=False, index=True),
+)
+
+content_bank = sa.Table(
+    "content_bank",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("category", sa.String(16), nullable=False),
+    # 'wiki_record' | 'anecdote' | 'story'
+    sa.Column("format", sa.String(8), nullable=False),
+    # 'single' | 'thread'
+    sa.Column("segments_json", sa.Text, nullable=False),
+    # JSON list[str]; len == 1 for 'single', 2-4 for 'thread'
+    sa.Column("content_key", sa.String(128), nullable=False, unique=True),
+    sa.Column("source", sa.String(256), nullable=False),
+    # e.g. "wikipedia:List_of_Test_cricket_records" -- traceability, not shown
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
 )
 
 
@@ -121,4 +138,12 @@ def ensure_schema(conn: sa.Connection) -> None:
                 "CREATE UNIQUE INDEX IF NOT EXISTS uq_posts_slot_key ON posts(slot_key)"
             )
         )
-        conn.execute(sa.text("ALTER TABLE posts ALTER COLUMN post_type TYPE VARCHAR(20)"))
+        conn.execute(
+            sa.text("ALTER TABLE posts ALTER COLUMN post_type TYPE VARCHAR(20)")
+        )
+        conn.execute(
+            sa.text(
+                "ALTER TABLE posts ADD COLUMN IF NOT EXISTS "
+                "tweet_count INTEGER NOT NULL DEFAULT 1"
+            )
+        )

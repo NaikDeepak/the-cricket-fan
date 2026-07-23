@@ -36,9 +36,12 @@ class _TimeoutSession(requests.Session):
 def month_post_count(conn, now: datetime) -> int:
     start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     return conn.execute(
-        sa.select(sa.func.count())
+        sa.select(sa.func.coalesce(sa.func.sum(posts.c.tweet_count), 0))
         .select_from(posts)
-        .where(posts.c.state == "posted", posts.c.posted_at >= start)
+        .where(
+            posts.c.state.in_(["posted", "partial"]),
+            posts.c.posted_at >= start,
+        )
     ).scalar_one()
 
 
@@ -84,5 +87,44 @@ class Poster:
             summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
             if summary_path:
                 with open(summary_path, "a") as f:
-                    f.write(f"### Post FAILED — copy/paste manually\n```\n{text}\n```\n\n")
+                    f.write(
+                        f"### Post FAILED — copy/paste manually\n```\n{text}\n```\n\n"
+                    )
             return False
+
+    def send_thread(self, segments: list[str]) -> tuple[bool, int]:
+        """Post segments as a reply chain. Returns (all_posted, tweets_sent).
+        On a mid-thread failure, already-posted tweets are left live (no
+        auto-delete); tweets_sent is the count that reached X."""
+        if self.settings.dry_run:
+            for i, seg in enumerate(segments):
+                print(f"DRY RUN THREAD {i + 1}/{len(segments)}:\n{seg}\n")
+            summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+            if summary_path:
+                with open(summary_path, "a") as f:
+                    joined = "\n\n".join(segments)
+                    f.write(f"### Thread (copy/paste)\n```\n{joined}\n```\n\n")
+            return True, len(segments)
+        client = self._x_client()
+        prev_id = None
+        sent = 0
+        for seg in segments:
+            try:
+                kwargs = {"text": seg}
+                if prev_id is not None:
+                    kwargs["in_reply_to_tweet_id"] = prev_id
+                resp = client.create_tweet(**kwargs)
+                prev_id = resp.data["id"]
+                sent += 1
+            except Exception:
+                logger.exception("X thread post failed at segment %d", sent + 1)
+                summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+                if summary_path:
+                    remaining = "\n\n".join(segments[sent:])
+                    with open(summary_path, "a") as f:
+                        f.write(
+                            "### Thread partial — post remaining manually\n"
+                            f"```\n{remaining}\n```\n\n"
+                        )
+                return False, sent
+        return True, sent
