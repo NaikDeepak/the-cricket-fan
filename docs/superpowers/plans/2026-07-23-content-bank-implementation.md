@@ -1175,6 +1175,35 @@ git commit -m "feat(bot): add two-phase content_bank seed script"
 
 ---
 
+## Post-review hardening (PR #3 feedback, applied after Task 6)
+
+Validate content-bank content at **both** boundaries, so a malformed or
+out-of-spec entry is rejected at write time and defensively skipped at read
+time rather than posting garbage or crashing the standalone tick:
+
+- **Write time (`commit_reviewed`, `bot/scripts/seed_content_bank.py`):** in
+  addition to the existing empty/duplicate/`>280` checks, skip any entry whose
+  `format` is unknown or whose segment count violates its format's cardinality
+  — `single` must have exactly 1 segment, `thread` must have 2–4
+  (`CONTENT_FORMATS = {"single": (1, 1), "thread": (2, 4)}`). Test:
+  `test_commit_skips_bad_cardinality_and_format` in `test_seed_content_bank.py`.
+- **Read time (`_content_bank_candidates`, `bot/trivia_standalone.py`):** wrap
+  `json.loads` to catch malformed `segments_json`, and skip rows failing
+  `_valid_content_row` (known format, matching cardinality, every segment a
+  non-empty `str` ≤ 280 chars); log and skip invalid rows instead of aborting
+  selection. Tests: `test_content_bank_candidates_skips_malformed_json_but_keeps_valid`,
+  `test_content_bank_candidates_skips_invalid_format_and_cardinality`.
+
+Also applied from the same review: `_post_standalone` now takes `content_key`
+and writes the `trivia_log` dedup row in the **same commit** as the posted
+state (closes the post-without-logging crash window); the quota preflight
+projects a thread's last-tweet count (`count + len(segments) - 1`) so a thread
+never overshoots a quota cutoff mid-way (test
+`test_standalone_four_segment_thread_blocked_near_quota_cutoff`); and `--draft`
+now also emits a `story`/`thread` skeleton (`STORY_PAGES`).
+
+---
+
 ## Self-Review (completed against the spec)
 
 **Spec coverage:**

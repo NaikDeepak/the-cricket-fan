@@ -245,3 +245,49 @@ def test_pick_without_conn_ignores_content_bank(engine):
 
     # df empty AND no conn -> no candidates at all
     assert pick_standalone_trivia(pd.DataFrame(), set(), rng=random.Random(0)) is None
+
+
+def _insert_row(conn, content_key, fmt, segments_json):
+    from datetime import datetime, timezone
+
+    from bot.db import content_bank
+
+    conn.execute(
+        content_bank.insert().values(
+            category="anecdote",
+            format=fmt,
+            segments_json=segments_json,
+            content_key=content_key,
+            source="wikipedia:X",
+            created_at=datetime(2026, 7, 23, tzinfo=timezone.utc),
+        )
+    )
+
+
+def test_content_bank_candidates_skips_malformed_json_but_keeps_valid(engine):
+    from bot.trivia_standalone import _content_bank_candidates
+
+    with engine.begin() as conn:
+        _insert_row(conn, "anecdote:bad-json", "single", "not valid json{")
+        _insert_row(conn, "anecdote:ok", "single", '["a fine fact"]')
+        keys = {c[0] for c in _content_bank_candidates(conn)}
+    assert keys == {"anecdote:ok"}  # bad row skipped, not raised
+
+
+def test_content_bank_candidates_skips_invalid_format_and_cardinality(engine):
+    from bot.trivia_standalone import _content_bank_candidates
+
+    with engine.begin() as conn:
+        _insert_row(conn, "anecdote:bad-format", "poem", '["x"]')  # unknown format
+        _insert_row(conn, "anecdote:single-two", "single", '["a", "b"]')  # single != 1
+        _insert_row(conn, "anecdote:thread-one", "thread", '["only one"]')  # thread < 2
+        _insert_row(
+            conn, "anecdote:thread-five", "thread", '["1","2","3","4","5"]'
+        )  # thread > 4
+        _insert_row(conn, "anecdote:empty-seg", "single", '[""]')  # empty segment
+        _insert_row(
+            conn, "anecdote:too-long", "single", '["' + "x" * 281 + '"]'
+        )  # > 280
+        _insert_row(conn, "anecdote:good", "thread", '["seg one", "seg two"]')
+        keys = {c[0] for c in _content_bank_candidates(conn)}
+    assert keys == {"anecdote:good"}

@@ -7,6 +7,7 @@ H2H/venue shape plus a season records/extremes pool.
 """
 
 import json
+import logging
 import random
 
 import pandas as pd
@@ -15,10 +16,15 @@ import sqlalchemy as sa
 from .compose import _truncate
 from .db import content_bank
 
+logger = logging.getLogger(__name__)
+
 MIN_H2H_MEETINGS = 3
 MIN_VENUE_HOME_MATCHES = 5
 MIN_PP_OVERS = 5.0  # powerplay is 6 overs; require most of it faced
 MIN_DEATH_OVERS = 4.0  # require a meaningful chunk of death bowling
+MAX_SEGMENT_LEN = 280  # per-tweet post limit
+# format -> (min_segments, max_segments); mirrors content_bank's documented shape
+CONTENT_FORMATS = {"single": (1, 1), "thread": (2, 4)}
 
 
 def _h2h_candidates(df: pd.DataFrame) -> list[tuple[str, str]]:
@@ -131,10 +137,25 @@ def _record_candidates(df: pd.DataFrame) -> list[tuple[str, str]]:
     return out
 
 
+def _valid_content_row(fmt, segments) -> bool:
+    """A content_bank row is postable only if its format is known, its segment
+    count matches that format, and every segment is a non-empty string within
+    the tweet limit. Guards the read boundary so one bad row (malformed seed,
+    manual insert) is skipped, not allowed to crash or post garbage."""
+    bounds = CONTENT_FORMATS.get(fmt)
+    if bounds is None or not isinstance(segments, list):
+        return False
+    lo, hi = bounds
+    if not lo <= len(segments) <= hi:
+        return False
+    return all(isinstance(s, str) and 0 < len(s) <= MAX_SEGMENT_LEN for s in segments)
+
+
 def _content_bank_candidates(conn) -> list[tuple[str, str, list[str]]]:
     """Wikipedia-sourced records + hand-authored anecdotes/stories. Same
     (content_key, format, segments) shape as build_candidates, feeding the
-    same 30-day trivia_log dedup."""
+    same 30-day trivia_log dedup. Malformed or out-of-spec rows are logged and
+    skipped rather than aborting the whole standalone-trivia selection."""
     rows = conn.execute(
         sa.select(
             content_bank.c.content_key,
@@ -142,7 +163,24 @@ def _content_bank_candidates(conn) -> list[tuple[str, str, list[str]]]:
             content_bank.c.segments_json,
         )
     ).all()
-    return [(r.content_key, r.format, json.loads(r.segments_json)) for r in rows]
+    out: list[tuple[str, str, list[str]]] = []
+    for r in rows:
+        try:
+            segments = json.loads(r.segments_json)
+        except (json.JSONDecodeError, TypeError):
+            logger.warning(
+                "content_bank row %s: malformed segments_json, skipping",
+                r.content_key,
+            )
+            continue
+        if not _valid_content_row(r.format, segments):
+            logger.warning(
+                "content_bank row %s: invalid format/segments, skipping",
+                r.content_key,
+            )
+            continue
+        out.append((r.content_key, r.format, segments))
+    return out
 
 
 def build_candidates(df: pd.DataFrame) -> list[tuple[str, str, list[str]]]:

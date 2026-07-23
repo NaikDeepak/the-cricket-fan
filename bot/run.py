@@ -108,15 +108,25 @@ def _try_post(conn, poster, post_row, text: str, now: datetime) -> bool:
     return posted
 
 
-def _post_standalone(conn, poster, post_row, fmt: str, segments: list[str], now) -> int:
+def _post_standalone(
+    conn, poster, post_row, content_key: str, fmt: str, segments: list[str], now
+) -> int:
     """Post a standalone single or thread. Returns tweets_sent (0 == nothing
     posted). Sets state posted/partial/failed and, when any tweet lands,
-    tweet_count + posted_at. No retry/abandon: standalone rows are slot-keyed
-    and single-attempt, matching the existing quiet-day design."""
+    tweet_count + posted_at AND logs content_key to trivia_log in the SAME
+    commit -- no crash window between the posted-state write and the dedup log.
+    No retry/abandon: standalone rows are slot-keyed and single-attempt."""
     count = month_post_count(conn, now)
-    if not allowed(post_row.post_type, count):
+    # A thread bills len(segments) tweets; gate on the count the LAST tweet
+    # would post at, so a thread that would spill past a quota cutoff mid-way
+    # is skipped whole rather than overshooting the cap.
+    projected = count + len(segments) - 1 if fmt == "thread" else count
+    if not allowed(post_row.post_type, projected):
         logger.warning(
-            "quota breaker: skipping %s (month count %d)", post_row.post_type, count
+            "quota breaker: skipping %s (month count %d, projected %d)",
+            post_row.post_type,
+            count,
+            projected,
         )
         return 0
     if fmt == "thread":
@@ -135,7 +145,11 @@ def _post_standalone(conn, poster, post_row, fmt: str, segments: list[str], now)
         values["posted_at"] = now
         values["tweet_count"] = tweets_sent
     conn.execute(posts.update().where(posts.c.id == post_row.id).values(**values))
-    conn.commit()  # irreversible external side effect must survive a later raise
+    if tweets_sent > 0:
+        conn.execute(trivia_log.insert().values(content_key=content_key, posted_at=now))
+    # Posted-state + dedup log land in one commit: an irreversible external
+    # side effect must survive a later raise, and never post-without-logging.
+    conn.commit()
     return tweets_sent
 
 
@@ -394,16 +408,9 @@ def tick(
                     post_row = conn.execute(
                         sa.select(posts).where(posts.c.id == post_id)
                     ).one()
-                    tweets_sent = _post_standalone(
-                        conn, poster, post_row, fmt, segments, now
+                    _post_standalone(
+                        conn, poster, post_row, content_key, fmt, segments, now
                     )
-                    if tweets_sent > 0:
-                        conn.execute(
-                            trivia_log.insert().values(
-                                content_key=content_key, posted_at=now
-                            )
-                        )
-                        conn.commit()
 
 
 def main() -> None:

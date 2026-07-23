@@ -107,3 +107,53 @@ def test_commit_skips_oversized_segment(engine, tmp_path):
         ).scalar_one()
     assert n == 0  # any segment >280 chars must never be inserted
     assert count == 0
+
+
+def test_commit_skips_bad_cardinality_and_format(engine, tmp_path):
+    review = {
+        "entries": [
+            {  # single must have exactly 1 segment
+                "category": "anecdote",
+                "format": "single",
+                "content_key": "anecdote:single-two",
+                "source": "wikipedia:X",
+                "segments": ["a", "b"],
+            },
+            {  # thread must have 2-4 segments
+                "category": "story",
+                "format": "thread",
+                "content_key": "story:thread-one",
+                "source": "wikipedia:X",
+                "segments": ["only one"],
+            },
+            {  # thread over the 4-segment max
+                "category": "story",
+                "format": "thread",
+                "content_key": "story:thread-five",
+                "source": "wikipedia:X",
+                "segments": ["1", "2", "3", "4", "5"],
+            },
+            {  # unknown format
+                "category": "anecdote",
+                "format": "poem",
+                "content_key": "anecdote:bad-format",
+                "source": "wikipedia:X",
+                "segments": ["x"],
+            },
+            {  # valid single -> the only insert
+                "category": "anecdote",
+                "format": "single",
+                "content_key": "anecdote:good",
+                "source": "wikipedia:X",
+                "segments": ["a fine fact"],
+            },
+        ]
+    }
+    f = tmp_path / "reviewed.json"
+    f.write_text(json.dumps(review))
+    now = datetime(2026, 7, 23, tzinfo=timezone.utc)
+    with engine.begin() as conn:
+        n = commit_reviewed(conn, f, now)
+        rows = conn.execute(sa.select(content_bank.c.content_key)).scalars().all()
+    assert n == 1
+    assert rows == ["anecdote:good"]

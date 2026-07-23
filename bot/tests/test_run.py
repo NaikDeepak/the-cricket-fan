@@ -514,3 +514,52 @@ def test_standalone_thread_partial_failure_records_partial_state(conn, art):
         .all()
     )
     assert keys == ["story:bodyline"]
+
+
+def test_standalone_four_segment_thread_blocked_near_quota_cutoff(conn, art):
+    """A 4-tweet thread at month count 449 would push the total to 452 -- past
+    the 450 standalone cutoff. The quota preflight projects the LAST tweet's
+    count (449 + 4 - 1 = 452) and skips the whole thread; a bare count check
+    (449 < 450) would wrongly let it post and overshoot."""
+    from bot.db import content_bank, trivia_log
+    from bot.run import _load_team_matches
+    from bot.trivia_standalone import build_candidates
+
+    conn.execute(
+        content_bank.insert().values(
+            category="story",
+            format="thread",
+            segments_json='["s1", "s2", "s3", "s4"]',
+            content_key="story:fourpart",
+            source="wikipedia:X",
+            created_at=datetime(2026, 7, 1, tzinfo=timezone.utc),
+        )
+    )
+    for key in {c[0] for c in build_candidates(_load_team_matches(conn))}:
+        conn.execute(
+            trivia_log.insert().values(
+                content_key=key, posted_at=datetime(2026, 7, 18, tzinfo=timezone.utc)
+            )
+        )
+    # One posted row carrying 449 tweets this month -> month_post_count == 449.
+    conn.execute(
+        posts.insert().values(
+            post_type="standalone_trivia",
+            state="posted",
+            tweet_count=449,
+            posted_at=datetime(2026, 7, 2, tzinfo=timezone.utc),
+        )
+    )
+    poster = SpyPoster()
+    now = datetime(2026, 7, 19, 8, 0, tzinfo=timezone.utc)
+    tick(conn, FakeProvider([], []), art, poster, now)
+    assert poster.threads == []  # projected 452 >= 450 -> thread skipped whole
+    assert poster.sent == []
+    logged = (
+        conn.execute(
+            sa.select(trivia_log.c.content_key).where(trivia_log.c.posted_at == now)
+        )
+        .scalars()
+        .all()
+    )
+    assert logged == []  # nothing posted -> nothing logged

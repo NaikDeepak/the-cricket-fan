@@ -33,7 +33,11 @@ RECORD_PAGES = {  # fmt tag -> Wikipedia page title
     "t20i": "List_of_Twenty20_International_cricket_records",
 }
 # Anecdote/story source pages seeded as empty skeletons for hand-authoring.
-ANECDOTE_PAGES = ["Bodyline", "Jim_Laker", "Kolkata_Test_2001"]
+ANECDOTE_PAGES = ["Bodyline", "Jim_Laker", "Kolkata_Test_2001"]  # single tweet
+STORY_PAGES = ["2005_Ashes_series"]  # multi-tweet thread (2-4 segments)
+
+# format -> (min_segments, max_segments); mirrors content_bank's documented shape
+CONTENT_FORMATS = {"single": (1, 1), "thread": (2, 4)}
 
 
 def _slug(text: str) -> str:
@@ -83,16 +87,27 @@ def extract_wiki_records(html: str, fmt: str, source: str) -> list[dict]:
 
 
 def anecdote_skeletons() -> list[dict]:
-    return [
+    skeletons = [
         {
             "category": "anecdote",
             "format": "single",
             "content_key": f"anecdote:{_slug(page)}",
             "source": f"wikipedia:{page}",
-            "segments": [],  # hand-author before --commit
+            "segments": [],  # hand-author 1 tweet before --commit
         }
         for page in ANECDOTE_PAGES
     ]
+    skeletons += [
+        {
+            "category": "story",
+            "format": "thread",
+            "content_key": f"story:{_slug(page)}",
+            "source": f"wikipedia:{page}",
+            "segments": [],  # hand-author 2-4 tweets before --commit
+        }
+        for page in STORY_PAGES
+    ]
+    return skeletons
 
 
 def write_draft(records_html: dict[str, str], path: Path) -> None:
@@ -115,6 +130,9 @@ def commit_reviewed(conn, path: Path, now: datetime) -> int:
         if e["content_key"] in existing:
             continue
         if any(len(seg) > 280 for seg in e["segments"]):  # over the post limit
+            continue
+        bounds = CONTENT_FORMATS.get(e["format"])  # unknown format / bad cardinality
+        if bounds is None or not bounds[0] <= len(e["segments"]) <= bounds[1]:
             continue
         conn.execute(
             content_bank.insert().values(
