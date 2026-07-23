@@ -24,7 +24,7 @@ The UI hits the API's endpoints, so the API plan MUST be built first. The two pl
 
 Each plan is TDD, complete code in every step (write failing test → verify fail → implement → verify pass → lint → commit). Work task-by-task, in order. Recommended: one focused effort per task, review the diff before moving on.
 
-1. Branch off `feature/mvp`: `git checkout feature/mvp && git checkout -b feature/composer`.
+1. Branch `feature/composer` is ALREADY created and pushed (off `feature/mvp`). Just check it out: `git checkout feature/composer && git pull`. Work here.
 2. Execute Plan 1, Tasks 1→7. Commit after each task (messages are in the plan).
 3. Execute Plan 2, Tasks 1→7.
 4. Open a PR into `feature/mvp`.

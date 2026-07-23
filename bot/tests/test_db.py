@@ -158,3 +158,60 @@ def test_posts_insert_defaults_tweet_count_to_one(engine):
 def pytest_raises_integrity():
     with pytest.raises(sa.exc.IntegrityError):
         yield
+
+
+def test_drafts_and_events_roundtrip_with_cascade(engine):
+    from datetime import datetime, timezone
+
+    from bot.db import content_events, drafts
+
+    now = datetime(2026, 7, 23, tzinfo=timezone.utc)
+    with engine.begin() as conn:
+        conn.execute(sa.text("PRAGMA foreign_keys=ON"))
+        did = conn.execute(
+            drafts.insert().values(
+                source="freeform",
+                category="anecdote",
+                text="a fine fact",
+                status="draft",
+                created_at=now,
+            )
+        ).inserted_primary_key[0]
+        conn.execute(
+            content_events.insert().values(
+                draft_id=did, action="generated", created_at=now
+            )
+        )
+        assert (
+            conn.execute(
+                sa.select(sa.func.count()).select_from(content_events)
+            ).scalar_one()
+            == 1
+        )
+        conn.execute(drafts.delete().where(drafts.c.id == did))
+        # FK cascade removes the orphan event (SQLite enforces only with PRAGMA on)
+        assert (
+            conn.execute(
+                sa.select(sa.func.count()).select_from(content_events)
+            ).scalar_one()
+            == 0
+        )
+
+
+def test_drafts_defaults(engine):
+    from datetime import datetime, timezone
+
+    from bot.db import drafts
+
+    with engine.begin() as conn:
+        did = conn.execute(
+            drafts.insert().values(
+                source="llm",
+                text="x",
+                created_at=datetime(2026, 7, 23, tzinfo=timezone.utc),
+            )
+        ).inserted_primary_key[0]
+        row = conn.execute(sa.select(drafts).where(drafts.c.id == did)).one()
+    assert row.status == "draft"
+    assert row.category is None
+    assert row.card_meta_json is None

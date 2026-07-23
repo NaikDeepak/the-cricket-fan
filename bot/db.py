@@ -113,6 +113,39 @@ content_bank = sa.Table(
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
 )
 
+drafts = sa.Table(
+    "drafts",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("source", sa.String(16), nullable=False),
+    # 'bank' | 'bot' | 'llm' | 'freeform'
+    sa.Column("category", sa.String(24), nullable=True),
+    sa.Column("text", sa.Text, nullable=False),
+    sa.Column("card_type", sa.String(16), nullable=True),
+    # 'prediction' | 'trivia' | 'record' | null
+    sa.Column("card_meta_json", sa.Text, nullable=True),
+    sa.Column("status", sa.String(12), nullable=False, default="draft"),
+    # 'draft' | 'posted'
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("posted_at", sa.DateTime(timezone=True), nullable=True),
+)
+
+content_events = sa.Table(
+    "content_events",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column(
+        "draft_id",
+        sa.Integer,
+        sa.ForeignKey("drafts.id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    sa.Column("action", sa.String(12), nullable=False),
+    # 'generated' | 'edited' | 'copied' | 'posted'
+    sa.Column("platform_hint", sa.String(16), nullable=True),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+)
+
 
 def get_engine(url: str) -> sa.Engine:
     return sa.create_engine(url, pool_pre_ping=True)
