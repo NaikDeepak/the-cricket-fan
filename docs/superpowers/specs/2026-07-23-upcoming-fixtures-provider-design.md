@@ -39,6 +39,19 @@ This spec builds on that.
   `/match_info` = 1 hit each. The cron runs ~12×/day, so `/match_info` calls
   must be strictly bounded (only genuinely new, near-term fixtures).
 
+## Endpoint choice (evaluated 2026-07-23 — do not re-explore)
+
+- **`/currentMatches`** — live + recently-ended only; misses scheduled. (current bug)
+- **`/matches`** ("all matches list") — the **full 15,931-row archive**,
+  paginated 25/row, **not** date-proximity ordered (offset 0 returned a Dec-2026
+  match). Has clean teams/`matchType`/`dateTimeGMT`/`matchStarted`/`matchEnded`
+  but **`venue` is empty** and there's no cheap "today" filter — finding a
+  specific upcoming match means paging hundreds of calls. **Rejected.**
+- **`/cricScore`** — **chosen.** One hit returns the current + near-term list
+  (~100) with an **`ms`** state field (`fixture`/`live`/`result`); includes the
+  Ind-Zim fixture (Jul 23/25/26). No venue → one `/match_info` per new fixture.
+- **`/match_info?id=`** — supplies `venue` + clean `teams` + started/ended.
+
 ## Goal
 
 Ingest upcoming T20 fixtures early enough that the existing prediction path
