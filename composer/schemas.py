@@ -35,6 +35,14 @@ class EventIn(BaseModel):
     platform_hint: str | None = None
 
 
+class ContentBankOut(BaseModel):
+    content_key: str
+    category: str
+    format: str
+    segments: list[str]
+    source: str
+
+
 def row_to_out(row) -> DraftOut:
     return DraftOut(
         id=row.id,

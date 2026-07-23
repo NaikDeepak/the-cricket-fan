@@ -49,9 +49,11 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    from .routers import content_bank as content_bank_router
     from .routers import drafts as drafts_router
 
     app.include_router(drafts_router.router)
+    app.include_router(content_bank_router.router)
 
     return app
 
