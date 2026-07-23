@@ -53,6 +53,18 @@ class GenerateLlmIn(BaseModel):
     category: str | None = None
 
 
+class CategoryCount(BaseModel):
+    category: str | None
+    drafts: int
+
+
+class AnalyticsOut(BaseModel):
+    funnel: dict[str, int]
+    event_totals: dict[str, int]
+    by_category: list[CategoryCount]
+    prediction_record: dict[str, int]
+
+
 def row_to_out(row) -> DraftOut:
     return DraftOut(
         id=row.id,
