@@ -12,6 +12,7 @@ export type Draft = {
   status: "draft" | "posted";
   created_at: string;
   posted_at: string | null;
+  content_key: string | null;
 };
 
 export type ContentBankItem = {
@@ -20,6 +21,7 @@ export type ContentBankItem = {
   format: string;
   segments: string[];
   source: string;
+  used: boolean;
 };
 
 export type Analytics = {
@@ -35,6 +37,7 @@ export type DraftIn = {
   text: string;
   card_type?: Draft["card_type"];
   card_meta?: CardMeta | null;
+  content_key?: string | null;
 };
 
 export type DraftPatch = Partial<
@@ -51,7 +54,16 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     cache: "no-store",
     ...init,
   });
-  if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const body = await res.json();
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      // body not JSON or empty — fall through with no detail
+    }
+    throw new Error(`API ${path} → ${res.status}${detail ? `: ${detail}` : ""}`);
+  }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }

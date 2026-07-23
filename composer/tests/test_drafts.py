@@ -67,3 +67,21 @@ def test_posted_event_flips_status_and_sets_posted_at(client):
     draft = client.get("/drafts").json()[0]
     assert draft["status"] == "posted"
     assert draft["posted_at"] is not None
+
+
+def test_bank_draft_roundtrips_content_key(client):
+    body = {
+        "source": "bank",
+        "category": "anecdote",
+        "text": "Bodyline changed cricket.",
+        "content_key": "anecdote:bodyline",
+    }
+    out = client.post("/drafts", json=body).json()
+    assert out["content_key"] == "anecdote:bodyline"
+    listed = client.get("/drafts").json()
+    assert listed[0]["content_key"] == "anecdote:bodyline"
+
+
+def test_freeform_draft_has_null_content_key(client):
+    out = client.post("/drafts", json={"source": "freeform", "text": "x"}).json()
+    assert out["content_key"] is None

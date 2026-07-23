@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { composerApi, type Draft } from "@/lib/composerApi";
 import { useDebouncedSave } from "./useDebouncedSave";
 
@@ -16,14 +16,23 @@ export default function Editor({
   const [category, setCategory] = useState(draft.category ?? "");
   const [cardType, setCardType] = useState(draft.card_type ?? "record");
 
-  useDebouncedSave({ text, category, cardType }, async (v) => {
-    const updated = await composerApi.patchDraft(draft.id, {
-      text: v.text,
-      category: v.category || null,
-      card_type: v.cardType as Draft["card_type"],
-    });
-    onChange(updated);
-  });
+  const value = useMemo(
+    () => ({ text, category, cardType }),
+    [text, category, cardType]
+  );
+  const save = useCallback(
+    async (v: { text: string; category: string; cardType: string }) => {
+      const updated = await composerApi.patchDraft(draft.id, {
+        text: v.text,
+        category: v.category || null,
+        card_type: v.cardType as Draft["card_type"],
+      });
+      onChange(updated);
+    },
+    [draft.id, onChange]
+  );
+
+  useDebouncedSave(value, save);
 
   const over = text.length > 280;
 

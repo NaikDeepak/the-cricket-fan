@@ -113,6 +113,33 @@ npm run build
 npm run lint
 ```
 
+### Composer (manual content tool, `/composer`)
+
+Separate FastAPI app under `composer/` — reuses `bot/`'s SQLite/Postgres DB
+(`bot/db.py` schema), not the legacy `backend/app/` one. Not started by
+`dev.sh`. Same port (8000) as the legacy backend above — run one or the
+other, not both.
+
+```bash
+# Backend (repo root, uses bot/'s venv — composer deps live in bot's venv too)
+bot/.venv/bin/pip install -r composer/requirements.txt   # once
+bot/.venv/bin/python -m uvicorn composer.app:app --reload --port 8000
+
+# Frontend — same `npm run dev` as above, then open http://localhost:3000/composer
+```
+
+Local defaults (no setup needed): `COMPOSER_DATABASE_URL` falls back to
+`sqlite:///composer.db` in the repo root. Optional, unlock more sources:
+- `GEMINI_API_KEY` (repo root or shell env) — enables "GENERATE WITH AI".
+- `CRICKET_API_KEY` + running `bot/run.py`'s fixture fetch — populates
+  `fixtures` so "GENERATE" (bot) has an upcoming match to draft from.
+- `python -m bot.scripts.seed_content_bank` — populates the content bank
+  (Wikipedia fetch + **hand-authored, owner-reviewed** before commit; not
+  something to auto-run or stub with fake data).
+
+With none of the above configured, only the "+ BLANK" freeform source
+works — that's expected, not a bug.
+
 ---
 
 ## CODING STANDARDS

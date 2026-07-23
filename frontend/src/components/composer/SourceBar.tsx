@@ -22,6 +22,7 @@ export default function SourceBar({
   const [showBank, setShowBank] = useState(false);
   const [bankItems, setBankItems] = useState<ContentBankItem[]>([]);
   const [loadingBank, setLoadingBank] = useState(false);
+  const [bankError, setBankError] = useState<string | null>(null);
 
   async function run(fn: () => Promise<Draft>) {
     setBusy(true);
@@ -29,10 +30,14 @@ export default function SourceBar({
     try {
       onCreated(await fn());
     } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      const detail = msg.match(/→ \d+: (.+)/)?.[1];
       setError(
-        e instanceof Error && e.message.includes("503")
-          ? "AI generation unavailable (GEMINI_API_KEY not configured)."
-          : "Generation failed. Try again."
+        detail
+          ? detail
+          : msg.includes("503")
+            ? "AI generation unavailable (GEMINI_API_KEY not configured)."
+            : "Generation failed. Try again."
       );
     } finally {
       setBusy(false);
@@ -46,11 +51,15 @@ export default function SourceBar({
     }
     setShowBank(true);
     setLoadingBank(true);
+    setBankError(null);
     try {
       const items = await composerApi.contentBank();
       setBankItems(items);
     } catch {
       setBankItems([]);
+      setBankError(
+        "Could not reach the composer API. Is it running on the URL in NEXT_PUBLIC_API_URL?"
+      );
     } finally {
       setLoadingBank(false);
     }
@@ -138,6 +147,13 @@ export default function SourceBar({
         </div>
       </div>
 
+      <p className="text-micro" style={{ color: "var(--muted)", margin: 0 }}>
+        BLANK: freeform card, no setup. BROWSE BANK: needs content_bank
+        seeded (see above). GENERATE: needs an upcoming fixture in the DB
+        (bot/run.py fetch, CRICKET_API_KEY). GENERATE WITH AI: needs
+        GEMINI_API_KEY in the composer&apos;s env.
+      </p>
+
       {error && (
         <p className="text-micro" style={{ color: "#ff6b6b", margin: 0 }}>
           {error}
@@ -161,9 +177,16 @@ export default function SourceBar({
               Loading bank items…
             </p>
           )}
-          {!loadingBank && bankItems.length === 0 && (
+          {!loadingBank && bankError && (
+            <p className="text-micro" style={{ color: "#ff6b6b" }}>
+              {bankError}
+            </p>
+          )}
+          {!loadingBank && !bankError && bankItems.length === 0 && (
             <p className="text-micro" style={{ color: "var(--muted)" }}>
-              No bank items found.
+              Content bank is empty. Seed it with{" "}
+              <code>python -m bot.scripts.seed_content_bank</code> (owner
+              reviews content before commit — see script docstring).
             </p>
           )}
           {bankItems.map((item) => (
@@ -176,6 +199,7 @@ export default function SourceBar({
                     source: "bank",
                     text: item.segments[0] || "",
                     category: item.category,
+                    content_key: item.content_key,
                   })
                 );
               }}
@@ -186,10 +210,12 @@ export default function SourceBar({
                 padding: "8px 12px",
                 marginBottom: 6,
                 cursor: "pointer",
+                opacity: item.used ? 0.5 : 1,
               }}
             >
               <span className="text-micro" style={{ color: "var(--muted)" }}>
                 [{item.category}] {item.content_key}
+                {item.used ? " · already used" : ""}
               </span>
               <p style={{ margin: "4px 0 0 0", fontSize: 13 }}>
                 {item.segments[0]}

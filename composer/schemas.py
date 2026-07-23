@@ -9,6 +9,7 @@ class DraftIn(BaseModel):
     text: str
     card_type: str | None = None
     card_meta: dict | None = None
+    content_key: str | None = None
 
 
 class DraftPatch(BaseModel):
@@ -28,6 +29,7 @@ class DraftOut(BaseModel):
     status: str
     created_at: object
     posted_at: object
+    content_key: str | None = None
 
 
 class EventIn(BaseModel):
@@ -41,6 +43,7 @@ class ContentBankOut(BaseModel):
     format: str
     segments: list[str]
     source: str
+    used: bool = False
 
 
 class GenerateBotIn(BaseModel):
@@ -76,4 +79,5 @@ def row_to_out(row) -> DraftOut:
         status=row.status,
         created_at=row.created_at,
         posted_at=row.posted_at,
+        content_key=row.content_key,
     )

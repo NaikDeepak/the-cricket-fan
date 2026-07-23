@@ -128,6 +128,9 @@ drafts = sa.Table(
     # 'draft' | 'posted'
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("posted_at", sa.DateTime(timezone=True), nullable=True),
+    sa.Column("content_key", sa.String(128), nullable=True),
+    # set only when source == 'bank'; links back to content_bank.content_key
+    # so the composer can avoid resurfacing already-used bank items
 )
 
 content_events = sa.Table(
@@ -178,5 +181,10 @@ def ensure_schema(conn: sa.Connection) -> None:
             sa.text(
                 "ALTER TABLE posts ADD COLUMN IF NOT EXISTS "
                 "tweet_count INTEGER NOT NULL DEFAULT 1"
+            )
+        )
+        conn.execute(
+            sa.text(
+                "ALTER TABLE drafts ADD COLUMN IF NOT EXISTS content_key VARCHAR(128)"
             )
         )

@@ -47,7 +47,13 @@ def _slug(text: str) -> str:
 def fetch_page_html(title: str) -> str:
     resp = requests.get(
         WIKI_API,
-        params={"action": "parse", "page": title, "prop": "text", "format": "json"},
+        params={
+            "action": "parse",
+            "page": title,
+            "prop": "text",
+            "format": "json",
+            "redirects": 1,
+        },
         headers={"User-Agent": "the-cricket-fan-bot/1.0 (seed)"},
         timeout=30,
     )
@@ -61,7 +67,7 @@ def extract_wiki_records(html: str, fmt: str, source: str) -> list[dict]:
     # pandas >=2.1 deprecates (and pandas 3.0 removes) passing a literal HTML
     # string directly -- it's parsed as a file path/URL otherwise. Wrap in
     # StringIO so read_html treats it as in-memory HTML.
-    tables = pd.read_html(io.StringIO(html))
+    tables = pd.read_html(io.StringIO(html), flavor="lxml")
     if not tables:
         return []
     table = tables[0]

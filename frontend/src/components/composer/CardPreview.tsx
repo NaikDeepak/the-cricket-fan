@@ -145,14 +145,15 @@ export default function CardPreview({
         </div>
       </div>
 
-      {/* Hidden off-screen twin container for 1:1 pixel-perfect html-to-image capture */}
+      {/* Off-screen twin container for pixel-perfect html-to-image capture.
+          No visibility:hidden — browsers don't paint that, so html-to-image's
+          foreignObject capture would come back blank/black. */}
       <div
         style={{
           position: "fixed",
           left: -9999,
-          top: -9999,
+          top: 0,
           pointerEvents: "none",
-          visibility: "hidden",
         }}
       >
         <div ref={captureRef}>{renderCard(aspect)}</div>

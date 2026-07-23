@@ -40,6 +40,7 @@ def create_draft(conn, body: DraftIn, log_generated: bool = False) -> DraftOut:
             else None,
             status="draft",
             created_at=_now(),
+            content_key=body.content_key,
         )
     ).inserted_primary_key[0]
     if log_generated:
