@@ -43,6 +43,11 @@ class ContentBankOut(BaseModel):
     source: str
 
 
+class GenerateBotIn(BaseModel):
+    kind: str  # 'prediction' | 'trivia' | 'h2h' | 'venue' | 'record'
+    fixture_id: int | None = None
+
+
 def row_to_out(row) -> DraftOut:
     return DraftOut(
         id=row.id,

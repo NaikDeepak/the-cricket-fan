@@ -51,9 +51,11 @@ def create_app() -> FastAPI:
 
     from .routers import content_bank as content_bank_router
     from .routers import drafts as drafts_router
+    from .routers import generate as generate_router
 
     app.include_router(drafts_router.router)
     app.include_router(content_bank_router.router)
+    app.include_router(generate_router.router)
 
     return app
 
