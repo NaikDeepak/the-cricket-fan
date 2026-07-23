@@ -6,7 +6,7 @@ the match and log — never predict through unresolved entities.
 
 import sqlalchemy as sa
 
-from .db import aliases
+from .db import aliases, team_matches
 
 
 class UnresolvedEntityError(Exception):
@@ -36,6 +36,34 @@ def resolve(conn, kind: str, name: str) -> str:
     ).first()
     if row:
         return row.canonical
+    # feature-store passthrough: the alias SEED is IPL-only, but the model is
+    # trained on every league/T20I ingested into team_matches. Any team/venue
+    # the model actually has history for resolves to its stored canonical name,
+    # so internationals and non-IPL sides aren't hard-skipped. Explicit alias
+    # rows still handle spelling variants (e.g. Bangalore -> Bengaluru).
+    if kind == "team":
+        # a team appears in both `team` and `opponent` columns across rows;
+        # match either side and return the stored (canonical-cased) value.
+        row = conn.execute(
+            sa.select(team_matches.c.team, team_matches.c.opponent)
+            .where(
+                sa.or_(
+                    sa.func.lower(team_matches.c.team) == n,
+                    sa.func.lower(team_matches.c.opponent) == n,
+                )
+            )
+            .limit(1)
+        ).first()
+        if row:
+            return row.team if _norm(row.team) == n else row.opponent
+    else:
+        row = conn.execute(
+            sa.select(team_matches.c.venue)
+            .where(sa.func.lower(team_matches.c.venue) == n)
+            .limit(1)
+        ).first()
+        if row:
+            return row[0]
     raise UnresolvedEntityError(f"{kind}: {name!r}")
 
 
