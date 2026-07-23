@@ -40,10 +40,10 @@ export default function Editor({
     <div
       className="card-container"
       style={{
-        padding: 16,
+        padding: "var(--space-md)",
         display: "flex",
         flexDirection: "column",
-        gap: 12,
+        gap: "var(--space-md)",
       }}
     >
       <div
@@ -53,12 +53,16 @@ export default function Editor({
           alignItems: "center",
         }}
       >
-        <span className="text-micro" style={{ color: "var(--muted)" }}>
-          EDIT DRAFT #{draft.id} ({draft.source})
+        <span className="ds-chip ds-chip-source">
+          #{draft.id} · {draft.source}
         </span>
         <span
           className="text-micro"
-          style={{ color: over ? "#ff6b6b" : "var(--muted)" }}
+          style={{
+            margin: 0,
+            color: over ? "var(--wire-red)" : "var(--muted)",
+            fontVariantNumeric: "tabular-nums",
+          }}
         >
           {text.length} / 280
         </span>
@@ -69,57 +73,66 @@ export default function Editor({
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={5}
+        className="ds-input"
         style={{
           width: "100%",
-          background: "var(--surface)",
-          color: "var(--fg)",
-          border: `1px solid ${over ? "#ff6b6b" : "var(--border)"}`,
-          borderRadius: 6,
-          padding: 12,
           fontFamily: "inherit",
-          fontSize: 14,
+          fontSize: 15,
+          lineHeight: 1.5,
           resize: "vertical",
+          borderColor: over ? "var(--wire-red)" : undefined,
         }}
       />
 
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--space-lg)",
+          flexWrap: "wrap",
+          minWidth: 0,
+        }}
+      >
         <label
           className="text-micro"
-          style={{ display: "flex", gap: 8, alignItems: "center" }}
+          style={{
+            display: "flex",
+            gap: "var(--space-sm)",
+            alignItems: "center",
+            margin: 0,
+            flex: "1 1 140px",
+            minWidth: 0,
+          }}
         >
-          CATEGORY:
+          Category
           <input
             aria-label="category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            style={{
-              background: "var(--surface)",
-              color: "var(--fg)",
-              border: "1px solid var(--border)",
-              borderRadius: 4,
-              padding: "4px 8px",
-            }}
+            className="ds-input"
+            style={{ padding: "6px 10px", fontSize: 13, width: "100%", minWidth: 0 }}
           />
         </label>
 
         <label
           className="text-micro"
-          style={{ display: "flex", gap: 8, alignItems: "center" }}
+          style={{
+            display: "flex",
+            gap: "var(--space-sm)",
+            alignItems: "center",
+            margin: 0,
+            flex: "1 1 140px",
+            minWidth: 0,
+          }}
         >
-          CARD THEME:
+          Card theme
           <select
             aria-label="card type"
             value={cardType}
             onChange={(e) =>
               setCardType(e.target.value as Draft["card_type"] & string)
             }
-            style={{
-              background: "var(--surface)",
-              color: "var(--fg)",
-              border: "1px solid var(--border)",
-              borderRadius: 4,
-              padding: "4px 8px",
-            }}
+            className="ds-input"
+            style={{ padding: "6px 10px", fontSize: 13, width: "100%", minWidth: 0 }}
           >
             {CARD_TYPES.map((t) => (
               <option key={t} value={t}>

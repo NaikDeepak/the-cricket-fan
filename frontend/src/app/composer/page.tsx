@@ -11,32 +11,52 @@ export default function ComposerPage() {
   return (
     <div>
       <p
-        className="text-micro"
-        style={{ color: "var(--muted)", marginBottom: 20, maxWidth: 640 }}
+        style={{
+          fontSize: 15,
+          color: "var(--muted)",
+          marginBottom: "var(--space-xl)",
+          maxWidth: "60ch",
+          lineHeight: 1.5,
+        }}
       >
         Create a draft on the left (blank / bank / bot / AI), edit text +
         pick a card theme on the right, preview the rendered card, then
         export PNG or copy text and paste it into X/IG/WhatsApp yourself —
         nothing here posts automatically.
       </p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+      <div className="composer-grid">
         <div>
-          <h2 className="text-micro" style={{ marginBottom: 16 }}>
-            DRAFTS & GENERATORS
+          <h2 className="text-title" style={{ marginBottom: "var(--space-md)" }}>
+            Drafts &amp; Generators
           </h2>
-          <Feed onSelect={setSelected} />
+          <Feed onSelect={setSelected} selectedId={selected?.id} />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <h2 className="text-micro">EDITOR & PREVIEW</h2>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-md)",
+          }}
+        >
+          <h2 className="text-title">Editor &amp; Preview</h2>
           {selected ? (
             <>
               <Editor draft={selected} onChange={setSelected} />
               <CardPreview draft={selected} onUpdate={setSelected} />
             </>
           ) : (
-            <p className="text-micro" style={{ color: "var(--muted)" }}>
-              Select or create a draft to start editing.
-            </p>
+            <div
+              className="ds-card"
+              style={{
+                cursor: "default",
+                textAlign: "center",
+                padding: "var(--space-xl) var(--space-md)",
+              }}
+            >
+              <p style={{ margin: 0, color: "var(--muted)", fontSize: 14 }}>
+                Select or create a draft to start editing.
+              </p>
+            </div>
           )}
         </div>
       </div>

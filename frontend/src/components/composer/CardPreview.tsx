@@ -84,10 +84,10 @@ export default function CardPreview({
     <div
       className="card-container"
       style={{
-        padding: 16,
+        padding: "var(--space-md)",
         display: "flex",
         flexDirection: "column",
-        gap: 16,
+        gap: "var(--space-md)",
       }}
     >
       <div
@@ -97,22 +97,30 @@ export default function CardPreview({
           alignItems: "center",
         }}
       >
-        <span className="text-micro" style={{ color: "var(--muted)" }}>
-          CARD PREVIEW ({cardType.toUpperCase()})
-        </span>
+        <span className="ds-chip ds-chip-category">{cardType}</span>
 
-        <div style={{ display: "flex", gap: 8 }}>
+        <div
+          role="group"
+          aria-label="aspect ratio"
+          style={{ display: "flex", gap: "var(--space-xs)" }}
+        >
           {(["1:1", "16:9", "4:5"] as AspectRatio[]).map((a) => (
             <button
               key={a}
               onClick={() => setAspect(a)}
-              className="text-micro"
+              aria-pressed={aspect === a}
               style={{
-                padding: "2px 8px",
-                background: aspect === a ? "var(--fg)" : "var(--surface)",
-                color: aspect === a ? "var(--bg)" : "var(--fg)",
+                padding: "4px 10px",
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: "0.05em",
+                background: aspect === a ? "var(--fg)" : "transparent",
+                color: aspect === a ? "var(--bg)" : "var(--muted)",
                 border: "1px solid var(--border)",
                 borderRadius: 4,
+                cursor: "pointer",
+                transition:
+                  "background-color var(--duration-fast) var(--ease-out-quart), color var(--duration-fast) var(--ease-out-quart)",
               }}
             >
               {a}
@@ -127,7 +135,7 @@ export default function CardPreview({
           background: "var(--surface)",
           border: "1px solid var(--border)",
           borderRadius: 8,
-          padding: 16,
+          padding: "var(--space-md)",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -159,35 +167,46 @@ export default function CardPreview({
         <div ref={captureRef}>{renderCard(aspect)}</div>
       </div>
 
-      {/* Actions */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        <button onClick={handleCopyText} className="text-micro">
-          COPY TEXT
+      {/* Actions — Download PNG is the one primary (Wire Red) action per
+          DESIGN.md's One Red Rule: it's the actual export/payoff moment. */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "var(--space-sm)",
+        }}
+      >
+        <button onClick={handleCopyText} className="ds-btn-secondary">
+          Copy Text
         </button>
-        <button onClick={handleCopyImage} disabled={busy} className="text-micro">
-          COPY IMAGE
+        <button
+          onClick={handleCopyImage}
+          disabled={busy}
+          className="ds-btn-secondary"
+        >
+          Copy Image
         </button>
         <button
           onClick={handleDownloadImage}
           disabled={busy}
-          className="text-micro"
+          className="ds-btn-primary"
         >
-          DOWNLOAD PNG
+          Download PNG
         </button>
         <button
           onClick={handleMarkPosted}
           disabled={draft.status === "posted"}
-          className="text-micro"
-          style={{
-            background: draft.status === "posted" ? "var(--border)" : undefined,
-          }}
+          className="ds-btn-secondary"
         >
-          {draft.status === "posted" ? "POSTED" : "MARK POSTED"}
+          {draft.status === "posted" ? "Posted" : "Mark Posted"}
         </button>
       </div>
 
       {feedback && (
-        <p className="text-micro" style={{ color: "#38bdf8", margin: 0 }}>
+        <p
+          className="text-micro"
+          style={{ color: "var(--floodlight-cyan)", margin: 0 }}
+        >
           {feedback}
         </p>
       )}

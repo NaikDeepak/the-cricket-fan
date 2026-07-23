@@ -128,7 +128,6 @@ export default function PredictionCardImg({
           background: "rgba(39, 39, 42, 0.6)",
           padding: 24,
           borderRadius: 16,
-          borderLeft: "6px solid #38bdf8",
         }}
       >
         <p

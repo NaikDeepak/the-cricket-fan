@@ -3,7 +3,20 @@ import { useEffect, useState } from "react";
 import { composerApi, type Draft } from "@/lib/composerApi";
 import SourceBar from "./SourceBar";
 
-export default function Feed({ onSelect }: { onSelect: (d: Draft) => void }) {
+const SOURCE_LABEL: Record<Draft["source"], string> = {
+  bank: "bank",
+  bot: "bot",
+  llm: "ai",
+  freeform: "freeform",
+};
+
+export default function Feed({
+  onSelect,
+  selectedId,
+}: {
+  onSelect: (d: Draft) => void;
+  selectedId?: number;
+}) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -27,15 +40,17 @@ export default function Feed({ onSelect }: { onSelect: (d: Draft) => void }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}
+    >
       <SourceBar onCreated={handleCreated} />
       {loadError && (
-        <p className="text-micro" style={{ color: "#ff6b6b" }}>
+        <p style={{ color: "var(--wire-red)", fontSize: 13, margin: 0 }}>
           {loadError}
         </p>
       )}
       {!loadError && drafts.length === 0 && (
-        <p className="text-micro" style={{ color: "var(--muted)" }}>
+        <p style={{ color: "var(--muted)", fontSize: 14 }}>
           No drafts yet — create one above.
         </p>
       )}
@@ -43,13 +58,31 @@ export default function Feed({ onSelect }: { onSelect: (d: Draft) => void }) {
         <button
           key={d.id}
           onClick={() => onSelect(d)}
-          className="card-container"
-          style={{ padding: 16, textAlign: "left", cursor: "pointer" }}
+          className={`ds-card${d.id === selectedId ? " ds-card--selected" : ""}`}
         >
-          <p className="text-micro">
-            {d.source} · {d.category ?? "—"} · {d.status}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-sm)",
+              marginBottom: "var(--space-sm)",
+            }}
+          >
+            <span className="ds-chip ds-chip-source">
+              {SOURCE_LABEL[d.source]}
+            </span>
+            {d.category && (
+              <span className="ds-chip ds-chip-category">{d.category}</span>
+            )}
+            {d.status === "posted" && (
+              <span className="text-micro" style={{ margin: 0 }}>
+                posted
+              </span>
+            )}
+          </div>
+          <p style={{ margin: 0, fontSize: 14, color: "var(--fg)" }}>
+            {d.text.slice(0, 140) || "(empty)"}
           </p>
-          <p style={{ marginTop: 8 }}>{d.text.slice(0, 140) || "(empty)"}</p>
         </button>
       ))}
     </div>

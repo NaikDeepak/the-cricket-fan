@@ -1,7 +1,11 @@
+"use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 export default function ComposerLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+
   return (
     <div
       style={{
@@ -20,16 +24,28 @@ export default function ComposerLayout({ children }: { children: ReactNode }) {
         <span className="text-micro" style={{ color: "var(--fg)" }}>
           🏏 COMPOSER
         </span>
-        <nav className="flex gap-6">
-          <Link href="/composer" className="text-micro">
+        <nav className="flex" style={{ gap: "var(--space-lg)" }}>
+          <Link
+            href="/composer"
+            className={`ds-nav-link${pathname === "/composer" ? " ds-nav-link--active" : ""}`}
+          >
             FEED
           </Link>
-          <Link href="/composer/analytics" className="text-micro">
+          <Link
+            href="/composer/analytics"
+            className={`ds-nav-link${pathname === "/composer/analytics" ? " ds-nav-link--active" : ""}`}
+          >
             ANALYTICS
           </Link>
         </nav>
       </header>
-      <main style={{ padding: "24px", maxWidth: 1100, margin: "0 auto" }}>
+      <main
+        style={{
+          padding: "var(--space-lg)",
+          maxWidth: 1100,
+          margin: "0 auto",
+        }}
+      >
         {children}
       </main>
     </div>

@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-24T00:00:00Z",
+  "title": "Design System: The Cricket Fan — Composer",
+  "extensions": {
+    "colorMeta": {
+      "bg": { "role": "neutral", "displayName": "Void Black", "canonical": "oklch(0.02 0 0)", "tonalRamp": ["oklch(0.02 0 0)", "oklch(0.06 0 0)", "oklch(0.10 0 0)", "oklch(0.16 0 0)", "oklch(0.30 0 0)", "oklch(0.50 0 0)", "oklch(0.75 0 0)", "oklch(0.95 0 0)"] },
+      "surface": { "role": "neutral", "displayName": "Ash Surface", "canonical": "oklch(0.05 0 0)", "tonalRamp": ["oklch(0.02 0 0)", "oklch(0.05 0 0)", "oklch(0.10 0 0)", "oklch(0.16 0 0)", "oklch(0.30 0 0)", "oklch(0.50 0 0)", "oklch(0.75 0 0)", "oklch(0.95 0 0)"] },
+      "ink": { "role": "neutral", "displayName": "Paper White", "canonical": "oklch(1.00 0 0)", "tonalRamp": ["oklch(0.20 0 0)", "oklch(0.35 0 0)", "oklch(0.50 0 0)", "oklch(0.65 0 0)", "oklch(0.80 0 0)", "oklch(0.90 0 0)", "oklch(0.96 0 0)", "oklch(1.00 0 0)"] },
+      "muted": { "role": "neutral", "displayName": "Signal Muted", "canonical": "oklch(0.60 0 0)", "tonalRamp": ["oklch(0.30 0 0)", "oklch(0.40 0 0)", "oklch(0.50 0 0)", "oklch(0.60 0 0)", "oklch(0.68 0 0)", "oklch(0.75 0 0)", "oklch(0.85 0 0)", "oklch(0.92 0 0)"] },
+      "border": { "role": "neutral", "displayName": "Border Line", "canonical": "oklch(0.12 0 0)", "tonalRamp": ["oklch(0.06 0 0)", "oklch(0.09 0 0)", "oklch(0.12 0 0)", "oklch(0.18 0 0)", "oklch(0.28 0 0)", "oklch(0.45 0 0)", "oklch(0.65 0 0)", "oklch(0.85 0 0)"] },
+      "wire-red": { "role": "primary", "displayName": "Wire Red", "canonical": "oklch(0.58 0.19 10)", "tonalRamp": ["oklch(0.20 0.10 10)", "oklch(0.30 0.14 10)", "oklch(0.40 0.17 10)", "oklch(0.50 0.19 10)", "oklch(0.58 0.19 10)", "oklch(0.68 0.16 10)", "oklch(0.80 0.10 10)", "oklch(0.92 0.04 10)"] },
+      "wire-red-deep": { "role": "primary", "displayName": "Wire Red Deep", "canonical": "oklch(0.45 0.19 10)", "tonalRamp": [] },
+      "wire-red-tint": { "role": "primary", "displayName": "Wire Red Tint", "canonical": "oklch(0.16 0.05 10)", "tonalRamp": [] },
+      "floodlight-cyan": { "role": "secondary", "displayName": "Floodlight Cyan", "canonical": "oklch(0.75 0.13 200)", "tonalRamp": ["oklch(0.25 0.07 200)", "oklch(0.35 0.09 200)", "oklch(0.45 0.11 200)", "oklch(0.55 0.12 200)", "oklch(0.65 0.13 200)", "oklch(0.75 0.13 200)", "oklch(0.85 0.09 200)", "oklch(0.94 0.04 200)"] },
+      "floodlight-cyan-deep": { "role": "secondary", "displayName": "Floodlight Cyan Deep", "canonical": "oklch(0.62 0.13 200)", "tonalRamp": [] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "One section header per view — 'DRAFTS & GENERATORS', 'EDITOR & PREVIEW'. Never body copy." },
+      "title": { "displayName": "Title", "purpose": "Card and panel titles, draft headings." },
+      "body": { "displayName": "Body", "purpose": "Editable draft text, paragraph copy, editor textarea." },
+      "label": { "displayName": "Label", "purpose": "Meta rows, chip text, form labels, timestamps — always uppercase, always Signal Muted at rest." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "ease-out-quart", "value": "cubic-bezier(0.25, 1, 0.5, 1)", "purpose": "Default easing for all state transitions (hover, focus, panel reveal). No bounce, no elastic." },
+      { "name": "duration-fast", "value": "150ms", "purpose": "Button/input hover and focus transitions." },
+      { "name": "duration-standard", "value": "250ms", "purpose": "Panel/card reveal, source-bar expand." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled action per view — Generate, Download PNG's confirming action, etc.",
+      "html": "<button class=\"ds-btn-primary\">GENERATE</button>",
+      "css": ".ds-btn-primary { background: #e8432e; color: #ffffff; padding: 12px 20px; border: none; border-radius: 4px; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; transition: background-color 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-primary:hover { background: #c22f1c; } .ds-btn-primary:focus-visible { outline: 2px solid #e8432e; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Every non-primary action — Copy Text, Browse Bank, aspect-ratio toggles.",
+      "html": "<button class=\"ds-btn-secondary\">COPY TEXT</button>",
+      "css": ".ds-btn-secondary { background: #0a0a0a; color: #ffffff; padding: 12px 20px; border: 1px solid #1a1a1a; border-radius: 4px; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; transition: background-color 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-secondary:hover { background: #1a1a1a; } .ds-btn-secondary:focus-visible { outline: 2px solid #e8432e; outline-offset: 2px; }"
+    },
+    {
+      "name": "Source Chip",
+      "kind": "chip",
+      "refersTo": "chip-source",
+      "description": "Tags a draft's origin: bank / bot / llm / freeform.",
+      "html": "<span class=\"ds-chip-source\">BANK</span>",
+      "css": ".ds-chip-source { display: inline-block; background: #3a1712; color: #e8432e; padding: 4px 12px; border-radius: 999px; font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; }"
+    },
+    {
+      "name": "Category Chip",
+      "kind": "chip",
+      "refersTo": "chip-category",
+      "description": "Tags content-bank category: wiki_record / anecdote / story.",
+      "html": "<span class=\"ds-chip-category\">ANECDOTE</span>",
+      "css": ".ds-chip-category { display: inline-block; background: #0a0a0a; color: #5dc4d9; border: 1px solid #1a1a1a; padding: 4px 12px; border-radius: 999px; font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "description": "Replaces the raw unstyled input/select across composer — category field, AI prompt, bot-kind select.",
+      "html": "<input class=\"ds-input\" placeholder=\"AI prompt…\" />",
+      "css": ".ds-input { background: #0a0a0a; color: #ffffff; border: 1px solid #1a1a1a; border-radius: 4px; padding: 12px 16px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; transition: border-color 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-input::placeholder { color: #888888; } .ds-input:focus { outline: none; border-color: #e8432e; }"
+    },
+    {
+      "name": "Draft Card",
+      "kind": "card",
+      "description": "A single draft row in the feed — flat, bordered, no shadow.",
+      "html": "<button class=\"ds-card\"><span class=\"ds-card-meta\">FREEFORM · ANECDOTE</span><p class=\"ds-card-text\">In 1999, Anil Kumble became only the second bowler in Test history to take all 10 wickets in an innings.</p></button>",
+      "css": ".ds-card { display: block; width: 100%; text-align: left; background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 4px; padding: 16px; cursor: pointer; transition: border-color 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-card:hover { border-color: #e8432e; } .ds-card-meta { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #888888; margin-bottom: 8px; } .ds-card-text { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 15px; line-height: 1.5; color: #ffffff; }"
+    },
+    {
+      "name": "Nav Link",
+      "kind": "nav",
+      "description": "Composer sub-nav — FEED / ANALYTICS.",
+      "html": "<a class=\"ds-nav-link ds-nav-link--active\" href=\"#\">FEED</a>",
+      "css": ".ds-nav-link { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #888888; text-decoration: none; padding-bottom: 4px; border-bottom: 2px solid transparent; transition: color 150ms cubic-bezier(0.25, 1, 0.5, 1), border-color 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-nav-link:hover { color: #ffffff; } .ds-nav-link--active { color: #ffffff; border-bottom-color: #e8432e; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Press Box",
+    "overview": "Composer is a sportswriter's desk at the ground, late in the day, under stadium floodlights — not a SaaS admin panel. The energy is wire-service urgency: facts come in, copy goes out, fast, with a single decisive red the same way a press-room clock or an on-air tally light reads as \"this matters, act now.\" Everything else stays quiet — near-black surfaces, tight neutral type — so that one red never has to compete for attention. This system explicitly rejects the generic-admin-dashboard defaults composer shipped with at first build: plain HTML select and input elements, no visual hierarchy between the four content sources, no color distinguishing a wiki-record fact from a hand-written anecdote, flat gray-on-gray panels. It also deliberately does not reuse the main app's team-blue/team-gold pairing — composer is a working tool, not a matchday scoreboard, and needed its own accent identity rather than borrowing the fixture colors.",
+    "keyCharacteristics": [
+      "Near-black, flat, tonally layered — no shadows, depth comes from surface-vs-bg-vs-border contrast alone.",
+      "One confident accent (Wire Red) carries all primary actions and states; it never shares a screen with equal-weight competing color.",
+      "A second, cooler color (Floodlight Cyan) exists only to code categories/sources — it is never used for actions.",
+      "Oswald carries display/section weight; Space Grotesk carries everything you read and type.",
+      "Fast and efficient, polished, a little playful — never sterile, never corporate."
+    ],
+    "rules": [
+      { "name": "The One Red Rule", "body": "Wire Red appears on exactly one interactive element's resting state per view — the single primary action. Everything else that needs emphasis uses weight, size, or a neutral surface change, never a second saturated fill.", "section": "colors" },
+      { "name": "The Cool-Codes, Warm-Acts Rule", "body": "Floodlight Cyan never sits on a button or triggers an action; Wire Red never labels a category. If a color is clickable-and-consequential, it's red. If it's informational, it's cyan or neutral.", "section": "colors" },
+      { "name": "The Loud-Then-Quiet Rule", "body": "A view gets exactly one Display-weight moment at its top; everything below drops straight to Title/Body/Label. No intermediate 'Headline' tier.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "If an element needs to look 'elevated,' change its surface tone or add the 1px border — never add a shadow. The one exception is a sparing glow behind the Wire Red primary action on hover.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Wire Red (#e8432e) for exactly one primary action per view, and Oswald Display type for exactly one section header per view.",
+      "Do code content sources and categories with Floodlight Cyan or neutral chips, never with a second saturated red.",
+      "Do keep every card, panel, and input flat: Ash Surface + 1px Border Line, no box-shadow.",
+      "Do surface real error/empty-state text instead of a generic failure message."
+    ],
+    "donts": [
+      "Don't reintroduce team-blue (#004ba0) or team-gold (#ffcb05) as composer's accent.",
+      "Don't use raw unstyled HTML select/input elements.",
+      "Don't add box-shadows, glassmorphism, or soft glows to cards or panels.",
+      "Don't use gradient text, side-stripe borders, or numbered section eyebrows (01/02/03) as default scaffolding.",
+      "Don't let Floodlight Cyan appear on a button or trigger an action."
+    ]
+  }
+}

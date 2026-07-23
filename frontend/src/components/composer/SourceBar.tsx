@@ -69,44 +69,54 @@ export default function SourceBar({
     <div
       className="card-container"
       style={{
-        padding: 16,
+        padding: "var(--space-md)",
         display: "flex",
         flexDirection: "column",
-        gap: 12,
+        gap: "var(--space-md)",
       }}
     >
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-        <button
-          onClick={() =>
-            run(() => composerApi.createDraft({ source: "freeform", text: "" }))
-          }
-          disabled={busy}
-          className="text-micro"
-        >
-          + BLANK
-        </button>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "var(--space-lg)",
+        }}
+      >
+        <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+          <button
+            onClick={() =>
+              run(() => composerApi.createDraft({ source: "freeform", text: "" }))
+            }
+            disabled={busy}
+            className="ds-btn-secondary"
+          >
+            + Blank
+          </button>
 
-        <button
-          onClick={toggleBank}
-          disabled={busy}
-          className="text-micro"
-          style={{ background: showBank ? "var(--border)" : undefined }}
-        >
-          BROWSE BANK
-        </button>
+          <button
+            onClick={toggleBank}
+            disabled={busy}
+            className="ds-btn-secondary"
+            aria-pressed={showBank}
+            style={{ borderColor: showBank ? "var(--floodlight-cyan)" : undefined }}
+          >
+            Browse Bank
+          </button>
+        </div>
 
-        <div className="flex gap-2" style={{ alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--space-sm)",
+            alignItems: "center",
+          }}
+        >
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value)}
             aria-label="bot kind"
-            style={{
-              background: "var(--surface)",
-              color: "var(--fg)",
-              border: "1px solid var(--border)",
-              padding: "4px 8px",
-              borderRadius: 4,
-            }}
+            className="ds-input"
+            style={{ padding: "10px 12px" }}
           >
             {BOT_KINDS.map((k) => (
               <option key={k} value={k}>
@@ -117,45 +127,50 @@ export default function SourceBar({
           <button
             onClick={() => run(() => composerApi.generateBot(kind))}
             disabled={busy}
-            className="text-micro"
+            className="ds-btn-secondary"
           >
-            GENERATE
+            Generate
           </button>
         </div>
 
-        <div className="flex gap-2" style={{ alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--space-sm)",
+            alignItems: "center",
+            flex: "1 1 240px",
+          }}
+        >
           <input
             placeholder="AI prompt…"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             aria-label="prompt"
-            style={{
-              background: "var(--surface)",
-              color: "var(--fg)",
-              border: "1px solid var(--border)",
-              padding: "4px 8px",
-              borderRadius: 4,
-            }}
+            className="ds-input"
+            style={{ flex: 1, minWidth: 0 }}
           />
           <button
             onClick={() => run(() => composerApi.generateLlm({ prompt }))}
             disabled={busy || !prompt}
-            className="text-micro"
+            className="ds-btn-secondary"
           >
-            GENERATE WITH AI
+            Generate with AI
           </button>
         </div>
       </div>
 
-      <p className="text-micro" style={{ color: "var(--muted)", margin: 0 }}>
-        BLANK: freeform card, no setup. BROWSE BANK: needs content_bank
-        seeded (see above). GENERATE: needs an upcoming fixture in the DB
-        (bot/run.py fetch, CRICKET_API_KEY). GENERATE WITH AI: needs
-        GEMINI_API_KEY in the composer&apos;s env.
+      <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: "var(--muted)" }}>
+        <strong style={{ color: "var(--fg)" }}>Blank</strong>: freeform card,
+        no setup. <strong style={{ color: "var(--fg)" }}>Browse Bank</strong>:
+        needs content_bank seeded (see below).{" "}
+        <strong style={{ color: "var(--fg)" }}>Generate</strong>: needs an
+        upcoming fixture in the DB (bot/run.py fetch, CRICKET_API_KEY).{" "}
+        <strong style={{ color: "var(--fg)" }}>Generate with AI</strong>:
+        needs GEMINI_API_KEY in the composer&apos;s env.
       </p>
 
       {error && (
-        <p className="text-micro" style={{ color: "#ff6b6b", margin: 0 }}>
+        <p style={{ color: "var(--wire-red)", fontSize: 13, margin: 0 }}>
           {error}
         </p>
       )}
@@ -164,64 +179,82 @@ export default function SourceBar({
         <div
           style={{
             borderTop: "1px solid var(--border)",
-            paddingTop: 12,
-            maxHeight: 200,
-            overflowY: "auto",
+            paddingTop: "var(--space-md)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-sm)",
           }}
         >
-          <p className="text-micro" style={{ marginBottom: 8 }}>
-            SELECT FROM CONTENT BANK:
+          <p className="text-micro" style={{ margin: 0 }}>
+            Select from content bank
           </p>
-          {loadingBank && (
-            <p className="text-micro" style={{ color: "var(--muted)" }}>
-              Loading bank items…
-            </p>
-          )}
-          {!loadingBank && bankError && (
-            <p className="text-micro" style={{ color: "#ff6b6b" }}>
-              {bankError}
-            </p>
-          )}
-          {!loadingBank && !bankError && bankItems.length === 0 && (
-            <p className="text-micro" style={{ color: "var(--muted)" }}>
-              Content bank is empty. Seed it with{" "}
-              <code>python -m bot.scripts.seed_content_bank</code> (owner
-              reviews content before commit — see script docstring).
-            </p>
-          )}
-          {bankItems.map((item) => (
-            <button
-              key={item.content_key}
-              onClick={() => {
-                setShowBank(false);
-                run(() =>
-                  composerApi.createDraft({
-                    source: "bank",
-                    text: item.segments[0] || "",
-                    category: item.category,
-                    content_key: item.content_key,
-                  })
-                );
-              }}
-              className="card-container"
-              style={{
-                width: "100%",
-                textAlign: "left",
-                padding: "8px 12px",
-                marginBottom: 6,
-                cursor: "pointer",
-                opacity: item.used ? 0.5 : 1,
-              }}
-            >
-              <span className="text-micro" style={{ color: "var(--muted)" }}>
-                [{item.category}] {item.content_key}
-                {item.used ? " · already used" : ""}
-              </span>
-              <p style={{ margin: "4px 0 0 0", fontSize: 13 }}>
-                {item.segments[0]}
+
+          <div
+            style={{
+              maxHeight: 220,
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-sm)",
+            }}
+          >
+            {loadingBank && (
+              <p style={{ color: "var(--muted)", fontSize: 14, margin: 0 }}>
+                Loading bank items…
               </p>
-            </button>
-          ))}
+            )}
+            {!loadingBank && bankError && (
+              <p style={{ color: "var(--wire-red)", fontSize: 13, margin: 0 }}>
+                {bankError}
+              </p>
+            )}
+            {!loadingBank && !bankError && bankItems.length === 0 && (
+              <p style={{ color: "var(--muted)", fontSize: 14, margin: 0 }}>
+                Content bank is empty. Seed it with{" "}
+                <code>python -m bot.scripts.seed_content_bank</code> (owner
+                reviews content before commit — see script docstring).
+              </p>
+            )}
+            {bankItems.map((item) => (
+              <button
+                key={item.content_key}
+                onClick={() => {
+                  setShowBank(false);
+                  run(() =>
+                    composerApi.createDraft({
+                      source: "bank",
+                      text: item.segments[0] || "",
+                      category: item.category,
+                      content_key: item.content_key,
+                    })
+                  );
+                }}
+                className="ds-card"
+                style={{ opacity: item.used ? 0.5 : 1 }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-sm)",
+                    marginBottom: "var(--space-xs)",
+                  }}
+                >
+                  <span className="ds-chip ds-chip-category">
+                    {item.category}
+                  </span>
+                  {item.used && (
+                    <span className="text-micro" style={{ margin: 0 }}>
+                      already used
+                    </span>
+                  )}
+                </div>
+                <p style={{ margin: 0, fontSize: 14, color: "var(--fg)" }}>
+                  {item.segments[0]}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
