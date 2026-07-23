@@ -11,7 +11,9 @@ from bot.run import _home_team_at_venue, _load_team_matches
 from bot.trivia_standalone import build_candidates
 
 from ..deps import get_conn
-from ..schemas import DraftIn, DraftOut, GenerateBotIn
+from ..gemini import GeminiUnavailable
+from ..gemini import generate_content as gemini_generate
+from ..schemas import DraftIn, DraftOut, GenerateBotIn, GenerateLlmIn
 from .drafts import create_draft
 
 router = APIRouter()
@@ -101,8 +103,32 @@ def generate_bot(
     key, _fmt, segments = matches[0]
     return create_draft(
         conn,
+        DraftIn(source="bot", category=body.kind, text=segments[0], card_type="record"),
+        log_generated=True,
+    )
+
+
+def _gemini_key() -> str:
+    from ..config import get_settings
+
+    return get_settings().gemini_api_key
+
+
+@router.post("/generate/llm", response_model=DraftOut, status_code=201)
+def generate_llm(body: GenerateLlmIn, conn=Depends(get_conn)) -> DraftOut:
+    key = _gemini_key()
+    try:
+        result = gemini_generate(body.prompt, body.category, key)
+    except GeminiUnavailable as e:
+        raise HTTPException(503, f"LLM generation unavailable: {e}") from e
+    return create_draft(
+        conn,
         DraftIn(
-            source="bot", category=body.kind, text=segments[0], card_type="record"
+            source="llm",
+            category=body.category,
+            text=result["text"],
+            card_type="record",
+            card_meta=result.get("card_meta"),
         ),
         log_generated=True,
     )

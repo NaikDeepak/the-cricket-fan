@@ -48,6 +48,11 @@ class GenerateBotIn(BaseModel):
     fixture_id: int | None = None
 
 
+class GenerateLlmIn(BaseModel):
+    prompt: str
+    category: str | None = None
+
+
 def row_to_out(row) -> DraftOut:
     return DraftOut(
         id=row.id,
