@@ -43,7 +43,9 @@ class ContentBankOut(BaseModel):
     format: str
     segments: list[str]
     source: str
-    used: bool = False
+    last_used_days: int | None = None
+    event_month_day: str | None = None
+    on_this_day: bool = False
 
 
 class GenerateBotIn(BaseModel):

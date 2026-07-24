@@ -21,7 +21,9 @@ export type ContentBankItem = {
   format: string;
   segments: string[];
   source: string;
-  used: boolean;
+  last_used_days: number | null;
+  event_month_day: string | null;
+  on_this_day: boolean;
 };
 
 export type Analytics = {

@@ -12,10 +12,12 @@ export default function CardPreview({
   draft,
   onUpdate,
   onDelete,
+  onDuplicate,
 }: {
   draft: Draft;
   onUpdate?: (d: Draft) => void;
   onDelete?: (id: number) => void;
+  onDuplicate?: (d: Draft) => void;
 }) {
   const [aspect, setAspect] = useState<AspectRatio>("1:1");
   const [busy, setBusy] = useState(false);
@@ -87,6 +89,36 @@ export default function CardPreview({
     onUpdate?.(updated);
     setFeedback("Marked as posted!");
     setTimeout(() => setFeedback(null), 2500);
+  }
+
+  async function handleCopyAndMarkPosted() {
+    await navigator.clipboard.writeText(draft.text);
+    await composerApi.logEvent(draft.id, { action: "copied" });
+    await composerApi.logEvent(draft.id, { action: "posted" });
+    const updated = { ...draft, status: "posted" as const };
+    onUpdate?.(updated);
+    setFeedback("Copied and marked as posted!");
+    setTimeout(() => setFeedback(null), 2500);
+  }
+
+  async function handleDuplicate() {
+    setBusy(true);
+    try {
+      const created = await composerApi.createDraft({
+        source: "freeform",
+        category: draft.category,
+        text: draft.text,
+        card_type: draft.card_type,
+        card_meta: draft.card_meta,
+      });
+      onDuplicate?.(created);
+      setFeedback("Duplicated!");
+    } catch {
+      setFeedback("Failed to duplicate. Try again.");
+    } finally {
+      setBusy(false);
+      setTimeout(() => setFeedback(null), 2500);
+    }
   }
 
   async function handleDelete() {
@@ -223,6 +255,20 @@ export default function CardPreview({
           className="ds-btn-secondary"
         >
           {draft.status === "posted" ? "Posted" : "Mark Posted"}
+        </button>
+        <button
+          onClick={handleCopyAndMarkPosted}
+          disabled={draft.status === "posted"}
+          className="ds-btn-secondary"
+        >
+          Copy + Mark Posted
+        </button>
+        <button
+          onClick={handleDuplicate}
+          disabled={busy}
+          className="ds-btn-secondary"
+        >
+          Duplicate
         </button>
         <button
           onClick={handleDelete}

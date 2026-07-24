@@ -99,6 +99,36 @@ def test_generate_record_from_candidate_pool(client, conn, tmp_path):
     assert r.json()["source"] == "bot"
 
 
+def test_generate_record_sets_content_key(client, conn, tmp_path):
+    _seed_matches_and_fixture(conn)
+    r = client.post("/generate/bot", json={"kind": "record"})
+    assert r.status_code == 201
+    key = r.json()["content_key"]
+    assert key is not None
+    assert key.startswith("record:")
+
+
+def test_generate_record_avoids_recent_repeats_until_pool_exhausted(
+    client, conn, tmp_path
+):
+    _seed_matches_and_fixture(conn)
+    seen_keys = set()
+    for _ in range(3):
+        r = client.post("/generate/bot", json={"kind": "record"})
+        assert r.status_code == 201
+        seen_keys.add(r.json()["content_key"])
+    # 3 distinct record candidates exist in this fixture (win_margin,
+    # highest_total, best_chase) -- exhausting them without a repeat proves
+    # exclusion works, not luck.
+    assert len(seen_keys) == 3
+
+    # pool now fully used -- next pick must fall back to the full pool
+    # instead of erroring or returning no candidate.
+    r = client.post("/generate/bot", json={"kind": "record"})
+    assert r.status_code == 201
+    assert r.json()["content_key"] in seen_keys
+
+
 def test_generate_prediction_no_fixture_returns_409(client, conn, tmp_path):
     from bot.aliases import seed_aliases
 

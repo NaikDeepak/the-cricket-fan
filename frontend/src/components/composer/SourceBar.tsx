@@ -7,6 +7,7 @@ import {
 } from "@/lib/composerApi";
 
 const BOT_KINDS = ["prediction", "trivia", "h2h", "venue", "record"];
+const FRESHNESS_WINDOW_DAYS = 14;
 
 export default function SourceBar({
   onCreated,
@@ -215,45 +216,58 @@ export default function SourceBar({
                 reviews content before commit — see script docstring).
               </p>
             )}
-            {bankItems.map((item) => (
-              <button
-                key={item.content_key}
-                onClick={() => {
-                  setShowBank(false);
-                  run(() =>
-                    composerApi.createDraft({
-                      source: "bank",
-                      text: item.segments[0] || "",
-                      category: item.category,
-                      content_key: item.content_key,
-                    })
-                  );
-                }}
-                className="ds-card"
-                style={{ opacity: item.used ? 0.5 : 1 }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-sm)",
-                    marginBottom: "var(--space-xs)",
+            {bankItems.map((item) => {
+              const recentlyUsed =
+                item.last_used_days !== null &&
+                item.last_used_days < FRESHNESS_WINDOW_DAYS;
+              return (
+                <button
+                  key={item.content_key}
+                  onClick={() => {
+                    setShowBank(false);
+                    run(() =>
+                      composerApi.createDraft({
+                        source: "bank",
+                        text: item.segments.join("\n\n"),
+                        category: item.category,
+                        content_key: item.content_key,
+                      })
+                    );
                   }}
+                  className="ds-card"
+                  style={{ opacity: recentlyUsed ? 0.5 : 1 }}
                 >
-                  <span className="ds-chip ds-chip-category">
-                    {item.category}
-                  </span>
-                  {item.used && (
-                    <span className="text-micro" style={{ margin: 0 }}>
-                      already used
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-sm)",
+                      marginBottom: "var(--space-xs)",
+                    }}
+                  >
+                    <span className="ds-chip ds-chip-category">
+                      {item.category}
                     </span>
-                  )}
-                </div>
-                <p style={{ margin: 0, fontSize: 14, color: "var(--fg)" }}>
-                  {item.segments[0]}
-                </p>
-              </button>
-            ))}
+                    {item.on_this_day && (
+                      <span
+                        className="ds-chip"
+                        style={{ color: "var(--floodlight-cyan)" }}
+                      >
+                        On this day
+                      </span>
+                    )}
+                    {recentlyUsed && (
+                      <span className="text-micro" style={{ margin: 0 }}>
+                        used {item.last_used_days}d ago
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ margin: 0, fontSize: 14, color: "var(--fg)" }}>
+                    {item.segments[0]}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

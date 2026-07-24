@@ -47,6 +47,62 @@ describe("CardPreview", () => {
     });
   });
 
+  it("Copy + Mark Posted copies text and marks posted in one click", async () => {
+    const logSpy = vi
+      .spyOn(composerApi, "logEvent")
+      .mockResolvedValue(undefined as never);
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: writeTextMock, write: vi.fn() },
+      writable: true,
+      configurable: true,
+    });
+    const onUpdate = vi.fn();
+
+    render(<CardPreview draft={{ ...draft }} onUpdate={onUpdate} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: /copy \+ mark posted/i })
+    );
+
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith("Great cricket moment");
+      expect(logSpy).toHaveBeenCalledWith(12, { action: "copied" });
+      expect(logSpy).toHaveBeenCalledWith(12, { action: "posted" });
+      expect(onUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "posted" })
+      );
+    });
+  });
+
+  it("Copy + Mark Posted is disabled once the draft is already posted", () => {
+    render(<CardPreview draft={{ ...draft, status: "posted" }} />);
+    expect(
+      screen.getByRole("button", { name: /copy \+ mark posted/i })
+    ).toBeDisabled();
+  });
+
+  it("Duplicate creates a new draft pre-filled from this one's text/category/theme", async () => {
+    const created = { ...draft, id: 99, status: "draft" as const };
+    const createSpy = vi
+      .spyOn(composerApi, "createDraft")
+      .mockResolvedValue(created);
+    const onDuplicate = vi.fn();
+
+    render(<CardPreview draft={{ ...draft }} onDuplicate={onDuplicate} />);
+    fireEvent.click(screen.getByRole("button", { name: /duplicate/i }));
+
+    await waitFor(() => {
+      expect(createSpy).toHaveBeenCalledWith({
+        source: "freeform",
+        category: "anecdote",
+        text: "Great cricket moment",
+        card_type: "record",
+        card_meta: { headline: "RECORD" },
+      });
+      expect(onDuplicate).toHaveBeenCalledWith(created);
+    });
+  });
+
   it("Delete requires a second confirming click before calling the API", async () => {
     const deleteSpy = vi
       .spyOn(composerApi, "deleteDraft")

@@ -89,6 +89,7 @@ export default function ComposerPage() {
                 draft={selected}
                 onUpdate={handleUpdated}
                 onDelete={handleDeleted}
+                onDuplicate={handleCreated}
               />
             </div>
           ) : (

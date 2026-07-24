@@ -76,6 +76,7 @@ export default function PostsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   useEffect(() => {
     composerApi
@@ -89,10 +90,15 @@ export default function PostsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered =
-    filter === "all" ? posts : posts.filter((p) => p.state === filter);
+  const filtered = posts
+    .filter((p) => filter === "all" || p.state === filter)
+    .filter((p) => typeFilter === "all" || p.post_type === typeFilter);
   const counts = posts.reduce<Record<string, number>>((acc, p) => {
     acc[p.state] = (acc[p.state] ?? 0) + 1;
+    return acc;
+  }, {});
+  const typeCounts = posts.reduce<Record<string, number>>((acc, p) => {
+    acc[p.post_type] = (acc[p.post_type] ?? 0) + 1;
     return acc;
   }, {});
 
@@ -125,6 +131,28 @@ export default function PostsPage() {
                   }}
                 >
                   {s} {s !== "all" ? `(${counts[s] ?? 0})` : `(${posts.length})`}
+                </button>
+              )
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
+            {["all", "prediction", "trivia", "result", "standalone_trivia"].map(
+              (t) => (
+                <button
+                  key={t}
+                  onClick={() => setTypeFilter(t)}
+                  className="ds-btn-secondary"
+                  aria-pressed={typeFilter === t}
+                  style={{
+                    padding: "6px 14px",
+                    fontSize: 11,
+                    borderColor:
+                      typeFilter === t ? "var(--floodlight-cyan)" : undefined,
+                  }}
+                >
+                  {t === "all" ? "all" : TYPE_LABEL[t as Post["post_type"]]}{" "}
+                  {t !== "all" ? `(${typeCounts[t] ?? 0})` : `(${posts.length})`}
                 </button>
               )
             )}

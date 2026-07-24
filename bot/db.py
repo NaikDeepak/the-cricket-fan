@@ -111,6 +111,8 @@ content_bank = sa.Table(
     sa.Column("source", sa.String(256), nullable=False),
     # e.g. "wikipedia:List_of_Test_cricket_records" -- traceability, not shown
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("event_month_day", sa.String(5), nullable=True),
+    # "MM-DD" the item's anniversary falls on, e.g. "07-24"; null if undated
 )
 
 drafts = sa.Table(
@@ -183,8 +185,16 @@ def ensure_schema(conn: sa.Connection) -> None:
                 "tweet_count INTEGER NOT NULL DEFAULT 1"
             )
         )
+    # Plain ADD COLUMN (no "IF NOT EXISTS" -- SQLite's ALTER TABLE grammar
+    # doesn't support that clause, unlike Postgres) is valid on both
+    # dialects, so these aren't dialect-guarded. They must also patch
+    # pre-existing local dev SQLite files, which create_all() won't touch.
+    inspector = sa.inspect(conn)
+    draft_cols = {c["name"] for c in inspector.get_columns("drafts")}
+    if "content_key" not in draft_cols:
+        conn.execute(sa.text("ALTER TABLE drafts ADD COLUMN content_key VARCHAR(128)"))
+    bank_cols = {c["name"] for c in inspector.get_columns("content_bank")}
+    if "event_month_day" not in bank_cols:
         conn.execute(
-            sa.text(
-                "ALTER TABLE drafts ADD COLUMN IF NOT EXISTS content_key VARCHAR(128)"
-            )
+            sa.text("ALTER TABLE content_bank ADD COLUMN event_month_day VARCHAR(5)")
         )

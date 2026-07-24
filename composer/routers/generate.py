@@ -1,10 +1,11 @@
+import random
 from datetime import datetime, timezone
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from bot.compose import prediction_post, trivia_post
-from bot.db import fixtures
+from bot.db import drafts, fixtures
 from bot.features import build_features
 from bot.predict import predict
 from bot.run import _home_team_at_venue, _load_team_matches
@@ -100,12 +101,29 @@ def generate_bot(
         raise HTTPException(
             409, f"no {body.kind} candidate available from current data"
         )
-    key, _fmt, segments = matches[0]
+    recent = _recent_content_keys(conn)
+    pool = [c for c in matches if c[0] not in recent]
+    if not pool:
+        pool = matches  # every candidate already drafted -- repeat beats a dead end
+    key, _fmt, segments = random.choice(pool)
     return create_draft(
         conn,
-        DraftIn(source="bot", category=body.kind, text=segments[0], card_type="record"),
+        DraftIn(
+            source="bot",
+            category=body.kind,
+            text=segments[0],
+            card_type="record",
+            content_key=key,
+        ),
         log_generated=True,
     )
+
+
+def _recent_content_keys(conn) -> set[str]:
+    rows = conn.execute(
+        sa.select(drafts.c.content_key).where(drafts.c.content_key.is_not(None))
+    ).all()
+    return {r.content_key for r in rows}
 
 
 def _gemini_key() -> str:

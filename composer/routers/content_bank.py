@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends
@@ -22,25 +23,39 @@ def list_content_bank(
     if category:
         q = q.where(content_bank.c.category == category)
     q = q.limit(limit).offset(offset)
-    used_keys = set(
+    now = datetime.now(timezone.utc)
+    today_md = now.strftime("%m-%d")
+    last_used_at: dict[str, datetime] = dict(
         conn.execute(
-            sa.select(drafts.c.content_key).where(
-                drafts.c.source == "bank", drafts.c.content_key.is_not(None)
+            sa.select(drafts.c.content_key, sa.func.max(drafts.c.created_at))
+            .where(drafts.c.source == "bank", drafts.c.content_key.is_not(None))
+            .group_by(drafts.c.content_key)
+        ).all()
+    )
+    rows = []
+    for r in conn.execute(q).all():
+        used_at = last_used_at.get(r.content_key)
+        if used_at is not None and used_at.tzinfo is None:
+            used_at = used_at.replace(tzinfo=timezone.utc)
+        rows.append(
+            ContentBankOut(
+                content_key=r.content_key,
+                category=r.category,
+                format=r.format,
+                segments=json.loads(r.segments_json),
+                source=r.source,
+                last_used_days=(now - used_at).days if used_at is not None else None,
+                event_month_day=r.event_month_day,
+                on_this_day=r.event_month_day == today_md,
             )
         )
-        .scalars()
-        .all()
-    )
-    rows = [
-        ContentBankOut(
-            content_key=r.content_key,
-            category=r.category,
-            format=r.format,
-            segments=json.loads(r.segments_json),
-            source=r.source,
-            used=r.content_key in used_keys,
+    # on-this-day matches first, ahead of everything else; within each group,
+    # never-used first, then longest-unused (largest days) first
+    rows.sort(
+        key=lambda r: (
+            0 if r.on_this_day else 1,
+            0 if r.last_used_days is None else 1,
+            -(r.last_used_days or 0),
         )
-        for r in conn.execute(q).all()
-    ]
-    rows.sort(key=lambda r: r.used)
+    )
     return rows
