@@ -103,8 +103,9 @@ export default function RecordCardImg({
         }}
       >
         <span>THE CRICKET FAN</span>
-        <span>#Cricket</span>
+        <span>#TheCricketFan</span>
       </div>
     </div>
   );
 }
+

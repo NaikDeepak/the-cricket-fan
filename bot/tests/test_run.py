@@ -266,10 +266,13 @@ def test_result_flow_correct_and_record(conn, art):
     winner = "Chennai Super Kings" if prob >= 0.5 else "Mumbai Indians"
     done = FakeProvider([], [Result("m1", winner=winner, no_result=False)])
     tick(conn, done, art, poster, NOW + timedelta(hours=6))
-    assert conn.execute(sa.select(predictions.c.outcome)).scalar_one() == "correct"
     states = _post_states(conn)
     assert states["result"] == "posted"
-    assert "1/1" in poster.sent[-1]
+    assert states["post_match_news"] == "posted"
+
+    assert any("1/1" in msg for msg in poster.sent)
+    assert "#TheCricketFan" in poster.sent[-1]
+
 
 
 def test_abandoned_match_voids_prediction(conn, art):

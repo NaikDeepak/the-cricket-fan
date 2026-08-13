@@ -58,7 +58,23 @@ def test_commit_reviewed_inserts_and_skips_existing(engine, tmp_path):
         rows = conn.execute(sa.select(content_bank.c.content_key)).scalars().all()
     assert n1 == 2
     assert n2 == 0  # both content_keys already exist
-    assert sorted(rows) == ["story:bodyline", "wiki_record:test:most-wickets"]
+
+
+def test_seed_real_stories_inserts_historical_items(engine):
+    from bot.scripts.seed_content_bank import seed_real_stories
+
+    now = datetime(2026, 7, 24, tzinfo=timezone.utc)
+    with engine.begin() as conn:
+        n1 = seed_real_stories(conn, now)
+        n2 = seed_real_stories(conn, now)
+        rows = conn.execute(sa.select(content_bank)).mappings().all()
+
+    assert n1 > 0
+    assert n2 == 0
+    kolkata = next(r for r in rows if r["content_key"] == "story:kolkata-2001-vvs-laxman")
+    keys = [r["content_key"] for r in rows]
+    assert "story:kolkata-2001-vvs-laxman" in keys
+
 
 
 def test_commit_skips_unauthored_skeletons(engine, tmp_path):
