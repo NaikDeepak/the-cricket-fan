@@ -169,6 +169,7 @@ body { margin: 0; overflow-x: hidden; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-family: inherit;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -229,6 +230,18 @@ body { margin: 0; overflow-x: hidden; }
 .ds-nav-link--active {
   color: var(--fg);
   border-bottom-color: var(--wire-red);
+}
+
+.ds-skeleton {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  min-height: 148px;
+  animation: ds-skeleton-pulse 1.2s ease-in-out infinite;
+}
+@keyframes ds-skeleton-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
 .composer-grid {
