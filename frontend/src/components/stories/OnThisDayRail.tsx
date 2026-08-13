@@ -13,9 +13,15 @@ const MONTHS = [
 
 export default function OnThisDayRail({ stories }: { stories: Story[] }) {
   const railRef = useRef<HTMLElement>(null);
+  // The rail only renders (and railRef only attaches) once `stories` arrives
+  // from the parent's async fetch — it's `[]` on first mount. Key the
+  // one-shot entrance on data arrival instead of raw mount, and guard with
+  // this ref so it fires exactly once, not on every subsequent stories change.
+  const hasAnimatedRef = useRef(false);
 
   useEffect(() => {
-    if (prefersReducedMotion() || !railRef.current) return;
+    if (hasAnimatedRef.current || prefersReducedMotion() || !railRef.current) return;
+    hasAnimatedRef.current = true;
     const ctx = gsap.context(() => {
       gsap.from(railRef.current!.querySelectorAll("a"), {
         opacity: 0,
@@ -27,7 +33,7 @@ export default function OnThisDayRail({ stories }: { stories: Story[] }) {
       });
     }, railRef);
     return () => ctx.revert();
-  }, []);
+  }, [stories]);
 
   if (stories.length === 0) return null;
   return (

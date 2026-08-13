@@ -62,10 +62,16 @@ export default function StoryDetailPage({
 
   useEffect(() => {
     if (!story || prefersReducedMotion()) return;
+    // `active` guards against a stale run: if `story` changes again (fast
+    // prev/next navigation) before the dynamic import below resolves,
+    // cleanup fires first and flips this to false, so the ctx created after
+    // the await is reverted immediately instead of leaking.
+    let active = true;
     let ctx: ReturnType<typeof gsap.context> | undefined;
     (async () => {
       const { ScrollTrigger } = await import("gsap/ScrollTrigger");
       gsap.registerPlugin(ScrollTrigger);
+      if (!active) return;
       ctx = gsap.context(() => {
         gsap.utils.toArray<HTMLElement>("[data-beat]").forEach((el) => {
           gsap.from(el, {
@@ -78,7 +84,10 @@ export default function StoryDetailPage({
         });
       });
     })();
-    return () => ctx?.revert();
+    return () => {
+      active = false;
+      ctx?.revert();
+    };
   }, [story]);
 
   async function handleDownload() {
