@@ -71,6 +71,7 @@ class StoryOut(BaseModel):
     match_format: str | None = None
     tags: list[str] = []
     is_published: bool = True
+    event_month_day: str | None = None
 
 
 class WireItemOut(BaseModel):

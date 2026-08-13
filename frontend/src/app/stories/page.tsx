@@ -3,9 +3,11 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Story, storiesApi } from "@/lib/storiesApi";
+import { Story, WireItem, storiesApi, todayMonthDay } from "@/lib/storiesApi";
 import { StoryCardModal } from "@/components/stories/StoryCardModal";
 import StoryCard from "@/components/stories/StoryCard";
+import OnThisDayRail from "@/components/stories/OnThisDayRail";
+import WireStrip from "@/components/stories/WireStrip";
 import {
   filtersFromSearchParams,
   nextFiltersOnTagSelect,
@@ -21,6 +23,7 @@ function Vault() {
 
   const [qInput, setQInput] = useState(filters.q);
   const [stories, setStories] = useState<Story[]>([]);
+  const [wire, setWire] = useState<WireItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
 
@@ -75,11 +78,29 @@ function Vault() {
     };
   }, [filters.q]);
 
+  // Fetch the wire strip once — it's independent of the search query. An
+  // API error here must not blank the vault, so failures resolve to [].
+  useEffect(() => {
+    let cancelled = false;
+    storiesApi
+      .getWire()
+      .catch(() => [])
+      .then((data) => {
+        if (!cancelled) setWire(data);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const allTags = Array.from(new Set(stories.flatMap((s) => s.tags || [])));
 
   const filteredStories = activeTag
     ? stories.filter((s) => s.tags?.includes(activeTag))
     : stories;
+
+  const showRails = !filters.q && !activeTag;
+  const onThisDay = stories.filter((s) => s.event_month_day === todayMonthDay());
 
   function selectTag(tag: string | null) {
     // Carry the live qInput (not stale filters.q) so a tag click mid-debounce
@@ -127,6 +148,13 @@ function Vault() {
           Composer →
         </Link>
       </div>
+
+      {showRails && (
+        <>
+          <OnThisDayRail stories={onThisDay} />
+          <WireStrip items={wire} />
+        </>
+      )}
 
       <div
         style={{

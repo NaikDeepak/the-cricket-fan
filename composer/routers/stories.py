@@ -33,6 +33,7 @@ def _row_to_story(r) -> StoryOut:
         match_format=r.match_format,
         tags=tags,
         is_published=bool(r.is_published) if r.is_published is not None else True,
+        event_month_day=r.event_month_day,
     )
 
 

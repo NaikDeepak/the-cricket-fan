@@ -161,3 +161,23 @@ def test_publish_patch_flips_flag(client, engine):
     assert "story:flipme" not in keys
 
     assert client.patch("/content-bank/99999/publish", json={"is_published": True}).status_code == 404
+
+
+def test_story_exposes_event_month_day(client, engine):
+    with engine.begin() as conn:
+        ensure_schema(conn)
+        conn.execute(
+            content_bank.insert().values(
+                content_key="story:dated",
+                category="story",
+                format="single",
+                segments_json=json.dumps(["a"]),
+                source="test",
+                title="Dated",
+                summary="s",
+                event_month_day="08-13",
+                created_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+            )
+        )
+    s = client.get("/stories/story:dated").json()
+    assert s["event_month_day"] == "08-13"

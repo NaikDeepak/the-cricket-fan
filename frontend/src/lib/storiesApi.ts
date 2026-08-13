@@ -17,7 +17,29 @@ export type Story = {
   match_format: string | null;
   tags: string[];
   is_published: boolean;
+  event_month_day: string | null;
 };
+
+export type WireItem = {
+  id: number;
+  category: string | null;
+  text: string;
+  posted_at: string;
+  content_key: string | null;
+};
+
+const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+
+export function formatDateStamp(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+export function todayMonthDay(now: Date = new Date()): string {
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${m}-${d}`;
+}
 
 async function req<T>(path: string): Promise<T> {
   const res = await fetch(`${API}${path}`, {
@@ -67,4 +89,6 @@ export const storiesApi = {
   getStoryByKey: (content_key: string) => {
     return req<Story>(`/stories/${encodeURIComponent(content_key)}`);
   },
+
+  getWire: (limit = 12) => req<WireItem[]>(`/stories/wire?limit=${limit}`),
 };
