@@ -4,7 +4,6 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Story, WireItem, storiesApi, todayMonthDay } from "@/lib/storiesApi";
-import { StoryCardModal } from "@/components/stories/StoryCardModal";
 import StoryCard from "@/components/stories/StoryCard";
 import OnThisDayRail from "@/components/stories/OnThisDayRail";
 import WireStrip from "@/components/stories/WireStrip";
@@ -25,7 +24,6 @@ function Vault() {
   const [stories, setStories] = useState<Story[]>([]);
   const [wire, setWire] = useState<WireItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
 
   // Tracks the last `q` value *this component* pushed into the URL (via the
   // debounce below or a tag click carrying qInput). Lets the resync effect
@@ -248,14 +246,16 @@ function Vault() {
           }}
         >
           {filteredStories.map((story) => (
-            <div key={story.content_key} onClick={() => setSelectedStory(story)}>
+            <Link
+              key={story.content_key}
+              href={`/stories/${encodeURIComponent(story.content_key)}`}
+              style={{ textDecoration: "none" }}
+            >
               <StoryCard story={story} />
-            </div>
+            </Link>
           ))}
         </div>
       )}
-
-      <StoryCardModal story={selectedStory} onClose={() => setSelectedStory(null)} />
     </div>
   );
 }
