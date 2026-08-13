@@ -135,6 +135,12 @@ export const composerApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  generateRecap: (team_a: string, team_b: string) =>
+    req<Draft>("/generate/recap", {
+      method: "POST",
+      body: JSON.stringify({ team_a, team_b }),
+    }),
+  teams: () => req<string[]>("/teams"),
   analytics: () => req<Analytics>("/analytics"),
   predictions: (q: { outcome?: string } = {}) => {
     const p = new URLSearchParams(q as Record<string, string>).toString();

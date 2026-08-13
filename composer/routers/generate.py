@@ -5,8 +5,9 @@ import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from bot.compose import prediction_post, trivia_post
-from bot.db import drafts, fixtures
+from bot.db import drafts, fixtures, team_matches
 from bot.features import build_features
+from bot.news_fetcher import get_match_recap_tweet
 from bot.predict import predict
 from bot.run import _home_team_at_venue, _load_team_matches
 from bot.trivia_standalone import build_candidates
@@ -14,7 +15,7 @@ from bot.trivia_standalone import build_candidates
 from ..deps import get_conn
 from ..gemini import GeminiUnavailable
 from ..gemini import generate_content as gemini_generate
-from ..schemas import DraftIn, DraftOut, GenerateBotIn, GenerateLlmIn
+from ..schemas import DraftIn, DraftOut, GenerateBotIn, GenerateLlmIn, GenerateRecapIn
 from .drafts import create_draft
 
 router = APIRouter()
@@ -150,3 +151,22 @@ def generate_llm(body: GenerateLlmIn, conn=Depends(get_conn)) -> DraftOut:
         ),
         log_generated=True,
     )
+
+
+@router.post("/generate/recap", response_model=DraftOut, status_code=201)
+def generate_recap(body: GenerateRecapIn, conn=Depends(get_conn)) -> DraftOut:
+    text = get_match_recap_tweet(body.team_a, body.team_b)
+    return create_draft(
+        conn,
+        DraftIn(source="bot", category="recap", text=text),
+        log_generated=True,
+    )
+
+
+@router.get("/teams", response_model=list[str])
+def list_teams(conn=Depends(get_conn)) -> list[str]:
+    names: set[str] = set()
+    names.update(r[0] for r in conn.execute(sa.select(team_matches.c.team).distinct()))
+    names.update(r[0] for r in conn.execute(sa.select(fixtures.c.team_a).distinct()))
+    names.update(r[0] for r in conn.execute(sa.select(fixtures.c.team_b).distinct()))
+    return sorted(n for n in names if n)

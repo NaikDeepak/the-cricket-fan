@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   composerApi,
   type ContentBankItem,
@@ -24,6 +24,15 @@ export default function SourceBar({
   const [bankItems, setBankItems] = useState<ContentBankItem[]>([]);
   const [loadingBank, setLoadingBank] = useState(false);
   const [bankError, setBankError] = useState<string | null>(null);
+
+  // Recap source state
+  const [teamA, setTeamA] = useState("");
+  const [teamB, setTeamB] = useState("");
+  const [teamNames, setTeamNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    composerApi.teams().then(setTeamNames).catch(() => setTeamNames([]));
+  }, []);
 
   async function run(fn: () => Promise<Draft>) {
     setBusy(true);
@@ -158,6 +167,39 @@ export default function SourceBar({
             Generate with AI
           </button>
         </div>
+
+        <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "center" }}>
+          <input
+            placeholder="Team A"
+            value={teamA}
+            onChange={(e) => setTeamA(e.target.value)}
+            aria-label="recap team a"
+            list="team-names"
+            className="ds-input"
+            style={{ width: 110 }}
+          />
+          <input
+            placeholder="Team B"
+            value={teamB}
+            onChange={(e) => setTeamB(e.target.value)}
+            aria-label="recap team b"
+            list="team-names"
+            className="ds-input"
+            style={{ width: 110 }}
+          />
+          <datalist id="team-names">
+            {teamNames.map((t) => (
+              <option key={t} value={t} />
+            ))}
+          </datalist>
+          <button
+            onClick={() => run(() => composerApi.generateRecap(teamA, teamB))}
+            disabled={busy || !teamA || !teamB}
+            className="ds-btn-secondary"
+          >
+            Recap
+          </button>
+        </div>
       </div>
 
       <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: "var(--muted)" }}>
@@ -167,7 +209,10 @@ export default function SourceBar({
         <strong style={{ color: "var(--fg)" }}>Generate</strong>: needs an
         upcoming fixture in the DB (bot/run.py fetch, CRICKET_API_KEY).{" "}
         <strong style={{ color: "var(--fg)" }}>Generate with AI</strong>:
-        needs GEMINI_API_KEY in the composer&apos;s env.
+        needs GEMINI_API_KEY in the composer&apos;s env.{" "}
+        <strong style={{ color: "var(--fg)" }}>Recap</strong>: fetches the
+        latest match-report headline from Google News RSS (works offline
+        with a fallback line).
       </p>
 
       {error && (

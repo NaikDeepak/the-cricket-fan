@@ -1,8 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SourceBar from "@/components/composer/SourceBar";
 import { composerApi } from "@/lib/composerApi";
 
+beforeEach(() => {
+  vi.spyOn(composerApi, "teams").mockResolvedValue(["CSK", "MI"]);
+});
 afterEach(() => vi.restoreAllMocks());
 
 const draft = {
@@ -149,6 +152,17 @@ describe("SourceBar", () => {
     await waitFor(() =>
       expect(composerApi.setBankPublished).toHaveBeenCalledWith(1, false)
     );
+  });
+
+  it("creates a recap draft from two team names", async () => {
+    const onCreated = vi.fn();
+    vi.spyOn(composerApi, "generateRecap").mockResolvedValue(draft);
+    render(<SourceBar onCreated={onCreated} />);
+    fireEvent.change(screen.getByLabelText("recap team a"), { target: { value: "CSK" } });
+    fireEvent.change(screen.getByLabelText("recap team b"), { target: { value: "MI" } });
+    fireEvent.click(screen.getByRole("button", { name: /recap/i }));
+    await waitFor(() => expect(composerApi.generateRecap).toHaveBeenCalledWith("CSK", "MI"));
+    await waitFor(() => expect(onCreated).toHaveBeenCalled());
   });
 
   it("LLM 503 shows a disabled message, no crash", async () => {

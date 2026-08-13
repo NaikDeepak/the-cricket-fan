@@ -91,6 +91,11 @@ class GenerateLlmIn(BaseModel):
     category: str | None = None
 
 
+class GenerateRecapIn(BaseModel):
+    team_a: str
+    team_b: str
+
+
 class CategoryCount(BaseModel):
     category: str | None
     drafts: int
