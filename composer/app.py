@@ -55,6 +55,7 @@ def create_app() -> FastAPI:
     from .routers import generate as generate_router
     from .routers import posts as posts_router
     from .routers import predictions as predictions_router
+    from .routers import stories as stories_router
 
     app.include_router(drafts_router.router)
     app.include_router(content_bank_router.router)
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
     app.include_router(analytics_router.router)
     app.include_router(predictions_router.router)
     app.include_router(posts_router.router)
+    app.include_router(stories_router.router)
 
     return app
 
