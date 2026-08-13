@@ -2,10 +2,12 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import gsap from "gsap";
 import { Story, storiesApi } from "@/lib/storiesApi";
 import StoryBeats from "@/components/stories/StoryBeats";
 import StoryCardImg from "@/components/stories/StoryCardImg";
 import { captureCard, downloadCard } from "@/lib/share";
+import { prefersReducedMotion } from "@/lib/motion";
 
 // Mirrors StoryCard.tsx's local CATEGORY_LABEL map — not exported there, so
 // duplicated here rather than reaching into a sibling component's internals.
@@ -57,6 +59,27 @@ export default function StoryDetailPage({
       cancelled = true;
     };
   }, [key]);
+
+  useEffect(() => {
+    if (!story || prefersReducedMotion()) return;
+    let ctx: ReturnType<typeof gsap.context> | undefined;
+    (async () => {
+      const { ScrollTrigger } = await import("gsap/ScrollTrigger");
+      gsap.registerPlugin(ScrollTrigger);
+      ctx = gsap.context(() => {
+        gsap.utils.toArray<HTMLElement>("[data-beat]").forEach((el) => {
+          gsap.from(el, {
+            opacity: 0,
+            y: 20,
+            duration: 0.45,
+            ease: "power4.out",
+            scrollTrigger: { trigger: el, start: "top 85%" },
+          });
+        });
+      });
+    })();
+    return () => ctx?.revert();
+  }, [story]);
 
   async function handleDownload() {
     if (!cardRef.current || !story) return;

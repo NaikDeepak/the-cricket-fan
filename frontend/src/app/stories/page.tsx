@@ -3,10 +3,12 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import gsap from "gsap";
 import { Story, WireItem, storiesApi, todayMonthDay } from "@/lib/storiesApi";
 import StoryCard from "@/components/stories/StoryCard";
 import OnThisDayRail from "@/components/stories/OnThisDayRail";
 import WireStrip from "@/components/stories/WireStrip";
+import { prefersReducedMotion } from "@/lib/motion";
 import {
   filtersFromSearchParams,
   nextFiltersOnTagSelect,
@@ -24,6 +26,7 @@ function Vault() {
   const [stories, setStories] = useState<Story[]>([]);
   const [wire, setWire] = useState<WireItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   // Tracks the last `q` value *this component* pushed into the URL (via the
   // debounce below or a tag click carrying qInput). Lets the resync effect
@@ -96,6 +99,28 @@ function Vault() {
   const filteredStories = activeTag
     ? stories.filter((s) => s.tags?.includes(activeTag))
     : stories;
+
+  // Vault grid stagger — independent of the q/URL-sync effects above.
+  useEffect(() => {
+    if (prefersReducedMotion() || !gridRef.current) return;
+    const cards = gridRef.current.children;
+    if (cards.length === 0) return;
+    const ctx = gsap.context(() => {
+      gsap.from(cards, {
+        opacity: 0,
+        y: 16,
+        duration: 0.35,
+        stagger: 0.04,
+        ease: "power4.out",
+        clearProps: "all",
+      });
+    }, gridRef);
+    return () => ctx.revert();
+    // `filteredStories` is a fresh array reference on every render whenever
+    // activeTag is set (stories.filter allocates), which would re-fire this
+    // on every keystroke via qInput-driven re-renders. Depend on the actual
+    // primitives that determine "stories/filter changed" instead.
+  }, [stories, activeTag]);
 
   const showRails = !filters.q && !activeTag;
   const onThisDay = stories.filter((s) => s.event_month_day === todayMonthDay());
@@ -239,6 +264,7 @@ function Vault() {
         </div>
       ) : (
         <div
+          ref={gridRef}
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
