@@ -48,6 +48,33 @@ class ContentBankOut(BaseModel):
     on_this_day: bool = False
 
 
+class StoryOut(BaseModel):
+    content_key: str
+    category: str
+    format: str
+    segments: list[str]
+    source: str
+    title: str | None = None
+    summary: str | None = None
+    source_type: str | None = None
+    source_ref: str | None = None
+    teams: list[str] = []
+    players: list[str] = []
+    venue: str | None = None
+    year: int | None = None
+    match_format: str | None = None
+    tags: list[str] = []
+    is_published: bool = True
+
+
+class WireItemOut(BaseModel):
+    id: int
+    category: str | None = None
+    text: str
+    posted_at: object
+    content_key: str | None = None
+
+
 class GenerateBotIn(BaseModel):
     kind: str  # 'prediction' | 'trivia' | 'h2h' | 'venue' | 'record'
     fixture_id: int | None = None
