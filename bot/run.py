@@ -196,7 +196,7 @@ def _has_upcoming_fixture_within_24h(conn, now: datetime) -> bool:
             if r.start_time.tzinfo
             else r.start_time.replace(tzinfo=timezone.utc)
         )
-        if now <= start <= now + timedelta(hours=24):
+        if start.date() == now.date() or (now - timedelta(hours=2) <= start <= now + timedelta(hours=24)):
             return True
     return False
 

@@ -47,3 +47,30 @@ def test_fetch_resolves_and_splits(provider, conn):
 def test_unresolved_team_skipped_not_raised(provider, conn):
     fixtures, _ = provider.fetch(conn)  # must not raise despite Gotham Galacticos
     assert all(f.provider_match_id != "unknown-1" for f in fixtures)
+
+
+def test_fetch_supports_t20i_and_ipl_match_types(conn):
+    payload = {
+        "status": "success",
+        "data": [
+            {
+                "id": "t20i-1",
+                "matchType": "t20i",
+                "teams": ["Chennai Super Kings", "Mumbai Indians"],
+                "venue": "M.Chinnaswamy Stadium",
+                "dateTimeGMT": "2026-08-14T14:00:00",
+                "series": "T20 International Series",
+                "matchStarted": False,
+                "matchEnded": False,
+            }
+        ],
+    }
+
+    def handler(request):
+        return httpx.Response(200, json=payload)
+
+    p = CricApiProvider("https://api.example.com/v1", "k", client=httpx.Client(transport=httpx.MockTransport(handler)))
+    fixtures, _ = p.fetch(conn)
+    assert len(fixtures) == 1
+    assert fixtures[0].provider_match_id == "t20i-1"
+

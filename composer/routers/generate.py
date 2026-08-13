@@ -34,9 +34,13 @@ def _resolve_fixture(conn, fixture_id: int | None):
         return row
     row = conn.execute(
         sa.select(fixtures)
-        .where(fixtures.c.status == "upcoming")
+        .where(fixtures.c.status.in_(["upcoming", "live"]))
         .order_by(fixtures.c.start_time.asc())
     ).first()
+    if row is None:
+        row = conn.execute(
+            sa.select(fixtures).order_by(fixtures.c.start_time.desc())
+        ).first()
     if row is None:
         raise HTTPException(409, "no upcoming fixture to generate from")
     return row

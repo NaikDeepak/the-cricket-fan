@@ -80,7 +80,33 @@ SEED: list[tuple[str, str, str]] = [
     ("team", "rr", "Rajasthan Royals"),
     ("team", "gt", "Gujarat Titans"),
     ("team", "lsg", "Lucknow Super Giants"),
+    # International teams & abbreviations
+    ("team", "ind", "India"),
+    ("team", "aus", "Australia"),
+    ("team", "eng", "England"),
+    ("team", "pak", "Pakistan"),
+    ("team", "sa", "South Africa"),
+    ("team", "nz", "New Zealand"),
+    ("team", "wi", "West Indies"),
+    ("team", "sl", "Sri Lanka"),
+    ("team", "ban", "Bangladesh"),
+    ("team", "afg", "Afghanistan"),
+    ("team", "ned", "Netherlands"),
+    ("team", "ire", "Ireland"),
+    ("team", "zim", "Zimbabwe"),
+    ("team", "usa", "United States of America"),
+    ("team", "united states", "United States of America"),
+    # Venues
     ("venue", "m.chinnaswamy stadium", "M Chinnaswamy Stadium, Bengaluru"),
+    ("venue", "m.chinnaswamy stadium, bengaluru", "M Chinnaswamy Stadium, Bengaluru"),
+    ("venue", "wankhede stadium", "Wankhede Stadium, Mumbai"),
+    ("venue", "wankhede stadium, mumbai", "Wankhede Stadium, Mumbai"),
+    ("venue", "eden gardens", "Eden Gardens, Kolkata"),
+    ("venue", "eden gardens, kolkata", "Eden Gardens, Kolkata"),
+    ("venue", "arun jaitley stadium", "Arun Jaitley Stadium, Delhi"),
+    ("venue", "arun jaitley stadium, delhi", "Arun Jaitley Stadium, Delhi"),
+    ("venue", "ma chidambaram stadium", "MA Chidambaram Stadium, Chepauk, Chennai"),
+    ("venue", "narendra modi stadium", "Narendra Modi Stadium, Ahmedabad"),
 ]
 
 
