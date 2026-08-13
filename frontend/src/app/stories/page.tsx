@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Story, storiesApi } from "@/lib/storiesApi";
@@ -8,8 +8,9 @@ import { StoryCardModal } from "@/components/stories/StoryCardModal";
 import StoryCard from "@/components/stories/StoryCard";
 import {
   filtersFromSearchParams,
-  queryStringFromFilters,
-  type VaultFilters,
+  nextFiltersOnTagSelect,
+  resolveQSync,
+  storiesUrl,
 } from "@/lib/storiesFilters";
 
 function Vault() {
@@ -23,12 +24,32 @@ function Vault() {
   const [loading, setLoading] = useState(true);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
 
+  // Tracks the last `q` value *this component* pushed into the URL (via the
+  // debounce below or a tag click carrying qInput). Lets the resync effect
+  // tell "the URL changed because we pushed it" apart from "the URL changed
+  // out from under us" (back/forward, a tag click carrying newer text).
+  const lastPushedQ = useRef(filters.q);
+
+  // The URL is the source of truth for `q`. When it changes for a reason
+  // other than this component's own debounce push — browser back/forward,
+  // or a tag click that carried a newer qInput — resync the local buffer so
+  // it doesn't silently overwrite the URL 300ms later with stale text.
+  useEffect(() => {
+    const sync = resolveQSync(filters.q, lastPushedQ.current);
+    if (sync) {
+      lastPushedQ.current = sync.lastPushedQ;
+      setQInput(sync.qInput);
+    }
+  }, [filters.q]);
+
   // Debounce the typed query into the URL — URL stays the single source of truth.
   useEffect(() => {
     const id = setTimeout(() => {
-      if (qInput !== filters.q) {
-        const next: VaultFilters = { q: qInput, tag: filters.tag };
-        router.replace("/stories" + queryStringFromFilters(next), { scroll: false });
+      const nextUrl = storiesUrl({ q: qInput, tag: filters.tag });
+      const currentUrl = storiesUrl({ q: filters.q, tag: filters.tag });
+      if (nextUrl !== currentUrl) {
+        lastPushedQ.current = qInput;
+        router.replace(nextUrl, { scroll: false });
       }
     }, 300);
     return () => clearTimeout(id);
@@ -61,9 +82,25 @@ function Vault() {
     : stories;
 
   function selectTag(tag: string | null) {
-    const next: VaultFilters = { q: filters.q, tag: tag === activeTag ? null : tag };
-    router.replace("/stories" + queryStringFromFilters(next), { scroll: false });
+    // Carry the live qInput (not stale filters.q) so a tag click mid-debounce
+    // doesn't discard text the user just typed but hasn't committed yet.
+    const next = nextFiltersOnTagSelect(qInput, activeTag, tag);
+    const nextUrl = storiesUrl(next);
+    lastPushedQ.current = next.q;
+    if (nextUrl !== storiesUrl(filters)) {
+      router.replace(nextUrl, { scroll: false });
+    }
   }
+
+  function clearFilters() {
+    lastPushedQ.current = "";
+    setQInput("");
+    if (storiesUrl(filters) !== "/stories") {
+      router.replace("/stories", { scroll: false });
+    }
+  }
+
+  const hasActiveFilter = Boolean(filters.q || activeTag);
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "var(--space-lg)" }}>
@@ -163,6 +200,16 @@ function Vault() {
           <p style={{ marginTop: "var(--space-sm)", color: "var(--muted)", fontSize: 14 }}>
             Try clearing the search or tag filter to see more of the vault.
           </p>
+          {hasActiveFilter && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="ds-btn-secondary"
+              style={{ marginTop: "var(--space-md)" }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
         <div
