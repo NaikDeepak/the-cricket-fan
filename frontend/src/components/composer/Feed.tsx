@@ -63,8 +63,12 @@ export default function Feed({
               <span className="ds-chip ds-chip-category">{d.category}</span>
             )}
             {d.status === "posted" && (
-              <span className="text-micro" style={{ margin: 0 }}>
-                posted
+              <span
+                className="ds-chip"
+                style={{ color: "var(--floodlight-cyan)", borderColor: "var(--floodlight-cyan)" }}
+                title="Visible on The Wire at /stories"
+              >
+                On the Wire
               </span>
             )}
           </div>

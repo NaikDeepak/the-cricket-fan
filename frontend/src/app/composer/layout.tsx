@@ -8,6 +8,7 @@ const TABS = [
   { href: "/composer/predictions", label: "Predictions" },
   { href: "/composer/posts", label: "Posts" },
   { href: "/composer/analytics", label: "Analytics" },
+  { href: "/stories", label: "Vault" },
 ];
 
 export default function ComposerLayout({ children }: { children: ReactNode }) {

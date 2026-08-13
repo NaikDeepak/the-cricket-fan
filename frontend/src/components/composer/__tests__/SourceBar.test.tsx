@@ -154,6 +154,30 @@ describe("SourceBar", () => {
     );
   });
 
+  it("links each bank item to its Vault detail page", async () => {
+    vi.spyOn(composerApi, "contentBank").mockResolvedValue([
+      {
+        id: 1,
+        content_key: "story:the great chase",
+        category: "story",
+        format: "single",
+        segments: ["A vault-worthy story segment."],
+        source: "wikipedia",
+        last_used_days: null,
+        event_month_day: null,
+        on_this_day: false,
+        is_published: true,
+      },
+    ]);
+    render(<SourceBar onCreated={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /browse bank/i }));
+    const link = await screen.findByRole("link", { name: /view in vault/i });
+    expect(link).toHaveAttribute(
+      "href",
+      `/stories/${encodeURIComponent("story:the great chase")}`
+    );
+  });
+
   it("creates a recap draft from two team names", async () => {
     const onCreated = vi.fn();
     vi.spyOn(composerApi, "generateRecap").mockResolvedValue(draft);

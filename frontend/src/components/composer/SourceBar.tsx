@@ -306,48 +306,70 @@ export default function SourceBar({
                         used {item.last_used_days}d ago
                       </span>
                     )}
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      aria-label={
-                        item.is_published
-                          ? "Unpublish from vault"
-                          : "Publish to vault"
-                      }
-                      title={
-                        item.is_published
-                          ? "Visible in Vault — click to hide"
-                          : "Hidden from Vault — click to show"
-                      }
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        const updated = await composerApi.setBankPublished(
-                          item.id,
-                          !item.is_published
-                        );
-                        setBankItems((prev) =>
-                          prev.map((b) =>
-                            b.id === updated.id
-                              ? { ...b, is_published: updated.is_published }
-                              : b
-                          )
-                        );
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          (e.target as HTMLElement).click();
-                        }
-                      }}
+                    <div
                       style={{
                         marginLeft: "auto",
-                        cursor: "pointer",
-                        opacity: item.is_published ? 1 : 0.4,
-                        fontSize: 14,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-sm)",
                       }}
                     >
-                      {item.is_published ? "\u{1F441}" : "\u{1F6AB}"}
-                    </span>
+                      <a
+                        href={`/stories/${encodeURIComponent(item.content_key)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-micro"
+                        style={{
+                          margin: 0,
+                          color: "var(--floodlight-cyan)",
+                          textDecoration: "none",
+                        }}
+                      >
+                        View in Vault ↗
+                      </a>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label={
+                          item.is_published
+                            ? "Unpublish from vault"
+                            : "Publish to vault"
+                        }
+                        title={
+                          item.is_published
+                            ? "Visible in Vault — click to hide"
+                            : "Hidden from Vault — click to show"
+                        }
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const updated = await composerApi.setBankPublished(
+                            item.id,
+                            !item.is_published
+                          );
+                          setBankItems((prev) =>
+                            prev.map((b) =>
+                              b.id === updated.id
+                                ? { ...b, is_published: updated.is_published }
+                                : b
+                            )
+                          );
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            (e.target as HTMLElement).click();
+                          }
+                        }}
+                        style={{
+                          cursor: "pointer",
+                          opacity: item.is_published ? 1 : 0.4,
+                          fontSize: 14,
+                        }}
+                      >
+                        {item.is_published ? "\u{1F441}" : "\u{1F6AB}"}
+                      </span>
+                    </div>
                   </div>
                   <p style={{ margin: 0, fontSize: 14, color: "var(--fg)" }}>
                     {item.segments[0]}
