@@ -1,9 +1,11 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Story, storiesApi } from "@/lib/storiesApi";
 import StoryBeats from "@/components/stories/StoryBeats";
+import StoryCardImg from "@/components/stories/StoryCardImg";
+import { captureCard, downloadCard } from "@/lib/share";
 
 // Mirrors StoryCard.tsx's local CATEGORY_LABEL map — not exported there, so
 // duplicated here rather than reaching into a sibling component's internals.
@@ -27,6 +29,8 @@ export default function StoryDetailPage({
   const [story, setStory] = useState<Story | null>(null);
   const [siblings, setSiblings] = useState<Story[]>([]);
   const [notFound, setNotFound] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +57,20 @@ export default function StoryDetailPage({
       cancelled = true;
     };
   }, [key]);
+
+  async function handleDownload() {
+    if (!cardRef.current || !story) return;
+    setExporting(true);
+    try {
+      const blob = await captureCard(cardRef.current);
+      await downloadCard(
+        blob,
+        `${story.content_key.replace(/[^a-z0-9]+/gi, "-")}.png`
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const containerStyle = { maxWidth: 680, margin: "0 auto", padding: "var(--space-xl) var(--space-lg)" };
 
@@ -147,7 +165,7 @@ export default function StoryDetailPage({
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: "var(--space-xl)",
+          marginBottom: "var(--space-md)",
         }}
       >
         <span>
@@ -169,6 +187,15 @@ export default function StoryDetailPage({
         <span>#TheCricketFan</span>
       </div>
 
+      <button
+        onClick={handleDownload}
+        disabled={exporting}
+        className="ds-btn-primary"
+        style={{ marginBottom: "var(--space-xl)" }}
+      >
+        {exporting ? "Rendering..." : "Download card"}
+      </button>
+
       {(prev || next) && (
         <div style={{ display: "flex", justifyContent: "space-between", gap: "var(--space-md)" }}>
           {prev ? (
@@ -187,6 +214,18 @@ export default function StoryDetailPage({
           )}
         </div>
       )}
+
+      {/* Off-screen card wrapper for html-to-image capture.
+          Use fixed position off-viewport, not display:none — html-to-image
+          can't capture undisplayed nodes. */}
+      <div
+        style={{ position: "fixed", left: -20000, top: 0 }}
+        aria-hidden
+      >
+        <div ref={cardRef}>
+          <StoryCardImg story={story} />
+        </div>
+      </div>
     </div>
   );
 }
