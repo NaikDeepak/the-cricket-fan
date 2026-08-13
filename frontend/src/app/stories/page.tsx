@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import gsap from "gsap";
@@ -123,7 +123,10 @@ function Vault() {
   }, [stories, activeTag]);
 
   const showRails = !filters.q && !activeTag;
-  const onThisDay = stories.filter((s) => s.event_month_day === todayMonthDay());
+  const onThisDay = useMemo(
+    () => stories.filter((s) => s.event_month_day === todayMonthDay()),
+    [stories],
+  );
 
   function selectTag(tag: string | null) {
     // Carry the live qInput (not stale filters.q) so a tag click mid-debounce

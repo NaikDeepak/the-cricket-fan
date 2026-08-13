@@ -2,7 +2,13 @@ from datetime import date
 
 import pandas as pd
 
-from bot.compose import FEATURE_PHRASES, prediction_post, result_post, trivia_post
+from bot.compose import (
+    FEATURE_PHRASES,
+    format_post_match_news_tweet,
+    prediction_post,
+    result_post,
+    trivia_post,
+)
 from bot.features import FEATURE_NAMES
 
 BANNED = ["bet", "odds", "stake", "wager", "gamble"]
@@ -136,3 +142,49 @@ def test_result_post_correct_and_wrong():
     assert "23/31" in right and len(right) <= 280
     assert "23/31" in wrong and len(wrong) <= 280
     assert right != wrong
+
+
+def test_post_match_news_tweet_never_truncates_url_mid_string():
+    """Regression: Google News RSS links are long redirect URLs (200-500
+    chars). Truncating from the tail to fit 280 chars can slice straight
+    through the URL, producing a broken link. The URL must either appear in
+    full, or the "Read: {url}" clause must be dropped entirely."""
+    long_url = (
+        "https://news.google.com/rss/articles/"
+        "CBMiqAFBVV95cUxNc29tZVZlcnlMb25nQmFzZTY0RW5jb2RlZFN0cmluZ1RoYXRSZXByZXNlbnRz"
+        "QVJlYWxHb29nbGVOZXdzUlNTQXJ0aWNsZUxpbmtXaXRoTW9yZVRoYW4yMDBDaGFyYWN0ZXJzSW5J"
+        "dFRvU2ltdWxhdGVBUmVhbGlzdGljUmVkaXJlY3RVUkxUaGF0SXNWZXJ5TG9uZ0FuZFVudHJ1bmNh"
+        "dGFibGVBbmRIYXNFbm91Z2hDaGFyYWN0ZXJzVG9FeGNlZWRUaHJlZUh1bmRyZWRUb3RhbA"
+        "?oc=5"
+    )
+    assert len(long_url) > 300
+
+    tweet = format_post_match_news_tweet(
+        "Chennai Super Kings",
+        "Mumbai Indians",
+        "Dhoni Magic Seals Last-Ball Thriller",
+        "A last-ball six from the finisher sealed a stunning chase after a "
+        "roller-coaster middle overs collapse threatened to derail the innings.",
+        source_url=long_url,
+    )
+
+    assert len(tweet) <= 280
+    assert "#TheCricketFan" in tweet
+    if "Read:" in tweet:
+        # URL must be complete, never a partial/broken fragment.
+        assert f"Read: {long_url}" in tweet
+    else:
+        assert long_url not in tweet
+
+
+def test_post_match_news_tweet_short_url_included_as_before():
+    tweet = format_post_match_news_tweet(
+        "CSK",
+        "MI",
+        "CSK triumph over MI in IPL classic",
+        "Dhoni hits last-ball six to secure dramatic victory for Chennai Super Kings.",
+        source_url="https://example.com/csk-mi",
+    )
+    assert len(tweet) <= 280
+    assert "Read: https://example.com/csk-mi" in tweet
+    assert "#TheCricketFan" in tweet

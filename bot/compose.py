@@ -124,11 +124,29 @@ def format_post_match_news_tweet(
     summary: str,
     source_url: str | None = None,
 ) -> str:
-    """Format the post-match recap news tweet; branding tag always fits."""
+    """Format the post-match recap news tweet; branding tag always fits.
+
+    The source URL, when present, is treated as an atomic unit: it is either
+    included in full or dropped entirely. Google News RSS links are long
+    redirect URLs (often 200-500 chars), so the body text (headline/summary)
+    is truncated to make room for it, but the URL itself is never cut
+    mid-string — a partial URL is unusable.
+    """
     tag = "\n#Cricket #TheCricketFan"
-    content = f"📰 {team_a} vs {team_b}: {headline}\n{summary}"
+    body = f"📰 {team_a} vs {team_b}: {headline}\n{summary}"
+
     if source_url:
-        content += f"\nRead: {source_url}"
-    return _truncate_reserving_tag(content, tag)
+        read_clause = f"\nRead: {source_url}"
+        max_body_len = 280 - len(tag) - len(read_clause)
+        if max_body_len >= 0:
+            if len(body) > max_body_len:
+                body = (
+                    body[: max_body_len - 3] + "..." if max_body_len >= 3 else body[:max_body_len]
+                )
+            return body + read_clause + tag
+        # Full URL + tag alone don't fit within 280 chars — drop the
+        # clause entirely rather than truncate the URL mid-string.
+
+    return _truncate_reserving_tag(body, tag)
 
 

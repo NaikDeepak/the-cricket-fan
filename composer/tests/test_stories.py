@@ -160,7 +160,8 @@ def test_publish_patch_flips_flag(client, engine):
     keys = [s["content_key"] for s in client.get("/stories").json()]
     assert "story:flipme" not in keys
 
-    assert client.patch("/content-bank/99999/publish", json={"is_published": True}).status_code == 404
+    res = client.patch("/content-bank/99999/publish", json={"is_published": True})
+    assert res.status_code == 404
 
 
 def test_story_exposes_event_month_day(client, engine):
