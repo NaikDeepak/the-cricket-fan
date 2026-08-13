@@ -1,4 +1,4 @@
-"""Fetch and extract latest news recap articles for completed matches using Google News RSS feeds."""
+"""Fetch and extract latest news recap articles for completed matches via Google News RSS."""
 
 import logging
 import urllib.parse
@@ -47,7 +47,11 @@ def fetch_match_news_article(team_a: str, team_b: str, timeout: float = 10.0) ->
 
         clean_desc = re.sub(r"<[^>]+>", "", description).strip()
         # Use first line or short sentence from description
-        summary = clean_desc.split(".")[0] + "." if clean_desc else "Match analysis and highlights."
+        summary = (
+            clean_desc.split(".")[0] + "."
+            if clean_desc
+            else "Match analysis and highlights."
+        )
 
         return {
             "headline": title.split(" - ")[0],  # Strip publisher name from Google RSS title

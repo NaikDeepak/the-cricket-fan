@@ -48,6 +48,41 @@ def test_prediction_post_unknown_feature_falls_back():
     assert len(text) <= 280  # falls back to generic phrase, no KeyError
 
 
+def test_prediction_post_long_content_keeps_branding_tag():
+    """Near the 280 limit, the branding tag must survive truncation, not get
+    sliced off along with the rest of the content (regression for blind
+    text[:277] truncation that cut the tag)."""
+    text = prediction_post(
+        "Royal Challengers Bangalore",
+        "Kolkata Knight Riders",
+        0.64,
+        [
+            "form5_a",
+            "form5_b",
+            "form10_a",
+            "form10_b",
+            "h2h_a_rate",
+            "venue_a_rate",
+            "venue_b_rate",
+            "venue_avg_1st_innings",
+            "venue_chase_win_rate",
+            "bat_rr_a",
+            "bat_rr_b",
+            "bowl_econ_a",
+            "bowl_econ_b",
+            "bat_pp_rr_a",
+            "bat_pp_rr_b",
+            "bowl_death_econ_a",
+            "bowl_death_econ_b",
+            "home_a",
+            "home_b",
+        ],
+        "Indian Premier League",
+    )
+    assert "#TheCricketFan" in text
+    assert len(text) <= 280
+
+
 def test_trivia_h2h_when_enough_meetings():
     rows = [
         _tm("A", "B", won=True),

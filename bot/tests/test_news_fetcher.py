@@ -12,7 +12,8 @@ def test_fetch_match_news_article_success():
         <item>
           <title>India beat Australia in last-over thriller - ESPNcricinfo</title>
           <link>https://example.com/match-report</link>
-          <description>&lt;p&gt;VVS Laxman scored a brilliant century to guide India home.&lt;/p&gt;</description>
+          <description>&lt;p&gt;VVS Laxman scored a brilliant century to guide
+          India home.&lt;/p&gt;</description>
         </item>
       </channel>
     </rss>"""
@@ -37,7 +38,8 @@ def test_get_match_recap_tweet_includes_branding():
         <item>
           <title>CSK triumph over MI in IPL classic - Cricbuzz</title>
           <link>https://example.com/csk-mi</link>
-          <description>Dhoni hits last-ball six to secure dramatic victory for Chennai Super Kings.</description>
+          <description>Dhoni hits last-ball six to secure dramatic victory
+          for Chennai Super Kings.</description>
         </item>
       </channel>
     </rss>"""
