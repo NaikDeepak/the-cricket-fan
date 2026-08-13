@@ -38,6 +38,7 @@ class EventIn(BaseModel):
 
 
 class ContentBankOut(BaseModel):
+    id: int
     content_key: str
     category: str
     format: str
@@ -46,6 +47,11 @@ class ContentBankOut(BaseModel):
     last_used_days: int | None = None
     event_month_day: str | None = None
     on_this_day: bool = False
+    is_published: bool = True
+
+
+class PublishIn(BaseModel):
+    is_published: bool
 
 
 class StoryOut(BaseModel):

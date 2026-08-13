@@ -16,6 +16,7 @@ export type Draft = {
 };
 
 export type ContentBankItem = {
+  id: number;
   content_key: string;
   category: string;
   format: string;
@@ -24,6 +25,7 @@ export type ContentBankItem = {
   last_used_days: number | null;
   event_month_day: string | null;
   on_this_day: boolean;
+  is_published: boolean;
 };
 
 export type Analytics = {
@@ -118,6 +120,11 @@ export const composerApi = {
     req<ContentBankItem[]>(
       `/content-bank${category ? `?category=${encodeURIComponent(category)}` : ""}`
     ),
+  setBankPublished: (id: number, is_published: boolean) =>
+    req<ContentBankItem>(`/content-bank/${id}/publish`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_published }),
+    }),
   generateBot: (kind: string, fixtureId?: number) =>
     req<Draft>("/generate/bot", {
       method: "POST",

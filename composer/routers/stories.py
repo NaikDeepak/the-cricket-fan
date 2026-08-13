@@ -32,7 +32,7 @@ def _row_to_story(r) -> StoryOut:
         year=r.year,
         match_format=r.match_format,
         tags=tags,
-        is_published=getattr(r, "is_published", True),
+        is_published=bool(r.is_published) if r.is_published is not None else True,
     )
 
 
@@ -55,6 +55,12 @@ def list_stories(
         q = q.where(content_bank.c.venue.ilike(f"%{venue}%"))
     if year:
         q = q.where(content_bank.c.year == year)
+    q = q.where(
+        sa.or_(
+            content_bank.c.is_published.is_(True),
+            content_bank.c.is_published.is_(None),  # pre-migration rows count as published
+        )
+    )
 
     rows = conn.execute(q).all()
     results = []
@@ -98,7 +104,13 @@ def get_contextual_stories(
             team_b = team_b or frow.team_b
             venue = venue or frow.venue
 
-    rows = conn.execute(sa.select(content_bank)).all()
+    q = sa.select(content_bank).where(
+        sa.or_(
+            content_bank.c.is_published.is_(True),
+            content_bank.c.is_published.is_(None),  # pre-migration rows count as published
+        )
+    )
+    rows = conn.execute(q).all()
     stories = [_row_to_story(r) for r in rows]
     matches = []
     for s in stories:

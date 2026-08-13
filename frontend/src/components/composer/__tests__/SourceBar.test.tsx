@@ -32,6 +32,7 @@ describe("SourceBar", () => {
   it("Browse Bank thread pick sends every segment, not just the first", async () => {
     vi.spyOn(composerApi, "contentBank").mockResolvedValue([
       {
+        id: 1,
         content_key: "story:thread-1",
         category: "story",
         format: "thread",
@@ -40,6 +41,7 @@ describe("SourceBar", () => {
         last_used_days: null,
         event_month_day: null,
         on_this_day: false,
+        is_published: true,
       },
     ]);
     vi.spyOn(composerApi, "createDraft").mockResolvedValue({ ...draft });
@@ -61,6 +63,7 @@ describe("SourceBar", () => {
   it("dims items used within the 14-day freshness window, not older ones", async () => {
     vi.spyOn(composerApi, "contentBank").mockResolvedValue([
       {
+        id: 1,
         content_key: "anecdote:recent",
         category: "anecdote",
         format: "single",
@@ -69,8 +72,10 @@ describe("SourceBar", () => {
         last_used_days: 5,
         event_month_day: null,
         on_this_day: false,
+        is_published: true,
       },
       {
+        id: 2,
         content_key: "anecdote:stale",
         category: "anecdote",
         format: "single",
@@ -79,6 +84,7 @@ describe("SourceBar", () => {
         last_used_days: 40,
         event_month_day: null,
         on_this_day: false,
+        is_published: true,
       },
     ]);
     render(<SourceBar onCreated={vi.fn()} />);
@@ -96,6 +102,7 @@ describe("SourceBar", () => {
   it("badges on-this-day items", async () => {
     vi.spyOn(composerApi, "contentBank").mockResolvedValue([
       {
+        id: 1,
         content_key: "anecdote:today",
         category: "anecdote",
         format: "single",
@@ -104,6 +111,7 @@ describe("SourceBar", () => {
         last_used_days: null,
         event_month_day: "07-24",
         on_this_day: true,
+        is_published: true,
       },
     ]);
     render(<SourceBar onCreated={vi.fn()} />);
@@ -114,6 +122,33 @@ describe("SourceBar", () => {
     // exact match on the badge only -- must not pass merely because the
     // body text "Happened on this day." also contains this substring
     expect(screen.getByText(/^on this day$/i)).toBeInTheDocument();
+  });
+
+  it("toggles bank item publish state via the eye control", async () => {
+    const bankItem = {
+      id: 1,
+      content_key: "story:visible",
+      category: "story",
+      format: "single" as const,
+      segments: ["A published story segment."],
+      source: "wikipedia",
+      last_used_days: null,
+      event_month_day: null,
+      on_this_day: false,
+      is_published: true,
+    };
+    vi.spyOn(composerApi, "contentBank").mockResolvedValue([bankItem]);
+    vi.spyOn(composerApi, "setBankPublished").mockResolvedValue({
+      ...bankItem,
+      is_published: false,
+    });
+    render(<SourceBar onCreated={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /browse bank/i }));
+    await screen.findByText(bankItem.segments[0]);
+    fireEvent.click(screen.getByLabelText("Unpublish from vault"));
+    await waitFor(() =>
+      expect(composerApi.setBankPublished).toHaveBeenCalledWith(1, false)
+    );
   });
 
   it("LLM 503 shows a disabled message, no crash", async () => {

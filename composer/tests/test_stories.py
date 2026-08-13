@@ -111,3 +111,53 @@ def test_wire_returns_posted_drafts_newest_first(client, engine):
 
     res_limited = client.get("/stories/wire?limit=1")
     assert len(res_limited.json()) == 1
+
+
+def _insert_bank_row(conn, key: str, published: bool = True) -> None:
+    conn.execute(
+        content_bank.insert().values(
+            content_key=key,
+            category="story",
+            format="single",
+            segments_json=json.dumps([f"segment for {key}"]),
+            source="test",
+            title=key,
+            summary="s",
+            created_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+            is_published=published,
+        )
+    )
+
+
+def test_unpublished_hidden_from_listings_but_direct_fetch_works(client, engine):
+    with engine.begin() as conn:
+        ensure_schema(conn)
+        _insert_bank_row(conn, "story:visible", published=True)
+        _insert_bank_row(conn, "story:hidden", published=False)
+
+    keys = [s["content_key"] for s in client.get("/stories").json()]
+    assert "story:visible" in keys
+    assert "story:hidden" not in keys
+
+    assert client.get("/stories/story:hidden").status_code == 200
+
+
+def test_publish_patch_flips_flag(client, engine):
+    with engine.begin() as conn:
+        ensure_schema(conn)
+        _insert_bank_row(conn, "story:flipme", published=True)
+
+    items = client.get("/content-bank").json()
+    item = next(i for i in items if i["content_key"] == "story:flipme")
+    assert item["is_published"] is True
+
+    res = client.patch(
+        f"/content-bank/{item['id']}/publish", json={"is_published": False}
+    )
+    assert res.status_code == 200
+    assert res.json()["is_published"] is False
+
+    keys = [s["content_key"] for s in client.get("/stories").json()]
+    assert "story:flipme" not in keys
+
+    assert client.patch("/content-bank/99999/publish", json={"is_published": True}).status_code == 404

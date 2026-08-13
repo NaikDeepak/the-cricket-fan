@@ -2,12 +2,12 @@ import json
 from datetime import datetime, timezone
 
 import sqlalchemy as sa
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from bot.db import content_bank, drafts
 
 from ..deps import get_conn
-from ..schemas import ContentBankOut
+from ..schemas import ContentBankOut, PublishIn
 
 router = APIRouter()
 
@@ -39,6 +39,7 @@ def list_content_bank(
             used_at = used_at.replace(tzinfo=timezone.utc)
         rows.append(
             ContentBankOut(
+                id=r.id,
                 content_key=r.content_key,
                 category=r.category,
                 format=r.format,
@@ -47,6 +48,7 @@ def list_content_bank(
                 last_used_days=(now - used_at).days if used_at is not None else None,
                 event_month_day=r.event_month_day,
                 on_this_day=r.event_month_day == today_md,
+                is_published=bool(r.is_published) if r.is_published is not None else True,
             )
         )
     # on-this-day matches first, ahead of everything else; within each group,
@@ -59,3 +61,31 @@ def list_content_bank(
         )
     )
     return rows
+
+
+@router.patch("/content-bank/{item_id}/publish", response_model=ContentBankOut)
+def set_published(item_id: int, body: PublishIn, conn=Depends(get_conn)) -> ContentBankOut:
+    row = conn.execute(
+        sa.select(content_bank).where(content_bank.c.id == item_id)
+    ).first()
+    if row is None:
+        raise HTTPException(404, f"content bank item {item_id} not found")
+    conn.execute(
+        sa.update(content_bank)
+        .where(content_bank.c.id == item_id)
+        .values(is_published=body.is_published)
+    )
+    conn.commit()
+    r = conn.execute(
+        sa.select(content_bank).where(content_bank.c.id == item_id)
+    ).one()
+    return ContentBankOut(
+        id=r.id,
+        content_key=r.content_key,
+        category=r.category,
+        format=r.format,
+        segments=json.loads(r.segments_json),
+        source=r.source,
+        event_month_day=r.event_month_day,
+        is_published=bool(r.is_published),
+    )
