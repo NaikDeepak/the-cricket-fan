@@ -51,7 +51,7 @@ def prediction_post(
     text = (
         f"🔮 {league}: {fav} {round(p * 100)}% to beat {other}.\n"
         f"Why: {why}.\n"
-        f"Model pick, publicly tracked. #Cricket"
+        f"Model pick, publicly tracked. #Cricket #TheCricketFan"
     )
     return _truncate(text)
 
@@ -64,7 +64,7 @@ def trivia_post(df: pd.DataFrame, team_a: str, team_b: str, venue: str) -> str:
             text = (
                 f"📊 {team_a} vs {team_b}: {team_a} lead {wins_a}-"
                 f"{len(h2h) - wins_a} in their last {len(h2h)} meetings.\n"
-                f"Today's chapter starts soon. #Cricket"
+                f"Today's chapter starts soon. #Cricket #TheCricketFan"
             )
             return _truncate(text)
         at_venue = df[df["venue"] == venue]
@@ -78,12 +78,12 @@ def trivia_post(df: pd.DataFrame, team_a: str, team_b: str, venue: str) -> str:
             text = (
                 f"📊 {first}: home teams have won "
                 f"{round(win_rate * 100)}% of recent matches here.\n"
-                f"{team_a} vs {team_b} today. #Cricket"
+                f"{team_a} vs {team_b} today. #Cricket #TheCricketFan"
             )
             return _truncate(text)
     return _truncate(
         f"📊 {team_a} vs {team_b} today. "
-        f"Two lineups, one result. Numbers at stumps. #Cricket"
+        f"Two lineups, one result. Numbers at stumps. #Cricket #TheCricketFan"
     )
 
 
@@ -103,6 +103,29 @@ def result_post(
     text = (
         f"{mark} {verdict}: {fav} {round(p * 100)}% — {winner} won.\n"
         f"Season record: {season_correct}/{season_total}. "
-        f"Every pick tracked, hits and misses. #Cricket"
+        f"Every pick tracked, hits and misses. #Cricket #TheCricketFan"
     )
     return _truncate(text)
+
+
+def format_post_match_news_tweet(
+    team_a: str,
+    team_b: str,
+    headline: str,
+    summary: str,
+    source_url: str | None = None,
+) -> str:
+    """Format the post-match recap news tweet with mandatory #TheCricketFan branding guaranteed to fit."""
+    tag = "\n#Cricket #TheCricketFan"
+    max_content_len = 280 - len(tag)
+
+    content = f"📰 {team_a} vs {team_b}: {headline}\n{summary}"
+    if source_url:
+        content += f"\nRead: {source_url}"
+
+    if len(content) > max_content_len:
+        content = content[: max_content_len - 3] + "..."
+
+    return content + tag
+
+
