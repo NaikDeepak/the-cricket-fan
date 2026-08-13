@@ -113,6 +113,17 @@ content_bank = sa.Table(
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("event_month_day", sa.String(5), nullable=True),
     # "MM-DD" the item's anniversary falls on, e.g. "07-24"; null if undated
+    sa.Column("title", sa.String(128), nullable=True),
+    sa.Column("summary", sa.Text, nullable=True),
+    sa.Column("source_type", sa.String(32), nullable=True),
+    sa.Column("source_ref", sa.String(256), nullable=True),
+    sa.Column("teams_json", sa.Text, nullable=True),
+    sa.Column("players_json", sa.Text, nullable=True),
+    sa.Column("venue", sa.String(128), nullable=True),
+    sa.Column("year", sa.Integer, nullable=True),
+    sa.Column("match_format", sa.String(16), nullable=True),
+    sa.Column("tags_json", sa.Text, nullable=True),
+    sa.Column("is_published", sa.Boolean, nullable=False, default=True),
 )
 
 drafts = sa.Table(
@@ -198,3 +209,22 @@ def ensure_schema(conn: sa.Connection) -> None:
         conn.execute(
             sa.text("ALTER TABLE content_bank ADD COLUMN event_month_day VARCHAR(5)")
         )
+    story_cols = {
+        "title": "VARCHAR(128)",
+        "summary": "TEXT",
+        "source_type": "VARCHAR(32)",
+        "source_ref": "VARCHAR(256)",
+        "teams_json": "TEXT",
+        "players_json": "TEXT",
+        "venue": "VARCHAR(128)",
+        "year": "INTEGER",
+        "match_format": "VARCHAR(16)",
+        "tags_json": "TEXT",
+        "is_published": "BOOLEAN NOT NULL DEFAULT TRUE",
+    }
+    for col_name, col_type in story_cols.items():
+        if col_name not in bank_cols:
+            conn.execute(
+                sa.text(f"ALTER TABLE content_bank ADD COLUMN {col_name} {col_type}")
+            )
+
