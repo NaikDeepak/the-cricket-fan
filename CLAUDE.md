@@ -23,9 +23,12 @@ the-cricket-fan/
 │   ├── ingest.py          # cricsheet.py — match-data ingest
 │   ├── db.py              # SQLite/Postgres schema, shared with composer/
 │   ├── news_fetcher.py    # match-recap headline fetch (Google News RSS)
-│   ├── trivia_standalone.py  # trivia question logic — NOT YET wired to
-│   │                          # composer or the public surface (tracked
-│   │                          # below under "Next up")
+│   ├── trivia_standalone.py  # trivia question logic — wired into
+│   │                          # composer's /generate/bot (kind=trivia)
+│   │                          # and rendered by CardPreview's
+│   │                          # TriviaCardImg, same as prediction; no
+│   │                          # public surface displays it yet
+│   │                          # (tracked below under "Next up")
 │   └── scripts/seed_content_bank.py  # hand-authored content bank seed
 ├── composer/             # FastAPI content tool — reuses bot/db.py's schema
 │   ├── app.py
@@ -70,13 +73,15 @@ up").
 | `GET /stories/{content_key}` | Single story detail |
 | `GET /stories/contextual` | Stories relevant to a given fixture/teams/venue |
 | `GET /stories/wire` | Recent posted-draft archive for the wire strip |
-| `POST /generate` | Bot-kind draft generation (prediction/trivia/h2h/venue/record) |
+| `POST /generate/bot` | Bot-kind draft generation (prediction/trivia/h2h/venue/record) |
 | `POST /generate/llm` | Freeform Gemini-prompted draft |
 | `POST /generate/recap` | Match-recap draft from Google News RSS |
-| `GET/POST /predictions` | ELO prediction generation + retrieval |
-| `GET/POST /posts` | Draft → posted-card lifecycle |
+| `GET /teams` | Team name list (used by composer's team-autocomplete inputs) |
+| `GET /predictions` | ELO prediction generation + retrieval |
+| `GET /posts` | Draft → posted-card lifecycle |
 | `GET /analytics` | Posting analytics |
-| `GET/POST /content-bank` | Hand-authored content bank browse + publish toggle |
+| `GET /content-bank` | Hand-authored content bank browse |
+| `PATCH /content-bank/{item_id}/publish` | Content bank publish toggle |
 | `GET/POST /drafts` | Draft CRUD |
 
 `backend/app/`'s 5 endpoints (`/match-story/today`,
@@ -220,16 +225,19 @@ treatment).
 
 **Composer (`/composer`):** `Editor`, `Feed`, `SourceBar`, `CardPreview`,
 `TeamBadge`, card-type renderers (`PredictionCardImg`, `RecordCardImg`,
-`TriviaCardImg` — note: `TriviaCardImg` exists as a component but has
-no composer router or generation path feeding it yet, see "Next up").
+`TriviaCardImg` — `CardPreview` renders `TriviaCardImg` for
+`card_type: "trivia"` drafts the same way it renders `PredictionCardImg`
+for predictions; the gap is downstream of composer, see "Next up").
 
 ### Next up (scoped, not yet designed — each gets its own brainstorming
 cycle per `docs/superpowers/specs/2026-08-14-world-class-ui-quality-bar-design.md`'s
 decomposition)
 
-1. **Trivia end-to-end.** `bot/trivia_standalone.py` has the question
-   logic; no composer router wires it to draft generation, and no
-   public `/stories` surface displays a trivia card. Full-stack gap.
+1. **Trivia end-to-end.** Trivia generation and card rendering already
+   work — composer's `/generate/bot` (kind=trivia) wires
+   `bot/trivia_standalone.py`'s question logic to draft generation, and
+   `CardPreview` renders a `TriviaCardImg` for it, same as prediction.
+   What's missing: no public `/stories` surface displays a trivia card.
 2. **Prediction on the public surface.** Composer can generate and
    export a `PredictionCardImg`, but `/stories` never displays a
    prediction — it only leaves the app as a downloaded PNG for manual

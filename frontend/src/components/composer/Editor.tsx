@@ -131,8 +131,8 @@ export default function Editor({
             onChange={(e) =>
               setCardType(e.target.value as Draft["card_type"] & string)
             }
-            className="ds-input"
-            style={{ padding: "6px 10px", fontSize: 13, width: "100%", minWidth: 0 }}
+            className="ds-select"
+            style={{ width: "100%", minWidth: 0 }}
           >
             {CARD_TYPES.map((t) => (
               <option key={t} value={t}>

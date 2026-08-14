@@ -74,13 +74,13 @@ components:
     padding: "4px 12px"
 ---
 
-# Design System: The Cricket Fan — Composer
+# Design System: The Cricket Fan — Press Box System
 
 ## 1. Overview
 
 **Creative North Star: "The Press Box"**
 
-Composer is a sportswriter's desk at the ground, late in the day, under stadium floodlights — not a SaaS admin panel. The energy is wire-service urgency: facts come in, copy goes out, fast, with a single decisive red the same way a press-room clock or an on-air tally light reads as "this matters, act now." Everything else stays quiet — near-black surfaces, tight neutral type — so that one red never has to compete for attention.
+The Press Box is a sportswriter's desk at the ground, late in the day, under stadium floodlights — not a SaaS admin panel or a generic matchday scoreboard. The energy is wire-service urgency: facts come in, copy goes out, fast, with a single decisive red the same way a press-room clock or an on-air tally light reads as "this matters, act now." Everything else stays quiet — near-black surfaces, tight neutral type — so that one red never has to compete for attention.
 
 This system now covers both surfaces the app ships: the public Vault
 (`/stories`) and the internal Composer (`/composer`). Both consume the
@@ -304,7 +304,7 @@ element is a keyboard dead end and is not shipped.
 - **Do** surface real error/empty-state text (missing API key, empty content bank, unreachable API) instead of a generic failure message — per PRODUCT.md's "fail honestly" principle.
 
 ### Don't:
-- **Don't** reintroduce team-blue (`#004ba0`) or team-gold (`#ffcb05`) as composer's accent — that pairing was explicitly rejected for this surface; it belongs to the matchday/fixture UI, not the composer desk.
+- **Don't** reintroduce team-blue (`#004ba0`) or team-gold (`#ffcb05`) as an accent anywhere in this app — that pairing belonged to a matchday/fixture UI that has been removed from the codebase entirely; nothing here should bring it back without a new brainstorming cycle.
 - **Don't** use raw unstyled HTML `<select>`/`<input>` elements — the plain-admin-dashboard look this system replaces.
 - **Don't** add box-shadows, glassmorphism, or soft glows to cards or panels — flat tonal layering only (the one sanctioned exception is the sparing Wire Red button hover glow).
 - **Don't** use gradient text, side-stripe borders, or numbered section eyebrows (01 / 02 / 03) as default scaffolding — composer's feed isn't a numbered sequence.

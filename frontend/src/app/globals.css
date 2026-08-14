@@ -194,9 +194,13 @@ body { margin: 0; overflow-x: hidden; }
   cursor: not-allowed;
 }
 
+.ds-tag-scroll {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
 @media (max-width: 640px) {
   .ds-tag-scroll {
-    display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;

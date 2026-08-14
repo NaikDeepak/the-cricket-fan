@@ -215,7 +215,7 @@ function Vault() {
         />
 
         {allTags.length > 0 && (
-          <div className="ds-tag-scroll" style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
+          <div className="ds-tag-scroll">
             <button
               type="button"
               onClick={() => selectTag(null)}

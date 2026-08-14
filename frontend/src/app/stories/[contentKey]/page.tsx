@@ -76,7 +76,6 @@ export default function StoryDetailPage({
       ctx = gsap.context(() => {
         gsap.utils.toArray<HTMLElement>("[data-beat]").forEach((el) => {
           gsap.from(el, {
-            opacity: 0,
             y: 20,
             duration: 0.45,
             ease: "power4.out",
