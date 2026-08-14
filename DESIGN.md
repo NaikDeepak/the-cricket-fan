@@ -1,6 +1,6 @@
 ---
-name: The Cricket Fan — Composer
-description: A sportswriter's late-night desk for turning cricket facts into copy-ready, on-brand posts.
+name: The Cricket Fan — Press Box System
+description: The shared design system for both the public Vault (/stories) and the internal Composer (/composer) — one token set, one interaction contract, two surfaces.
 colors:
   bg: "#030303"
   surface: "#0a0a0a"
@@ -82,7 +82,13 @@ components:
 
 Composer is a sportswriter's desk at the ground, late in the day, under stadium floodlights — not a SaaS admin panel. The energy is wire-service urgency: facts come in, copy goes out, fast, with a single decisive red the same way a press-room clock or an on-air tally light reads as "this matters, act now." Everything else stays quiet — near-black surfaces, tight neutral type — so that one red never has to compete for attention.
 
-This system explicitly rejects the generic-admin-dashboard defaults composer shipped with at first build: plain HTML `<select>` and `<input>` elements, no visual hierarchy between the four content sources, no color distinguishing a wiki-record fact from a hand-written anecdote, flat gray-on-gray panels. It also deliberately does not reuse the main app's team-blue/team-gold pairing — composer is a working tool, not a matchday scoreboard, and needed its own accent identity rather than borrowing the fixture colors.
+This system now covers both surfaces the app ships: the public Vault
+(`/stories`) and the internal Composer (`/composer`). Both consume the
+same tokens in `frontend/src/app/globals.css` — there is one design
+system, not a composer-only skin. An earlier team-blue/team-gold
+matchday identity existed for a fixture-explorer UI that has since
+been removed from the codebase; nothing in the current app should
+reintroduce it without a new brainstorming cycle.
 
 **Key Characteristics:**
 - Near-black, flat, tonally layered — no shadows, depth comes from surface-vs-bg-vs-border contrast alone.
@@ -172,7 +178,124 @@ Flat by design — no box-shadows anywhere in the system. Depth is conveyed enti
 ### Navigation
 - **Style:** The composer sub-nav (FEED / ANALYTICS) uses Label-weight uppercase links, Signal Muted at rest, Paper White on hover, Wire Red underline (2px, no shadow) on the active route. No pill background on the active state — the underline alone carries it, keeping the header flat.
 
-## 6. Do's and Don'ts
+## 6. States
+
+### Loading
+Skeleton shapes, never a spinner. Use the existing `.ds-skeleton` class
+(Ash Surface background, `ds-skeleton-pulse` opacity animation, already
+defined in `globals.css`) sized to match the content it's replacing —
+card-shaped skeletons for a card grid, not a generic bar.
+
+### Empty
+Real copy plus an actionable next step — never a bare "No results."
+The Vault's existing empty-state pattern (`NOTHING IN THE VAULT FOR
+THAT FILTER` + a `Clear filters` button when a filter is active) is
+the house rule, not a one-off: any list/grid view that can return zero
+results follows the same shape — Label-weight headline, one line of
+Body-weight explanation, a recovery action when one exists.
+
+### Error
+Per PRODUCT.md's fail-honestly principle: surface the real failure
+(unreachable API, missing env var, 503) in Body text, never a generic
+"Something went wrong." `SourceBar.tsx`'s error handling (distinguishing
+a 503/missing-key message from a generic one) is the reference
+implementation — apply the same specificity anywhere a request can fail.
+
+### Named Rule
+
+**The Honest-State Rule.** A component's loading, empty, and error
+states get the same design attention as its populated state — they are
+not an afterthought bolted on after the "real" UI ships.
+
+## 7. Motion Contract
+
+**Tokens only.** Every transition/animation duration is
+`var(--duration-fast)` (150ms) or `var(--duration-standard)` (250ms);
+every easing is `var(--ease-out-quart)`. No inline `300ms`, no
+`ease-in-out`, no bespoke curve — if a moment needs a duration not on
+this list, that's a signal to use the existing token closest to it, not
+to add a new one.
+
+**Animates:**
+- Vault grid mount/filter-change stagger (existing, `stories/page.tsx`).
+- On-this-day rail entrance on real data arrival (existing).
+- A short cross-fade between the Vault and a story detail page —
+  "same collection, different item," not a directional navigation.
+
+**Does not animate:**
+- Hover states on secondary/non-primary elements — motion marks the one
+  primary action per view, mirroring the One Red Rule. A card border
+  color change on hover (already flat, no motion) stays as-is; it does
+  not gain a scale/shadow/glow treatment.
+
+**Reduced motion.** Every animation degrades to an instant state swap
+under `prefers-reduced-motion: reduce`. GSAP-driven motion checks
+`prefersReducedMotion()` from `frontend/src/lib/motion.ts` before
+running; CSS-only transitions are covered by the global
+`@media (prefers-reduced-motion: reduce)` block that already zeroes all
+animation/transition durations (`globals.css`).
+
+### Named Rule
+
+**The One-Motion-Moment Rule.** A route or state change gets exactly
+one motion moment — the stagger, the reveal, or the cross-fade, never
+several competing at once. This is the Loud-Then-Quiet rule applied to
+time instead of type scale.
+
+## 8. Mobile
+
+**Breakpoint.** 640px is the single mobile breakpoint for both
+surfaces (distinct from Composer's existing 860px two-column collapse
+in `.composer-grid` — that rule is unchanged and stays as its own
+breakpoint for the Drafts/Editor split).
+
+**Layout.** Below 640px: single-column card grids (Vault's
+`repeat(auto-fill, minmax(280px, 1fr))` already collapses to one column
+naturally at this width — verify, don't reintroduce a fixed column
+count).
+
+**Tag rows.** Below 640px, a tag/chip row that would otherwise wrap to
+several lines becomes a single horizontally-scrolling row
+(`overflow-x: auto`, `-webkit-overflow-scrolling: touch`) with a
+low-opacity edge fade (a `mask-image` linear-gradient, or a
+pseudo-element gradient overlay) signaling more content off-screen.
+Never wrap a tag row to more than 2 lines on mobile.
+
+**Touch targets.** Every tappable element (chip, button, card) keeps a
+minimum 44×44px hit area on touch viewports, even where the visual
+element is smaller — pad with `min-height`/`min-width`, not visual
+size inflation.
+
+### Named Rule
+
+**The Scroll-Not-Wrap Rule.** A row of same-weight items (tags, chips)
+that doesn't fit its container scrolls horizontally on mobile; it does
+not wrap into a multi-line block that pushes content down.
+
+## 9. Keyboard
+
+**Reachability.** Every interactive element is a native `<button>`,
+`<a>`, `<input>`, or `<select>` (never a click-only `<div>` or `<span
+role="button">` without the accompanying `tabIndex`/`onKeyDown` pair
+the existing publish-toggle in `SourceBar.tsx` already demonstrates)
+and is reachable via Tab in the same order it appears visually.
+
+**Focus.** The existing Wire Red 2px focus ring (`.ds-btn-primary`,
+`.ds-btn-secondary`, `.ds-input` already define `:focus-visible`) is
+the one focus treatment in the system — every new interactive class
+gets the same `outline: 2px solid var(--wire-red); outline-offset:
+2px;` on `:focus-visible`, no exceptions.
+
+**Escape.** Any open modal, popover, or expandable panel (e.g.
+`SourceBar`'s Browse Bank panel) closes on `Escape`.
+
+### Named Rule
+
+**The No-Silent-Element Rule.** If it's clickable, it's Tab-reachable
+and has a visible focus state. A hover-only or click-only interactive
+element is a keyboard dead end and is not shipped.
+
+## 10. Do's and Don'ts
 
 ### Do:
 - **Do** use Wire Red (`#e8432e`) for exactly one primary action per view, and Oswald Display type for exactly one section header per view — the "one loud thing" discipline is the whole personality.
