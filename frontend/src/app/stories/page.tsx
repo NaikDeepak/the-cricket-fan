@@ -27,6 +27,7 @@ function Vault() {
   const [wire, setWire] = useState<WireItem[]>([]);
   const [loading, setLoading] = useState(true);
   const gridRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Tracks the last `q` value *this component* pushed into the URL (via the
   // debounce below or a tag click carrying qInput). Lets the resync effect
@@ -122,6 +123,20 @@ function Vault() {
     // primitives that determine "stories/filter changed" instead.
   }, [stories, activeTag]);
 
+  // Fade the whole vault in on mount — softens the hard cut arriving from a
+  // story detail page's "← The Vault" link.
+  useEffect(() => {
+    if (prefersReducedMotion() || !containerRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.from(containerRef.current, {
+        opacity: 0,
+        duration: 0.25,
+        ease: "power4.out",
+      });
+    }, containerRef);
+    return () => ctx.revert();
+  }, []);
+
   const showRails = !filters.q && !activeTag;
   const onThisDay = useMemo(
     () => stories.filter((s) => s.event_month_day === todayMonthDay()),
@@ -150,7 +165,7 @@ function Vault() {
   const hasActiveFilter = Boolean(filters.q || activeTag);
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "var(--space-lg)" }}>
+    <div ref={containerRef} style={{ maxWidth: 1100, margin: "0 auto", padding: "var(--space-lg)" }}>
       <div
         style={{
           display: "flex",

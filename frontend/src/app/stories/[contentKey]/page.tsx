@@ -32,6 +32,7 @@ export default function StoryDetailPage({
   const [siblings, setSiblings] = useState<Story[]>([]);
   const [notFound, setNotFound] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -90,6 +91,20 @@ export default function StoryDetailPage({
     };
   }, [story]);
 
+  // Fade the whole page in once the story loads — softens the hard cut
+  // arriving from the Vault, mirroring the fade-in there.
+  useEffect(() => {
+    if (!story || prefersReducedMotion() || !pageRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.from(pageRef.current, {
+        opacity: 0,
+        duration: 0.25,
+        ease: "power4.out",
+      });
+    }, pageRef);
+    return () => ctx.revert();
+  }, [story]);
+
   async function handleDownload() {
     if (!cardRef.current || !story) return;
     setExporting(true);
@@ -133,7 +148,7 @@ export default function StoryDetailPage({
   const sourceIsLink = story.source_ref?.startsWith("http");
 
   return (
-    <div style={containerStyle}>
+    <div ref={pageRef} style={containerStyle}>
       <Link href="/stories" className="ds-nav-link" style={{ display: "inline-block", marginBottom: "var(--space-lg)" }}>
         ← The Vault
       </Link>

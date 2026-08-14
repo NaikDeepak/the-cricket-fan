@@ -227,19 +227,6 @@ body { margin: 0; overflow-x: hidden; }
   margin: 0;
 }
 
-::view-transition-old(stories-content) {
-  animation: var(--duration-standard) var(--ease-out-quart) both ds-fade-out;
-}
-::view-transition-new(stories-content) {
-  animation: var(--duration-standard) var(--ease-out-quart) both ds-fade-in;
-}
-@keyframes ds-fade-out {
-  to { opacity: 0; }
-}
-@keyframes ds-fade-in {
-  from { opacity: 0; }
-}
-
 .ds-chip {
   display: inline-flex;
   align-items: center;
