@@ -1,15 +1,19 @@
 "use client";
+
 import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import CardPreview from "@/components/composer/CardPreview";
 import Editor from "@/components/composer/Editor";
 import Feed from "@/components/composer/Feed";
 import { composerApi, type Draft } from "@/lib/composerApi";
+import { HERO_REVEAL_VARIANTS, prefersReducedMotion } from "@/lib/motion";
 
 export default function ComposerPage() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Draft | null>(null);
+  const isReduced = prefersReducedMotion();
 
   useEffect(() => {
     composerApi
@@ -43,23 +47,80 @@ export default function ComposerPage() {
 
   return (
     <div>
-      <p
+      {/* Apple Hero Header Banner with Titanium Render */}
+      <motion.div
+        className="ds-spatial-card-dark"
+        variants={HERO_REVEAL_VARIANTS}
+        initial={isReduced ? false : "hidden"}
+        animate="visible"
         style={{
-          fontSize: 15,
-          color: "var(--muted)",
+          borderRadius: 24,
+          padding: "var(--space-xl)",
           marginBottom: "var(--space-xl)",
-          maxWidth: "60ch",
-          lineHeight: 1.5,
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "var(--space-xl)",
+          alignItems: "center",
+          backgroundImage: "linear-gradient(135deg, rgba(10, 10, 14, 0.95) 0%, rgba(20, 20, 30, 0.9) 100%)",
         }}
       >
-        Create a draft on the left (blank / bank / bot / AI), edit text +
-        pick a card theme on the right, preview the rendered card, then
-        export PNG or copy text and paste it into X/IG/WhatsApp yourself —
-        nothing here posts automatically.
-      </p>
+        <div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: "var(--space-xs)" }}>
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "var(--wire-red)",
+                boxShadow: "0 0 8px var(--wire-red)",
+              }}
+            />
+            <span className="text-micro" style={{ color: "rgba(255, 255, 255, 0.7)" }}>
+              PRESS BOX COMPOSER STUDIO
+            </span>
+          </div>
+
+          <h1
+            style={{
+              fontSize: "var(--text-2xl)",
+              fontWeight: 700,
+              color: "#ffffff",
+              margin: "var(--space-xs) 0 var(--space-sm) 0",
+              letterSpacing: "-0.02em",
+              lineHeight: 1.15,
+            }}
+          >
+            Craft High-Fidelity Cricket Match Content.
+          </h1>
+
+          <p
+            style={{
+              fontSize: "var(--text-base)",
+              color: "rgba(255, 255, 255, 0.8)",
+              lineHeight: 1.6,
+              margin: 0,
+              maxWidth: 460,
+            }}
+          >
+            Draft stories, records, and predictions from content bank or AI generators. Edit copy, select card themes, and export high-resolution PNG assets.
+          </p>
+        </div>
+
+        {/* Product photography render overlay */}
+        <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 16px 40px rgba(0,0,0,0.5)" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/composer_hero.jpg"
+            alt="Cricket Titanium Render"
+            style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }}
+          />
+        </div>
+      </motion.div>
+
+      {/* Main Composer Tool Grid */}
       <div className="composer-grid">
         <div>
-          <h2 className="text-title" style={{ marginBottom: "var(--space-md)" }}>
+          <h2 className="text-title" style={{ marginBottom: "var(--space-md)", color: "#000000", fontSize: "var(--text-xl)" }}>
             Drafts &amp; Generators
           </h2>
           <Feed
@@ -71,6 +132,7 @@ export default function ComposerPage() {
             selectedId={selected?.id}
           />
         </div>
+
         <div
           style={{
             display: "flex",
@@ -78,7 +140,9 @@ export default function ComposerPage() {
             gap: "var(--space-md)",
           }}
         >
-          <h2 className="text-title">Editor &amp; Preview</h2>
+          <h2 className="text-title" style={{ color: "#000000", fontSize: "var(--text-xl)" }}>
+            Editor &amp; Preview
+          </h2>
           {selected ? (
             <div
               key={selected.id}
@@ -99,9 +163,11 @@ export default function ComposerPage() {
                 cursor: "default",
                 textAlign: "center",
                 padding: "var(--space-xl) var(--space-md)",
+                background: "#ffffff",
+                borderRadius: 16,
               }}
             >
-              <p style={{ margin: 0, color: "var(--muted)", fontSize: 14 }}>
+              <p style={{ margin: 0, color: "var(--fg-muted)", fontSize: "var(--text-sm)" }}>
                 Select or create a draft to start editing.
               </p>
             </div>

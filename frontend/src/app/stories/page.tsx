@@ -3,12 +3,17 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import gsap from "gsap";
+import { motion } from "framer-motion";
 import { Story, WireItem, storiesApi, todayMonthDay } from "@/lib/storiesApi";
 import StoryCard from "@/components/stories/StoryCard";
 import OnThisDayRail from "@/components/stories/OnThisDayRail";
 import WireStrip from "@/components/stories/WireStrip";
-import { prefersReducedMotion } from "@/lib/motion";
+import {
+  HERO_REVEAL_VARIANTS,
+  SPRING_PRESET,
+  STAGGER_CONTAINER_VARIANTS,
+  prefersReducedMotion,
+} from "@/lib/motion";
 import {
   filtersFromSearchParams,
   nextFiltersOnTagSelect,
@@ -26,18 +31,10 @@ function Vault() {
   const [stories, setStories] = useState<Story[]>([]);
   const [wire, setWire] = useState<WireItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const gridRef = useRef<HTMLDivElement>(null);
 
-  // Tracks the last `q` value *this component* pushed into the URL (via the
-  // debounce below or a tag click carrying qInput). Lets the resync effect
-  // tell "the URL changed because we pushed it" apart from "the URL changed
-  // out from under us" (back/forward, a tag click carrying newer text).
   const lastPushedQ = useRef(filters.q);
+  const isReduced = prefersReducedMotion();
 
-  // The URL is the source of truth for `q`. When it changes for a reason
-  // other than this component's own debounce push — browser back/forward,
-  // or a tag click that carried a newer qInput — resync the local buffer so
-  // it doesn't silently overwrite the URL 300ms later with stale text.
   useEffect(() => {
     const sync = resolveQSync(filters.q, lastPushedQ.current);
     if (sync) {
@@ -46,7 +43,6 @@ function Vault() {
     }
   }, [filters.q]);
 
-  // Debounce the typed query into the URL — URL stays the single source of truth.
   useEffect(() => {
     const id = setTimeout(() => {
       const nextUrl = storiesUrl({ q: qInput, tag: filters.tag });
@@ -59,7 +55,6 @@ function Vault() {
     return () => clearTimeout(id);
   }, [qInput, filters.q, filters.tag, router]);
 
-  // Refetch whenever the committed (URL) query changes.
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -79,8 +74,6 @@ function Vault() {
     };
   }, [filters.q]);
 
-  // Fetch the wire strip once — it's independent of the search query. An
-  // API error here must not blank the vault, so failures resolve to [].
   useEffect(() => {
     let cancelled = false;
     storiesApi
@@ -100,28 +93,6 @@ function Vault() {
     ? stories.filter((s) => s.tags?.includes(activeTag))
     : stories;
 
-  // Vault grid stagger — independent of the q/URL-sync effects above.
-  useEffect(() => {
-    if (prefersReducedMotion() || !gridRef.current) return;
-    const cards = gridRef.current.children;
-    if (cards.length === 0) return;
-    const ctx = gsap.context(() => {
-      gsap.from(cards, {
-        opacity: 0,
-        y: 16,
-        duration: 0.35,
-        stagger: 0.04,
-        ease: "power4.out",
-        clearProps: "all",
-      });
-    }, gridRef);
-    return () => ctx.revert();
-    // `filteredStories` is a fresh array reference on every render whenever
-    // activeTag is set (stories.filter allocates), which would re-fire this
-    // on every keystroke via qInput-driven re-renders. Depend on the actual
-    // primitives that determine "stories/filter changed" instead.
-  }, [stories, activeTag]);
-
   const showRails = !filters.q && !activeTag;
   const onThisDay = useMemo(
     () => stories.filter((s) => s.event_month_day === todayMonthDay()),
@@ -129,8 +100,6 @@ function Vault() {
   );
 
   function selectTag(tag: string | null) {
-    // Carry the live qInput (not stale filters.q) so a tag click mid-debounce
-    // doesn't discard text the user just typed but hasn't committed yet.
     const next = nextFiltersOnTagSelect(qInput, activeTag, tag);
     const nextUrl = storiesUrl(next);
     lastPushedQ.current = next.q;
@@ -150,142 +119,350 @@ function Vault() {
   const hasActiveFilter = Boolean(filters.q || activeTag);
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "var(--space-lg)" }}>
-      <div
+    <motion.div
+      initial={isReduced ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      style={{ maxWidth: 1200, margin: "0 auto", padding: "0 var(--space-lg) var(--space-xl)" }}
+    >
+      {/* Apple Vision Pro Header Navigation Bar */}
+      <header
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-start",
-          flexWrap: "wrap",
-          gap: "var(--space-md)",
+          alignItems: "center",
+          padding: "var(--space-md) 0 var(--space-xl)",
+          borderBottom: "1px solid var(--border)",
+          marginBottom: "var(--space-xl)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
+          <Link href="/stories" style={{ textDecoration: "none" }}>
+            <span style={{ fontSize: 22, fontWeight: 800, color: "#000000", letterSpacing: "-0.03em" }}>
+              TCH.
+            </span>
+          </Link>
+          <span className="text-micro" style={{ background: "#e8e8ed", padding: "4px 12px", borderRadius: 999 }}>
+            Press Box Vault
+          </span>
+        </div>
+
+        <nav style={{ display: "flex", alignItems: "center", gap: "var(--space-lg)" }}>
+          <Link href="/stories" className="ds-nav-link" style={{ color: "#000000", fontWeight: 700 }}>
+            The Vault
+          </Link>
+          <Link href="/composer" className="ds-nav-link">
+            Composer
+          </Link>
+          <Link href="/composer" className="ds-btn-pill ds-btn-pill-dark" style={{ textDecoration: "none" }}>
+            Contact Us ↗
+          </Link>
+        </nav>
+      </header>
+
+      {/* Apple Vision Pro Hero Section */}
+      <motion.section
+        variants={HERO_REVEAL_VARIANTS}
+        initial={isReduced ? false : "hidden"}
+        animate="visible"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "var(--space-xl)",
+          alignItems: "center",
           marginBottom: "var(--space-xl)",
         }}
       >
         <div>
-          <span className="text-micro">THE CRICKET FAN</span>
-          <h1 className="text-tool-headline" style={{ margin: "var(--space-xs) 0" }}>
-            The Vault
-          </h1>
-          <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>
-            Real, verified cricket folklore — comebacks, records, and turning points.
-          </p>
-        </div>
-        <Link href="/composer" className="ds-nav-link">
-          Composer →
-        </Link>
-      </div>
-
-      {showRails && (
-        <>
-          <OnThisDayRail stories={onThisDay} />
-          <WireStrip items={wire} />
-        </>
-      )}
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-md)",
-          marginBottom: "var(--space-xl)",
-        }}
-      >
-        <input
-          type="text"
-          className="ds-input"
-          placeholder="Search by player, team, rivalry, or keyword…"
-          value={qInput}
-          onChange={(e) => setQInput(e.target.value)}
-          style={{ width: "100%" }}
-        />
-
-        {allTags.length > 0 && (
-          <div style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => selectTag(null)}
-              className="ds-chip"
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: "var(--space-md)",
+            }}
+          >
+            <div
               style={{
-                border: `1px solid ${activeTag === null ? "var(--wire-red)" : "var(--border)"}`,
-                cursor: "pointer",
-                background: activeTag === null ? "var(--wire-red)" : "var(--surface)",
-                color: activeTag === null ? "#fff" : "var(--fg)",
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                background: "#000000",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                fontSize: 14,
+                fontWeight: 700,
               }}
             >
-              All Stories
-            </button>
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => selectTag(tag)}
-                className="ds-chip"
-                style={{
-                  border: `1px solid ${activeTag === tag ? "var(--wire-red)" : "var(--border)"}`,
-                  cursor: "pointer",
-                  background: activeTag === tag ? "var(--wire-red)" : "var(--surface)",
-                  color: activeTag === tag ? "#fff" : "var(--fg)",
-                }}
-              >
-                #{tag}
-              </button>
-            ))}
+              🏏
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#000000" }}>The Cricket Fan</div>
+              <div style={{ fontSize: 11, color: "var(--fg-muted)" }}>Revolution in match storytelling</div>
+            </div>
           </div>
-        )}
-      </div>
 
-      {loading ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: "var(--space-md)",
-          }}
-        >
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="ds-skeleton" />
-          ))}
-        </div>
-      ) : filteredStories.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "var(--space-xl) 0" }}>
-          <p className="text-micro" style={{ margin: 0 }}>
-            NOTHING IN THE VAULT FOR THAT FILTER
+          <h1
+            className="text-hero-headline"
+            style={{
+              marginBottom: "var(--space-md)",
+            }}
+          >
+            Seamlessly Blends Digital Cricket Folklore With Your Physical Space.
+          </h1>
+
+          <p
+            style={{
+              fontSize: "var(--text-base)",
+              lineHeight: 1.6,
+              color: "var(--fg-muted)",
+              marginBottom: "var(--space-xl)",
+              maxWidth: 480,
+            }}
+          >
+            Explore verified match comeback stories, iconic player rivalry statistics, and turning-point beats in ultra-high fidelity visual cards.
           </p>
-          <p style={{ marginTop: "var(--space-sm)", color: "var(--muted)", fontSize: 14 }}>
-            Try clearing the search or tag filter to see more of the vault.
-          </p>
-          {hasActiveFilter && (
+
+          <div style={{ display: "flex", gap: "var(--space-md)", alignItems: "center" }}>
+            <a href="#vault-grid" className="ds-btn-pill ds-btn-pill-dark" style={{ textDecoration: "none" }}>
+              Explore Vault ↗
+            </a>
             <button
               type="button"
-              onClick={clearFilters}
-              className="ds-btn-secondary"
-              style={{ marginTop: "var(--space-md)" }}
+              onClick={() => selectTag("rivalry")}
+              className="ds-btn-pill ds-btn-pill-light"
             >
-              Clear filters
+              Rivalries ↗
             </button>
-          )}
+          </div>
         </div>
-      ) : (
-        <div
-          ref={gridRef}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: "var(--space-md)",
-          }}
-        >
-          {filteredStories.map((story) => (
-            <Link
-              key={story.content_key}
-              href={`/stories/${encodeURIComponent(story.content_key)}`}
-              style={{ textDecoration: "none" }}
-            >
-              <StoryCard story={story} />
+
+        {/* Hero Stadium Visual Graphic Panel */}
+        <div style={{ position: "relative" }}>
+          <div
+            style={{
+              borderRadius: 24,
+              overflow: "hidden",
+              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.12)",
+              border: "1px solid rgba(0, 0, 0, 0.08)",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/hero_stadium.jpg"
+              alt="Cricket Stadium Masterpiece"
+              style={{
+                width: "100%",
+                height: 380,
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          </div>
+
+          {/* Floating Dark Spatial Card anchored over hero image */}
+          <div
+            className="ds-spatial-card-dark"
+            style={{
+              position: "absolute",
+              bottom: -24,
+              left: 24,
+              right: 24,
+              padding: "var(--space-md) var(--space-lg)",
+              borderRadius: 16,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              backdropFilter: "blur(20px)",
+              background: "rgba(10, 10, 14, 0.88)",
+            }}
+          >
+            <div>
+              <span className="text-micro" style={{ color: "rgba(255, 255, 255, 0.6)" }}>
+                MATCH OF THE MOMENT • NEW
+              </span>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#ffffff", marginTop: 2 }}>
+                Sharjah 1986 — Miandad&apos;s Last-Ball Six
+              </div>
+            </div>
+            <Link href="/stories/story%3Asharjah-1986-miandad-six" className="ds-btn-pill ds-btn-pill-accent" style={{ fontSize: 12, padding: "6px 16px" }}>
+              Explore ↗
             </Link>
-          ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {showRails && (
+        <div style={{ marginTop: "var(--space-xl)" }}>
+          <OnThisDayRail stories={onThisDay} />
+          <WireStrip items={wire} />
         </div>
       )}
-    </div>
+
+      {/* Vault Section & Filter Controls */}
+      <div id="vault-grid" style={{ paddingTop: "var(--space-xl)", marginBottom: "var(--space-lg)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "var(--space-md)" }}>
+          <div>
+            <span className="text-micro">EXPLORE ARCHIVE</span>
+            <h2 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, margin: "4px 0 0 0", letterSpacing: "-0.02em" }}>
+              Stories &amp; Turning Points
+            </h2>
+          </div>
+          <span className="text-caption" style={{ margin: 0 }}>
+            {filteredStories.length} stories available
+          </span>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-md)",
+            marginBottom: "var(--space-xl)",
+          }}
+        >
+          <input
+            type="text"
+            className="ds-input"
+            placeholder="Search by player, team, rivalry, or keyword…"
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
+            style={{ width: "100%" }}
+          />
+
+          {allTags.length > 0 && (
+            <div className="ds-tag-scroll">
+              <button
+                type="button"
+                onClick={() => selectTag(null)}
+                className="ds-chip"
+                style={{
+                  border: `1px solid ${activeTag === null ? "#000000" : "var(--border)"}`,
+                  cursor: "pointer",
+                  background: activeTag === null ? "#000000" : "var(--surface)",
+                  color: activeTag === null ? "#ffffff" : "var(--fg)",
+                }}
+              >
+                All Stories
+              </button>
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => selectTag(tag)}
+                  className="ds-chip"
+                  style={{
+                    border: `1px solid ${activeTag === tag ? "#000000" : "var(--border)"}`,
+                    cursor: "pointer",
+                    background: activeTag === tag ? "#000000" : "var(--surface)",
+                    color: activeTag === tag ? "#ffffff" : "var(--fg)",
+                  }}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Story Card Grid */}
+        {loading ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+              gap: "var(--space-lg)",
+            }}
+          >
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="ds-skeleton" />
+            ))}
+          </div>
+        ) : filteredStories.length === 0 ? (
+          <div className="ds-card" style={{ textAlign: "center", padding: "var(--space-xl)" }}>
+            <p className="text-micro" style={{ margin: 0, color: "var(--wire-red)" }}>
+              NOTHING IN THE VAULT FOR THAT FILTER
+            </p>
+            <p className="text-caption" style={{ marginTop: "var(--space-sm)" }}>
+              Try clearing the search query or tag filter to see more of the vault.
+            </p>
+            {hasActiveFilter && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="ds-btn-pill ds-btn-pill-dark"
+                style={{ marginTop: "var(--space-md)" }}
+              >
+                Clear filters ↗
+              </button>
+            )}
+          </div>
+        ) : (
+          <motion.div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+              gap: "var(--space-lg)",
+            }}
+            variants={STAGGER_CONTAINER_VARIANTS}
+            initial={isReduced ? false : "hidden"}
+            animate="visible"
+          >
+            {filteredStories.map((story, index) => {
+              const isFeatured = index === 0;
+              return (
+                <motion.div
+                  key={story.content_key}
+                  style={{
+                    gridColumn: isFeatured && filteredStories.length > 1 ? "span 2" : "span 1",
+                  }}
+                  variants={{
+                    hidden: { opacity: 0, y: 16 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
+                >
+                  <Link
+                    href={`/stories/${encodeURIComponent(story.content_key)}`}
+                    style={{ textDecoration: "none", display: "block", height: "100%" }}
+                  >
+                    <StoryCard story={story} featured={isFeatured} />
+                  </Link>
+                </motion.div>
+              );
+            })}
+
+            {filteredStories.length < 6 && (
+              <motion.div
+                className="ds-card"
+                style={{
+                  padding: "var(--space-lg)",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  minHeight: 180,
+                  borderStyle: "dashed",
+                  borderColor: "var(--border)",
+                  background: "transparent",
+                }}
+                variants={{
+                  hidden: { opacity: 0, y: 16 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+              >
+                <p className="text-tool-headline" style={{ margin: 0, fontSize: "var(--text-xl)", color: "var(--fg-muted)" }}>
+                  MORE STORIES COMING
+                </p>
+                <p className="text-caption" style={{ margin: "var(--space-sm) 0 0 0" }}>
+                  The vault grows with every match — check back soon.
+                </p>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
   );
 }
 

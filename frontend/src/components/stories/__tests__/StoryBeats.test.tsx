@@ -15,4 +15,9 @@ describe("StoryBeats", () => {
     render(<StoryBeats segments={["only beat"]} />);
     expect(screen.queryByText("1/1")).toBeNull();
   });
+  it("renders each beat with the ds-quote pull-quote treatment", () => {
+    render(<StoryBeats segments={["first beat"]} />);
+    const beat = document.querySelector("[data-beat]");
+    expect(beat).toHaveClass("ds-quote");
+  });
 });
