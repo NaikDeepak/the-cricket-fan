@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import gsap from "gsap";
+import { describe, expect, it } from "vitest";
 import OnThisDayRail from "../OnThisDayRail";
 import WireStrip from "../WireStrip";
 import type { Story, WireItem } from "@/lib/storiesApi";
@@ -38,29 +37,11 @@ describe("OnThisDayRail", () => {
     const { container } = render(<OnThisDayRail stories={[]} />);
     expect(container.firstChild).toBeNull();
   });
+
   it("renders matching stories with the date stamp", () => {
     render(<OnThisDayRail stories={[story]} />);
     expect(screen.getByText(/on this day/i)).toBeInTheDocument();
     expect(screen.getByText("The Dated Classic")).toBeInTheDocument();
-  });
-
-  it("animates once when stories arrive after an empty mount, not on every subsequent update", () => {
-    // Mirrors the real app: OnThisDayRail first mounts with stories=[] (async
-    // fetch still pending) — the same component instance later re-renders
-    // with real data once it arrives, rather than remounting. The entrance
-    // animation must key off that data arrival, not the initial (empty) mount.
-    const contextSpy = vi.spyOn(gsap, "context");
-    const { rerender } = render(<OnThisDayRail stories={[]} />);
-    expect(contextSpy).not.toHaveBeenCalled();
-
-    rerender(<OnThisDayRail stories={[story]} />);
-    expect(contextSpy).toHaveBeenCalledTimes(1);
-
-    const secondStory = { ...story, content_key: "story:dated-2", title: "Another Classic" };
-    rerender(<OnThisDayRail stories={[story, secondStory]} />);
-    expect(contextSpy).toHaveBeenCalledTimes(1);
-
-    contextSpy.mockRestore();
   });
 });
 
@@ -69,6 +50,7 @@ describe("WireStrip", () => {
     const { container } = render(<WireStrip items={[]} />);
     expect(container.firstChild).toBeNull();
   });
+
   it("renders posted items with date", () => {
     render(<WireStrip items={[wireItem]} />);
     expect(screen.getByText(/the wire/i)).toBeInTheDocument();

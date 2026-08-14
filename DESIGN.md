@@ -1,6 +1,6 @@
 ---
-name: The Cricket Fan — Composer
-description: A sportswriter's late-night desk for turning cricket facts into copy-ready, on-brand posts.
+name: The Cricket Fan — Press Box System
+description: The shared design system for both the public Vault (/stories) and the internal Composer (/composer) — one token set, one interaction contract, two surfaces.
 colors:
   bg: "#030303"
   surface: "#0a0a0a"
@@ -13,30 +13,39 @@ colors:
   floodlight-cyan: "#5dc4d9"
   floodlight-cyan-deep: "#3a9fb3"
 typography:
+  scale:
+    xs: "11px"
+    sm: "13px"
+    base: "15px"
+    lg: "18px"
+    xl: "24px"
+    2xl: "32px"
+    3xl: "clamp(36px, 5.5vw, 60px)"
+    4xl: "clamp(56px, 9vw, 96px)"
   display:
     fontFamily: "Oswald, sans-serif"
-    fontSize: "clamp(32px, 6vw, 64px)"
+    fontSize: "var(--text-3xl)"
     fontWeight: 700
     lineHeight: 1.1
-    letterSpacing: "-0.02em"
+    letterSpacing: "-0.03em"
   title:
     fontFamily: "Space Grotesk, sans-serif"
-    fontSize: "18px"
+    fontSize: "var(--text-lg)"
     fontWeight: 600
     lineHeight: 1.3
     letterSpacing: "-0.01em"
   body:
     fontFamily: "Space Grotesk, sans-serif"
-    fontSize: "15px"
+    fontSize: "var(--text-base)"
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: "normal"
   label:
     fontFamily: "Space Grotesk, sans-serif"
-    fontSize: "11px"
+    fontSize: "var(--text-xs)"
     fontWeight: 600
     lineHeight: 1.4
-    letterSpacing: "0.15em"
+    letterSpacing: "0.18em"
 rounded:
   sm: "4px"
   md: "8px"
@@ -74,15 +83,21 @@ components:
     padding: "4px 12px"
 ---
 
-# Design System: The Cricket Fan — Composer
+# Design System: The Cricket Fan — Press Box System
 
 ## 1. Overview
 
 **Creative North Star: "The Press Box"**
 
-Composer is a sportswriter's desk at the ground, late in the day, under stadium floodlights — not a SaaS admin panel. The energy is wire-service urgency: facts come in, copy goes out, fast, with a single decisive red the same way a press-room clock or an on-air tally light reads as "this matters, act now." Everything else stays quiet — near-black surfaces, tight neutral type — so that one red never has to compete for attention.
+The Press Box is a sportswriter's desk at the ground, late in the day, under stadium floodlights — not a SaaS admin panel or a generic matchday scoreboard. The energy is wire-service urgency: facts come in, copy goes out, fast, with a single decisive red the same way a press-room clock or an on-air tally light reads as "this matters, act now." Everything else stays quiet — near-black surfaces, tight neutral type — so that one red never has to compete for attention.
 
-This system explicitly rejects the generic-admin-dashboard defaults composer shipped with at first build: plain HTML `<select>` and `<input>` elements, no visual hierarchy between the four content sources, no color distinguishing a wiki-record fact from a hand-written anecdote, flat gray-on-gray panels. It also deliberately does not reuse the main app's team-blue/team-gold pairing — composer is a working tool, not a matchday scoreboard, and needed its own accent identity rather than borrowing the fixture colors.
+This system now covers both surfaces the app ships: the public Vault
+(`/stories`) and the internal Composer (`/composer`). Both consume the
+same tokens in `frontend/src/app/globals.css` — there is one design
+system, not a composer-only skin. An earlier team-blue/team-gold
+matchday identity existed for a fixture-explorer UI that has since
+been removed from the codebase; nothing in the current app should
+reintroduce it without a new brainstorming cycle.
 
 **Key Characteristics:**
 - Near-black, flat, tonally layered — no shadows, depth comes from surface-vs-bg-vs-border contrast alone.
@@ -124,23 +139,35 @@ The palette is Restrained-to-Committed: near-black neutrals dominate almost the 
 
 **Character:** Oswald is condensed, heavy, all-caps — it's the shout of a section headline or a stat, used sparingly. Space Grotesk is where the actual work happens: geometric but warm enough not to feel clinical, used for every editable field, button label, and paragraph of body copy.
 
-### Hierarchy
-- **Display** (Oswald 700, `clamp(32px, 6vw, 64px)`, 1.1 line-height, -0.02em tracking, uppercase): Page-level section headers only ("DRAFTS & GENERATORS" / "EDITOR & PREVIEW"). Reuses the app's existing `.text-section-headline` class.
-- **Title** (Space Grotesk 600, 18px, 1.3 line-height, -0.01em tracking): Card titles, draft preview headings, modal/panel titles.
-- **Body** (Space Grotesk 400, 15px, 1.5 line-height): Draft text, editor textarea, paragraph copy. Cap measure at ~70ch inside the editor so long drafts don't stretch edge-to-edge.
-- **Label** (Space Grotesk 600, 11px, 1.4 line-height, 0.15em tracking, uppercase): Meta rows, form labels, chip text, timestamps. Reuses the app's existing `.text-micro` class and color (`--muted`).
+### Modular Scale
+The typography system uses a strict 8-tier modular scale bound to CSS custom properties (`--text-xs` through `--text-4xl`). No hardcoded pixel font sizes exist in component code.
+
+- **4XL Watermark** (`--text-4xl`: `clamp(56px, 9vw, 96px)`): Oversized background watermark numerals (e.g. years or stats) at low opacity (4–6%).
+- **3XL Hero** (`--text-3xl`: `clamp(36px, 5.5vw, 60px)`): Page-level spatial section headers ("THE VAULT").
+- **2XL Title** (`--text-2xl`: `32px`): Sub-hero headlines and major detail titles.
+- **XL Featured** (`--text-xl`: `24px`): Featured lead story titles and panel section headers.
+- **LG Subhead** (`--text-lg`: `18px`): Standard story card titles and preview headings.
+- **Base Body** (`--text-base`: `15px`): Standard body text, story beats, and editor text.
+- **SM Caption** (`--text-sm`: `13px`): Secondary summaries, card metadata, and tool captions.
+- **XS Micro Label** (`--text-xs`: `11px`, 0.18em tracking, uppercase): Category badges, form labels, timestamps.
 
 ### Named Rules
 
-**The Loud-Then-Quiet Rule.** A view gets exactly one Display-weight moment at its top; everything below drops straight to Title/Body/Label. No intermediate "Headline" tier — the contrast between the one loud line and everything quiet under it is the hierarchy.
+**The Modular Scale Rule.** Every font size in the app must map to one of the system custom properties `--text-*`. Inline pixel numbers for font sizes are strictly disallowed.
 
-## 4. Elevation
+**The Loud-Then-Quiet Rule.** A view gets exactly one Display-weight moment at its top; everything below drops straight to Title/Body/Label. Contrast between the single loud line and quiet structure creates immediate visual hierarchy.
 
-Flat by design — no box-shadows anywhere in the system. Depth is conveyed entirely through tonal layering (Void Black → Ash Surface → a 1px Border Line) and through the Wire Red accent, which reads as "raised" purely because it's the only saturated thing in the frame. This matches the main app's existing `.card-container` convention and keeps the stadium-floodlight character: crisp edges, no soft glow, no glass.
+## 4. Elevation & Spatial Depth
+
+**Spatial Dark Glassmorphism:** Depth is created through translucent dark surfaces (`rgba(15, 15, 18, 0.75)` with `backdrop-filter: blur(24px)`), floating spatial tiles, and crisp 1px glowing borders (`rgba(255, 255, 255, 0.08)` at rest → Wire Red `#e8432e` hover aura). Inspired by Apple Vision Pro spatial landing pages, UI containers float with subtle backdrop blur and clean tonal contrast (Void Black `#030303` base → Ash Glass surface → 1px Border Line).
 
 ### Named Rules
 
-**The Flat-By-Default Rule.** If an element needs to look "elevated," change its surface tone or add the 1px border — never add a shadow. The one exception is a deliberate, sparing glow behind the Wire Red primary action on hover (a soft `filter: drop-shadow` at low opacity), used only there, never on cards or panels.
+**The Spatial Glass Rule.** Containers use translucent dark glass (`.ds-spatial-card`, `.ds-glass-panel`) with high-contrast text and 1px border lighting. Depth reads as floating translucent tiles without muddy heavy shadows.
+
+**The Focal Hero Rule.** Every top-level page opens with an immersive spatial hero moment combining media/graphic backdrop assets, bold display typography, and stadium lighting ambiance.
+
+**The Dynamic Rhythm Rule.** Story grids feature visual hierarchy: a lead spatial card spanning 2 columns with full visual prominence, followed by balanced floating cards.
 
 ## 5. Components
 
@@ -172,7 +199,111 @@ Flat by design — no box-shadows anywhere in the system. Depth is conveyed enti
 ### Navigation
 - **Style:** The composer sub-nav (FEED / ANALYTICS) uses Label-weight uppercase links, Signal Muted at rest, Paper White on hover, Wire Red underline (2px, no shadow) on the active route. No pill background on the active state — the underline alone carries it, keeping the header flat.
 
-## 6. Do's and Don'ts
+## 6. States
+
+### Loading
+Skeleton shapes, never a spinner. Use the existing `.ds-skeleton` class
+(Ash Surface background, `ds-skeleton-pulse` opacity animation, already
+defined in `globals.css`) sized to match the content it's replacing —
+card-shaped skeletons for a card grid, not a generic bar.
+
+### Empty
+Real copy plus an actionable next step — never a bare "No results."
+The Vault's existing empty-state pattern (`NOTHING IN THE VAULT FOR
+THAT FILTER` + a `Clear filters` button when a filter is active) is
+the house rule, not a one-off: any list/grid view that can return zero
+results follows the same shape — Label-weight headline, one line of
+Body-weight explanation, a recovery action when one exists.
+
+### Error
+Per PRODUCT.md's fail-honestly principle: surface the real failure
+(unreachable API, missing env var, 503) in Body text, never a generic
+"Something went wrong." `SourceBar.tsx`'s error handling (distinguishing
+a 503/missing-key message from a generic one) is the reference
+implementation — apply the same specificity anywhere a request can fail.
+
+### Named Rule
+
+**The Honest-State Rule.** A component's loading, empty, and error
+states get the same design attention as its populated state — they are
+not an afterthought bolted on after the "real" UI ships.
+
+## 7. Motion Contract
+
+**Declarative Framer Motion & Spring Physics.** All animation logic uses `framer-motion`. Transition durations and spring curves map to system design tokens (`var(--duration-fast)`, `var(--duration-standard)`, `var(--duration-slow)`).
+
+- **Spring Preset**: `type: "spring", stiffness: 300, damping: 28` for spatial tile hover lifts and subtle interactive responses.
+- **Stagger Preset**: `staggerChildren: 0.06` for grid reveals.
+
+**Animates:**
+- Spatial hero section entry stagger on page arrival.
+- Vault grid card stagger reveal (`motion.div` with Framer variants).
+- Spatial card interactive hover elevation (`whileHover={{ y: -4, scale: 1.01 }}`).
+- Primary Wire Red action button hover glow expansion (`filter: drop-shadow(0 0 12px rgba(232, 67, 46, 0.4))` + smooth scale).
+
+**Does not animate:**
+- Secondary meta text rows, static labels, or background elements.
+
+**Reduced Motion:** Framer Motion handles reduced motion via `<MotionConfig reducedMotion="user">` or checking `prefersReducedMotion()` in `lib/motion.ts`. Under reduced motion, all Framer Motion components instantly snap to final state without layout transitions, matching the global `@media (prefers-reduced-motion: reduce)` block in `globals.css`.
+
+### Named Rule
+
+**The One-Motion-Moment Rule.** A route or state change gets exactly one primary motion moment — the hero reveal, grid stagger, or detail cross-fade. This is the Loud-Then-Quiet rule applied to time.
+
+## 8. Mobile
+
+**Breakpoint.** 640px is the single mobile breakpoint for both
+surfaces (distinct from Composer's existing 860px two-column collapse
+in `.composer-grid` — that rule is unchanged and stays as its own
+breakpoint for the Drafts/Editor split).
+
+**Layout.** Below 640px: single-column card grids (Vault's
+`repeat(auto-fill, minmax(280px, 1fr))` already collapses to one column
+naturally at this width — verify, don't reintroduce a fixed column
+count).
+
+**Tag rows.** Below 640px, a tag/chip row that would otherwise wrap to
+several lines becomes a single horizontally-scrolling row
+(`overflow-x: auto`, `-webkit-overflow-scrolling: touch`) with a
+low-opacity edge fade (a `mask-image` linear-gradient, or a
+pseudo-element gradient overlay) signaling more content off-screen.
+Never wrap a tag row to more than 2 lines on mobile.
+
+**Touch targets.** Every tappable element (chip, button, card) keeps a
+minimum 44×44px hit area on touch viewports, even where the visual
+element is smaller — pad with `min-height`/`min-width`, not visual
+size inflation.
+
+### Named Rule
+
+**The Scroll-Not-Wrap Rule.** A row of same-weight items (tags, chips)
+that doesn't fit its container scrolls horizontally on mobile; it does
+not wrap into a multi-line block that pushes content down.
+
+## 9. Keyboard
+
+**Reachability.** Every interactive element is a native `<button>`,
+`<a>`, `<input>`, or `<select>` (never a click-only `<div>` or `<span
+role="button">` without the accompanying `tabIndex`/`onKeyDown` pair
+the existing publish-toggle in `SourceBar.tsx` already demonstrates)
+and is reachable via Tab in the same order it appears visually.
+
+**Focus.** The existing Wire Red 2px focus ring (`.ds-btn-primary`,
+`.ds-btn-secondary`, `.ds-input` already define `:focus-visible`) is
+the one focus treatment in the system — every new interactive class
+gets the same `outline: 2px solid var(--wire-red); outline-offset:
+2px;` on `:focus-visible`, no exceptions.
+
+**Escape.** Any open modal, popover, or expandable panel (e.g.
+`SourceBar`'s Browse Bank panel) closes on `Escape`.
+
+### Named Rule
+
+**The No-Silent-Element Rule.** If it's clickable, it's Tab-reachable
+and has a visible focus state. A hover-only or click-only interactive
+element is a keyboard dead end and is not shipped.
+
+## 10. Do's and Don'ts
 
 ### Do:
 - **Do** use Wire Red (`#e8432e`) for exactly one primary action per view, and Oswald Display type for exactly one section header per view — the "one loud thing" discipline is the whole personality.
@@ -181,7 +312,7 @@ Flat by design — no box-shadows anywhere in the system. Depth is conveyed enti
 - **Do** surface real error/empty-state text (missing API key, empty content bank, unreachable API) instead of a generic failure message — per PRODUCT.md's "fail honestly" principle.
 
 ### Don't:
-- **Don't** reintroduce team-blue (`#004ba0`) or team-gold (`#ffcb05`) as composer's accent — that pairing was explicitly rejected for this surface; it belongs to the matchday/fixture UI, not the composer desk.
+- **Don't** reintroduce team-blue (`#004ba0`) or team-gold (`#ffcb05`) as an accent anywhere in this app — that pairing belonged to a matchday/fixture UI that has been removed from the codebase entirely; nothing here should bring it back without a new brainstorming cycle.
 - **Don't** use raw unstyled HTML `<select>`/`<input>` elements — the plain-admin-dashboard look this system replaces.
 - **Don't** add box-shadows, glassmorphism, or soft glows to cards or panels — flat tonal layering only (the one sanctioned exception is the sparing Wire Red button hover glow).
 - **Don't** use gradient text, side-stripe borders, or numbered section eyebrows (01 / 02 / 03) as default scaffolding — composer's feed isn't a numbered sequence.

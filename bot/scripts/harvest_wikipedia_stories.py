@@ -1,10 +1,7 @@
 """Harvester to parse Wikipedia MediaWiki API for historic cricket stories, rivalries, and anecdotes."""
 
-import json
 import logging
-import re
 
-import requests
 
 logger = logging.getLogger(__name__)
 

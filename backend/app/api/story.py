@@ -86,10 +86,6 @@ async def _get_story_for_date(target_date: date_type, session: AsyncSession) -> 
     }
 
     generated = await generate_story(stats)
-
-    batsman_team = team_a.short_name if (batsman and batsman.team_id == team_a.id) else team_b.short_name
-    bowler_team = team_b.short_name if batsman_team == team_a.short_name else team_a.short_name
-
     response_data = {
         "headline": generated["headline"],
         "shock_stat": generated["shock_stat"],

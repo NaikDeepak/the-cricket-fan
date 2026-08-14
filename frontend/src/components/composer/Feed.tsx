@@ -30,15 +30,15 @@ export default function Feed({
     >
       <SourceBar onCreated={onCreated} />
       {loadError && (
-        <p style={{ color: "var(--wire-red)", fontSize: 13, margin: 0 }}>
+        <p style={{ color: "var(--wire-red)", fontSize: "var(--text-sm)", margin: 0 }}>
           {loadError}
         </p>
       )}
       {loading && (
-        <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading drafts…</p>
+        <p style={{ color: "var(--muted)", fontSize: "var(--text-sm)" }}>Loading drafts…</p>
       )}
       {!loading && !loadError && drafts.length === 0 && (
-        <p style={{ color: "var(--muted)", fontSize: 14 }}>
+        <p style={{ color: "var(--muted)", fontSize: "var(--text-sm)" }}>
           No drafts yet — create one above.
         </p>
       )}
@@ -72,7 +72,7 @@ export default function Feed({
               </span>
             )}
           </div>
-          <p style={{ margin: 0, fontSize: 14, color: "var(--fg)" }}>
+          <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--fg)" }}>
             {d.text.slice(0, 140) || "(empty)"}
           </p>
         </button>
