@@ -64,7 +64,7 @@ and Don'ts is renumbered in Step 7 below, after all four new sections
 are in place):
 
 ```markdown
-## 7. States
+## 6. States
 
 ### Loading
 Skeleton shapes, never a spinner. Use the existing `.ds-skeleton` class
