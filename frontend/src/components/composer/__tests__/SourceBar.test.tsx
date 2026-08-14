@@ -202,4 +202,11 @@ describe("SourceBar", () => {
       expect(screen.getByText(/unavailable/i)).toBeInTheDocument()
     );
   });
+
+  it("bot-kind select uses the styled ds-select class, not raw ds-input", () => {
+    render(<SourceBar onCreated={vi.fn()} />);
+    const select = screen.getByLabelText("bot kind");
+    expect(select).toHaveClass("ds-select");
+    expect(select).not.toHaveClass("ds-input");
+  });
 });

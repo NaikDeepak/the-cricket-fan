@@ -125,8 +125,7 @@ export default function SourceBar({
             value={kind}
             onChange={(e) => setKind(e.target.value)}
             aria-label="bot kind"
-            className="ds-input"
-            style={{ padding: "10px 12px" }}
+            className="ds-select"
           >
             {BOT_KINDS.map((k) => (
               <option key={k} value={k}>
