@@ -1,5 +1,8 @@
 name: bot-retrain
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"   # Refresh Cricsheet & retrain weekly on Mondays at 3:00 AM UTC
 jobs:
   retrain:
     runs-on: ubuntu-latest

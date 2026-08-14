@@ -5,6 +5,7 @@ import pandas as pd
 from bot.compose import (
     FEATURE_PHRASES,
     format_post_match_news_tweet,
+    live_prediction_post,
     prediction_post,
     result_post,
     trivia_post,
@@ -188,3 +189,44 @@ def test_post_match_news_tweet_short_url_included_as_before():
     assert len(tweet) <= 280
     assert "Read: https://example.com/csk-mi" in tweet
     assert "#TheCricketFan" in tweet
+
+
+def test_live_prediction_post_phases_and_no_emojis():
+    # Pre-match
+    pre = live_prediction_post("CSK", "MI", 0.65, ["form5_a"], phase="pre_match", league="IPL")
+    assert len(pre) <= 280
+    assert "CSK 65% to beat MI" in pre
+    assert "#TheCricketFan" in pre
+    # Check no emojis in text
+    assert all(ord(char) < 10000 for char in pre)
+
+    # Innings break
+    ib = live_prediction_post(
+        "CSK",
+        "MI",
+        0.72,
+        ["CSK total (185) is +20 above venue average"],
+        phase="innings_break",
+        score_summary="CSK 185/5",
+    )
+    assert len(ib) <= 280
+    assert "INNINGS BREAK: CSK vs MI (CSK 185/5)" in ib
+    assert "CSK 72% vs MI 28%" in ib
+    assert "#TheCricketFan" in ib
+    assert all(ord(char) < 10000 for char in ib)
+
+    # Chase in progress
+    chase = live_prediction_post(
+        "CSK",
+        "MI",
+        0.40,
+        ["MI need 45 off 30 balls"],
+        phase="chase_in_progress",
+        score_summary="MI 140/3 (15.0 ov)",
+    )
+    assert len(chase) <= 280
+    assert "LIVE UPDATE: CSK vs MI (MI 140/3 (15.0 ov))" in chase
+    assert "MI 60% vs CSK 40%" in chase
+    assert "#TheCricketFan" in chase
+    assert all(ord(char) < 10000 for char in chase)
+

@@ -24,6 +24,20 @@ export default function PredictionCardImg({
       ? { width: 1080, height: 1350 }
       : { width: 1080, height: 1080 };
 
+  const phase = (meta.phase as string) || "pre_match";
+  const scoreSummary = meta.score_summary as string | undefined;
+  const venue = meta.venue as string | undefined;
+  const league = meta.league as string | undefined;
+
+  const badgeText =
+    phase === "innings_break"
+      ? "INNINGS BREAK"
+      : phase === "chase_in_progress"
+      ? "LIVE UPDATE"
+      : phase === "completed"
+      ? "FINAL RESULT"
+      : "MODEL PICK";
+
   return (
     <div
       style={{
@@ -48,26 +62,34 @@ export default function PredictionCardImg({
           paddingBottom: 24,
         }}
       >
-        <span
-          style={{
-            fontSize: 24,
-            letterSpacing: 2,
-            color: "#a1a1aa",
-            fontWeight: 600,
-          }}
-        >
-          🏏 MATCH PREDICTION
-        </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span
+            style={{
+              fontSize: 24,
+              letterSpacing: 2,
+              color: "#a1a1aa",
+              fontWeight: 600,
+            }}
+          >
+            🏏 MATCH PREDICTION
+          </span>
+          {(scoreSummary || venue || league) && (
+            <span style={{ fontSize: 18, color: "#71717a", fontFamily: "var(--font-space-grotesk), sans-serif" }}>
+              {scoreSummary ? `${scoreSummary} · ` : ""}{league || ""}{venue ? ` · ${venue}` : ""}
+            </span>
+          )}
+        </div>
         <span
           style={{
             fontSize: 20,
-            background: "#27272a",
+            background: phase === "chase_in_progress" ? "rgba(225, 29, 72, 0.2)" : "#27272a",
+            border: phase === "chase_in_progress" ? "1px solid #e11d48" : "none",
             padding: "6px 16px",
             borderRadius: 20,
-            color: "#e4e4e7",
+            color: phase === "chase_in_progress" ? "#fb7185" : "#e4e4e7",
           }}
         >
-          MODEL PICK
+          {badgeText}
         </span>
       </div>
 

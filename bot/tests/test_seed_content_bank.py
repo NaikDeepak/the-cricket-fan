@@ -55,7 +55,7 @@ def test_commit_reviewed_inserts_and_skips_existing(engine, tmp_path):
     with engine.begin() as conn:
         n1 = commit_reviewed(conn, f, now)
         n2 = commit_reviewed(conn, f, now)  # re-run is additive, not destructive
-        rows = conn.execute(sa.select(content_bank.c.content_key)).scalars().all()
+        _ = conn.execute(sa.select(content_bank.c.content_key)).scalars().all()
     assert n1 == 2
     assert n2 == 0  # both content_keys already exist
 
@@ -71,10 +71,9 @@ def test_seed_real_stories_inserts_historical_items(engine):
 
     assert n1 > 0
     assert n2 == 0
-    kolkata = next(r for r in rows if r["content_key"] == "story:kolkata-2001-vvs-laxman")
+    assert any(r["content_key"] == "story:kolkata-2001-vvs-laxman" for r in rows)
     keys = [r["content_key"] for r in rows]
     assert "story:kolkata-2001-vvs-laxman" in keys
-
 
 
 def test_commit_skips_unauthored_skeletons(engine, tmp_path):

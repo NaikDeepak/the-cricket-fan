@@ -72,4 +72,42 @@ describe("composerApi", () => {
     expect(out).toHaveLength(1);
     expect(String(f.mock.calls[0][0])).toContain("/posts");
   });
+
+  it("parseLiveMatch posts raw text and returns structured MatchInput", async () => {
+    const mockParsed = {
+      team_a: "Chennai Super Kings",
+      team_b: "Mumbai Indians",
+      phase: "pre_match",
+    };
+    const f = mockFetch(mockParsed);
+    const out = await composerApi.parseLiveMatch({ raw_text: "CSK vs MI" });
+    expect(out.team_a).toBe("Chennai Super Kings");
+    const [url, init] = f.mock.calls[0];
+    expect(String(url)).toContain("/live-predict/parse");
+    expect(init?.method).toBe("POST");
+  });
+
+  it("runLivePrediction posts match state and returns prediction result", async () => {
+    const mockResult = {
+      team_a: "Chennai Super Kings",
+      team_b: "Mumbai Indians",
+      prob_team_a: 0.65,
+      reasons: ["home advantage"],
+      phase: "pre_match",
+      score_projection: {},
+      tweet_text: "CSK 65% to beat MI #Cricket #TheCricketFan",
+      card_meta: {},
+    };
+    const f = mockFetch(mockResult);
+    const out = await composerApi.runLivePrediction({
+      team_a: "Chennai Super Kings",
+      team_b: "Mumbai Indians",
+      phase: "pre_match",
+    });
+    expect(out.prob_team_a).toBe(0.65);
+    expect(out.tweet_text).toContain("#TheCricketFan");
+    const [url, init] = f.mock.calls[0];
+    expect(String(url)).toContain("/live-predict/run");
+    expect(init?.method).toBe("POST");
+  });
 });
