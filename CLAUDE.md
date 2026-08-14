@@ -18,38 +18,90 @@ This file provides guidance to Claude Code (claude.ai/code) when working in this
 
 ```
 the-cricket-fan/
-├── backend/
-│   ├── app/
-│   │   ├── api/        # FastAPI route handlers (one file per domain)
-│   │   ├── models/     # SQLAlchemy async ORM models
-│   │   ├── services/   # Business logic: story generator, trivia, prediction
-│   │   ├── data/       # Cricsheet JSON parsers + aggregation pipelines
-│   │   └── main.py     # FastAPI app, lifespan, CORS, router mounting
-│   ├── scripts/        # One-off data import / backfill scripts
-│   └── tests/          # pytest-asyncio tests
-└── frontend/
-    └── src/app/        # Next.js 16 App Router — page.tsx + layout.tsx
+├── bot/                  # ELO prediction engine, cricsheet ingest, X poster
+│   ├── predict.py        # ELO-based win-probability scoring
+│   ├── ingest.py          # cricsheet.py — match-data ingest
+│   ├── db.py              # SQLite/Postgres schema, shared with composer/
+│   ├── news_fetcher.py    # match-recap headline fetch (Google News RSS)
+│   ├── trivia_standalone.py  # trivia question logic — NOT YET wired to
+│   │                          # composer or the public surface (tracked
+│   │                          # below under "Next up")
+│   └── scripts/seed_content_bank.py  # hand-authored content bank seed
+├── composer/             # FastAPI content tool — reuses bot/db.py's schema
+│   ├── app.py
+│   ├── routers/          # stories, generate, predictions, posts,
+│   │                      # analytics, content_bank, drafts
+│   └── gemini.py          # Gemini SDK call site (story/copy generation)
+├── frontend/
+│   └── src/app/
+│       ├── stories/       # public Vault — /stories, /stories/[contentKey]
+│       └── composer/      # internal tool UI — /composer, /composer/{posts,predictions,analytics}
+└── backend/app/          # LEGACY — not on the live path. FastAPI app with
+                            # its own story/prediction/trivia services from
+                            # the original pre-pivot architecture. Superseded
+                            # by bot/ + composer/. Kept in the tree, not
+                            # deleted, pending confirmation nothing in it
+                            # gets reused once the trivia/prediction next-up
+                            # cycles land. Do not build new features here.
 ```
 
-**Data flow:** Cricsheet JSON → `backend/app/data/` parsers → PostgreSQL (pre-aggregated tables) → FastAPI services → JSON API → Next.js server components / client components
+**Data flow:** Cricsheet JSON → `bot/cricsheet.py` / `bot/ingest.py` →
+shared DB (`bot/db.py` schema, SQLite locally via `COMPOSER_DATABASE_URL`,
+Postgres in prod) → `composer/routers/` → JSON API → Next.js
+`frontend/src/app/{stories,composer}`.
 
-**Key tables to precompute:** `player_vs_player`, `venue_stats`, `phase_stats` (powerplay / middle / death). All heavy aggregation happens at ingest time via `backend/scripts/`, not at request time.
+**Story generation:** `composer/gemini.py` calls the Gemini API for
+draft copy (not Anthropic). Composer caches results as drafts in the DB
+rather than regenerating on every request.
 
-**Story generation:** `backend/app/services/story_service.py` calls the Gemini API to produce match narratives, trivia questions, and prediction reasoning. This is the only LLM call path — it wraps pre-aggregated stats in a structured prompt and returns typed JSON.
-
-**Prediction engine:** Weighted factor scoring (recent form, venue advantage, player matchups) — no ML. Logic lives in `backend/app/services/prediction_service.py`.
+**Prediction engine:** `bot/predict.py` — ELO-based win-probability
+scoring, no ML. `composer/routers/predictions.py` exposes it to the
+Composer UI; a prediction can be generated and exported as a card PNG,
+but nothing in `/stories` displays it yet (tracked below under "Next
+up").
 
 ---
 
-## API ENDPOINTS
+## API ENDPOINTS (composer, port 8000)
 
 | Endpoint | Description |
 |---|---|
-| `GET /match-story/today` | Narrative, key battle, 2–3 insights for today's match |
-| `GET /stats/player-vs-player` | Head-to-head stats between any two players |
-| `GET /stats/venue` | Venue trends (avg score, chasing win %, pitch type) |
-| `GET /trivia/today` | 1 question, 4 options, answer + fun explanation |
-| `GET /prediction/today` | Win probability + reasoning array (no black-box ML) |
+| `GET /stories` | List published vault stories (search/category/team/player/venue/year filters) |
+| `GET /stories/{content_key}` | Single story detail |
+| `GET /stories/contextual` | Stories relevant to a given fixture/teams/venue |
+| `GET /stories/wire` | Recent posted-draft archive for the wire strip |
+| `POST /generate` | Bot-kind draft generation (prediction/trivia/h2h/venue/record) |
+| `POST /generate/llm` | Freeform Gemini-prompted draft |
+| `POST /generate/recap` | Match-recap draft from Google News RSS |
+| `GET/POST /predictions` | ELO prediction generation + retrieval |
+| `GET/POST /posts` | Draft → posted-card lifecycle |
+| `GET /analytics` | Posting analytics |
+| `GET/POST /content-bank` | Hand-authored content bank browse + publish toggle |
+| `GET/POST /drafts` | Draft CRUD |
+
+`backend/app/`'s 5 endpoints (`/match-story/today`,
+`/stats/player-vs-player`, `/stats/venue`, `/trivia/today`,
+`/prediction/today`) are legacy — not mounted on the live composer app,
+not called by the frontend. See ARCHITECTURE's legacy note.
+
+---
+
+## DESIGN
+
+The authority for all visual/interaction work on both surfaces is
+`DESIGN.md` (repo root) — per the house `design-standards` skill's own
+override contract, a project's design system wins over the generic
+house defaults where the two would otherwise conflict.
+
+Summary (see `DESIGN.md` for the full rules): near-black flat surfaces,
+one accent color (Wire Red) for primary actions only, Floodlight Cyan
+for category/source labeling only, Oswald for the one Display-weight
+headline per view + Space Grotesk for everything else (One Red Rule,
+Loud-Then-Quiet Rule). As of 2026-08-14 this also covers: skeleton/
+empty/error states (Honest-State Rule), a token-only motion contract
+(One-Motion-Moment Rule), a 640px mobile breakpoint with horizontal-
+scroll tag rows (Scroll-Not-Wrap Rule), and full keyboard reachability
+(No-Silent-Element Rule).
 
 ---
 
@@ -149,7 +201,7 @@ works — that's expected, not a bug.
 - Async everywhere: use `async def` for all route handlers and service methods
 - Pydantic v2 models for all request/response shapes
 - SQLAlchemy 2.0 async session pattern — never use sync `Session`
-- Do not call the Anthropic API on every request — cache story/trivia results in DB for the day
+- Do not call the Gemini API on every request — cache story/trivia results in DB for the day (composer's live LLM path is Gemini via `composer/gemini.py`, not Anthropic)
 
 ### Frontend (TypeScript / Next.js)
 - **Next.js 16 has breaking changes from prior versions.** Before writing any Next.js code, check `frontend/node_modules/next/dist/docs/` for current API. Do not rely on training-data knowledge of Next.js conventions.
@@ -160,13 +212,28 @@ works — that's expected, not a bug.
 - Dark theme with neon / stadium lighting feel; smooth scroll storytelling
 - `clsx` + `tailwind-merge` for conditional class logic
 
-### Planned frontend components (not yet built)
-- `MatchHero` — today's match with narrative headline
-- `PlayerBattleCard` — head-to-head player stats
-- `AnimatedStatGraph` — motion-driven stat visualization
-- `TriviaCard` — interactive guess → reveal
-- `PredictionCard` — win probability + reasoning bullets
-- Shareable export card (Instagram / WhatsApp branding) — placeholder branding for now
+### Frontend components (live)
+
+**Vault (`/stories`):** `StoryCard`, `StoryCardImg` (share-card export),
+`OnThisDayRail`, `WireStrip`, `StoryBeats` (pull-quote story-text
+treatment).
+
+**Composer (`/composer`):** `Editor`, `Feed`, `SourceBar`, `CardPreview`,
+`TeamBadge`, card-type renderers (`PredictionCardImg`, `RecordCardImg`,
+`TriviaCardImg` — note: `TriviaCardImg` exists as a component but has
+no composer router or generation path feeding it yet, see "Next up").
+
+### Next up (scoped, not yet designed — each gets its own brainstorming
+cycle per `docs/superpowers/specs/2026-08-14-world-class-ui-quality-bar-design.md`'s
+decomposition)
+
+1. **Trivia end-to-end.** `bot/trivia_standalone.py` has the question
+   logic; no composer router wires it to draft generation, and no
+   public `/stories` surface displays a trivia card. Full-stack gap.
+2. **Prediction on the public surface.** Composer can generate and
+   export a `PredictionCardImg`, but `/stories` never displays a
+   prediction — it only leaves the app as a downloaded PNG for manual
+   posting.
 
 ---
 
@@ -213,3 +280,4 @@ See `.env.example` (root) and `.worktrees/mvp/.env.example` (more complete). Req
 |---|---|---|---|
 | 2026-04-24 | Project init | FastAPI + Next.js 16 monorepo; Vercel for both; Claude API for story generation; no ML for predictions | Implement Cricsheet parser + `/match-story/today` endpoint |
 | 2026-07-19 | Viability pivot | Fantasy affiliate dead (PROGA + SC ruling). Product = automated X prediction bot: LightGBM (ML rule overridden), GitHub Actions cron, Neon Postgres, CricAPI, X free tier. Web UI parked. Spec + 13-task plan committed in docs/superpowers/ | Execute plan subagent-driven, Task 1 (scaffold+schema) onward |
+| 2026-08-14 | World-class UI quality bar | DESIGN.md extended with States/Motion Contract/Mobile/Keyboard sections (Approach B: extend then execute). Fixed raw `<select>`, vault dead-space, story-detail raw-text-dump. CLAUDE.md truth-up: bot/+composer/ presented as live stack, backend/app/ marked legacy (not deleted). Trivia end-to-end and prediction-on-vault logged as separate next-up cycles. | Brainstorm trivia end-to-end cycle, then prediction-on-vault cycle |
