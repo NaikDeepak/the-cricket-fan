@@ -6,7 +6,7 @@
 
 **Architecture:** Doc-first (DESIGN.md gets the new rules), then fixes applied against those rules in the existing component tree — no new pages, no new routes, no backend changes. CSS additions live in `frontend/src/app/globals.css` alongside the existing `.ds-*` utility classes; components consume them by class name, same pattern already used throughout.
 
-**Tech Stack:** Next.js 16 App Router, React 19.2 (`ViewTransition` from `react`), Tailwind v4 tokens via `globals.css` CSS variables, GSAP for imperative motion, Vitest + Testing Library for component tests.
+**Tech Stack:** Next.js 16 App Router, React 19.2, Tailwind v4 tokens via `globals.css` CSS variables, GSAP for imperative motion (including the vault/detail arrival fade — React's `ViewTransition` component was considered for that but is canary-channel-only, not in the installed stable react@19.2.4), Vitest + Testing Library for component tests.
 
 **Spec:** `docs/superpowers/specs/2026-08-14-world-class-ui-quality-bar-design.md`
 
@@ -702,115 +702,169 @@ adjacent quoting convention."
 
 ---
 
-### Task 6: Vault↔detail cross-fade via React ViewTransition
+### Task 6: Vault↔detail cross-fade via GSAP mount fade
+
+> **Ruling (superseded original approach):** the plan originally specified
+> React's `ViewTransition` component (from `"react"`) + Next's
+> `experimental.viewTransition` config flag. Task 6's implementer
+> confirmed `ViewTransition` is not exported by the installed
+> `react@19.2.4` (stable channel) — it ships only on React's
+> experimental/canary channel. Upgrading the React channel is a much
+> larger, riskier change than this cycle's scope (frontend polish +
+> docs, no dependency-channel changes), so this section now specifies a
+> GSAP-based fade-in instead — consistent with every other motion
+> moment already in this codebase (`stories/page.tsx`'s grid stagger,
+> `[contentKey]/page.tsx`'s existing beat-reveal `ScrollTrigger` effect,
+> both using `gsap.context` + `ease: "power4.out"`, gated by
+> `prefersReducedMotion()`). This is a fade-in on arrival at each page,
+> not a true cross-route crossfade (that would need a persistent
+> layout-level transition wrapper — out of scope, no existing pattern
+> for it in this codebase) — it still delivers the Motion Contract's
+> intent (softening the hard navigation cut between "same collection,
+> different item" views) with the tools already in use here.
 
 **Files:**
-- Modify: `frontend/next.config.ts`
 - Modify: `frontend/src/app/stories/page.tsx`
 - Modify: `frontend/src/app/stories/[contentKey]/page.tsx`
+- Modify: `frontend/src/app/globals.css` — remove the now-unused
+  `::view-transition-old(stories-content)` /
+  `::view-transition-new(stories-content)` rules and their
+  `@keyframes ds-fade-out` / `@keyframes ds-fade-in` (added by Task 2
+  for the superseded `ViewTransition` approach; GSAP sets `opacity`
+  directly via JS, so this CSS has no consumer)
 
 **Interfaces:**
-- Consumes: `::view-transition-old(stories-content)` / `::view-transition-new(stories-content)` CSS from Task 2 Step 4; React's `ViewTransition` export (available in React 19.2, already installed).
-- Produces: no prop/interface change to either page component — purely wraps existing top-level return values.
+- Consumes: `gsap`, `gsap.context`, `prefersReducedMotion()` from
+  `frontend/src/lib/motion.ts` (same imports `[contentKey]/page.tsx`
+  already uses for its beat-reveal effect).
+- Produces: no prop/interface change to either page component — adds a
+  `ref` + one `useEffect` to each.
 
-- [ ] **Step 1: Enable view transitions in Next config**
+- [ ] **Step 1: Add the fade-in effect to the Vault**
 
-In `frontend/next.config.ts`, change:
-
-```ts
-const nextConfig: NextConfig = {
-  output: "standalone",
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "",
-  },
-};
-```
-
-to:
-
-```ts
-const nextConfig: NextConfig = {
-  output: "standalone",
-  experimental: {
-    viewTransition: true,
-  },
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "",
-  },
-};
-```
-
-- [ ] **Step 2: Wrap the Vault's top-level container**
-
-In `frontend/src/app/stories/page.tsx`, add the import:
+In `frontend/src/app/stories/page.tsx`, the `Vault()` function already
+has `const gridRef = useRef<HTMLDivElement>(null);` — add a second ref
+next to it:
 
 ```tsx
-import { ViewTransition } from "react";
+  const gridRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 ```
 
-Wrap the `Vault()` function's returned JSX (the outer `<div style={{ maxWidth: 1100, ... }}>` at line 153) in:
+Attach `containerRef` to the outermost returned `<div>` (the one with
+`style={{ maxWidth: 1100, margin: "0 auto", padding: "var(--space-lg)" }}`
+— find it structurally, not by line number, since Task 4 already
+shifted this file's line numbers):
 
 ```tsx
-  return (
-    <ViewTransition name="stories-content" default="none">
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "var(--space-lg)" }}>
-        {/* ...unchanged existing content... */}
-      </div>
-    </ViewTransition>
-  );
+    <div ref={containerRef} style={{ maxWidth: 1100, margin: "0 auto", padding: "var(--space-lg)" }}>
 ```
 
-- [ ] **Step 3: Wrap the story detail page's top-level container**
-
-In `frontend/src/app/stories/[contentKey]/page.tsx`, add the same import:
+Add a new `useEffect` near the other GSAP effect in this file (after
+the grid-stagger effect), that fires once on mount:
 
 ```tsx
-import { ViewTransition } from "react";
+  useEffect(() => {
+    if (prefersReducedMotion() || !containerRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.from(containerRef.current, {
+        opacity: 0,
+        duration: 0.25,
+        ease: "power4.out",
+      });
+    }, containerRef);
+    return () => ctx.revert();
+  }, []);
 ```
 
-Wrap the main return's outer `<div style={containerStyle}>` (line 136,
-the one containing the "← The Vault" link through the prev/next nav —
-**not** the `notFound` or loading-skeleton early returns, which stay
-untransitioned since they're not "the same collection, different item"
-case the cross-fade communicates) in the same `ViewTransition`:
+- [ ] **Step 2: Add the matching fade-in effect to the story detail page**
+
+In `frontend/src/app/stories/[contentKey]/page.tsx`, add a ref next to
+the existing `cardRef`:
 
 ```tsx
-  return (
-    <ViewTransition name="stories-content" default="none">
-      <div style={containerStyle}>
-        {/* ...unchanged existing content... */}
-      </div>
-    </ViewTransition>
-  );
+  const cardRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
 ```
 
-- [ ] **Step 4: Verify existing tests still pass**
+Attach `pageRef` to the main return's outer `<div style={containerStyle}>`
+(the one containing the "← The Vault" link through the prev/next nav —
+find it structurally; **not** the `notFound` or loading-skeleton early
+returns, which stay unwrapped since they're not "the same collection,
+different item" case this fade communicates):
+
+```tsx
+    <div ref={pageRef} style={containerStyle}>
+```
+
+Add a new `useEffect` that fires once `story` is available (mirroring
+the existing beat-reveal effect's `if (!story || prefersReducedMotion()) return;`
+guard, but simpler — no dynamic `ScrollTrigger` import needed for a
+plain opacity fade):
+
+```tsx
+  useEffect(() => {
+    if (!story || prefersReducedMotion() || !pageRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.from(pageRef.current, {
+        opacity: 0,
+        duration: 0.25,
+        ease: "power4.out",
+      });
+    }, pageRef);
+    return () => ctx.revert();
+  }, [story]);
+```
+
+- [ ] **Step 3: Remove the now-unused view-transition CSS from globals.css**
+
+In `frontend/src/app/globals.css`, delete the block Task 2 added:
+
+```css
+::view-transition-old(stories-content) {
+  animation: var(--duration-standard) var(--ease-out-quart) both ds-fade-out;
+}
+::view-transition-new(stories-content) {
+  animation: var(--duration-standard) var(--ease-out-quart) both ds-fade-in;
+}
+@keyframes ds-fade-out {
+  to { opacity: 0; }
+}
+@keyframes ds-fade-in {
+  from { opacity: 0; }
+}
+```
+
+- [ ] **Step 4: Run the full test suite**
 
 Run: `npm test`
-Expected: PASS — `ViewTransition` renders its children transparently in
-jsdom (no browser View Transition API support in the test environment,
-so it behaves as a pass-through wrapper); no existing assertion targets
-the removed/wrapped outer `<div>` by anything other than its content, so
-nothing breaks.
+Expected: PASS — the new effects are gated by `prefersReducedMotion()`,
+which returns `true` in jsdom (no `matchMedia` support by default in
+the test environment per `frontend/src/lib/motion.ts`'s own
+implementation), so neither effect's GSAP call executes during tests;
+no existing assertion targets the now-`ref`-bearing outer `<div>`s by
+anything other than their content, so nothing breaks.
 
-- [ ] **Step 5: Manual verification (no automated test for the animation itself — jsdom cannot execute the browser View Transition API)**
+- [ ] **Step 5: Manual verification (no automated test for the animation itself)**
 
-Start `npm run dev`, open `/stories` in an actual browser (Chrome/Edge —
-the doc notes Safari support varies), click into a story, click "← The
-Vault". Confirm a short opacity cross-fade plays instead of the previous
-hard cut, and that it disappears entirely with the OS "reduce motion"
-setting on.
+Start `npm run dev`, open `/stories`, click into a story, click "← The
+Vault". Confirm a short opacity fade-in plays on each arrival instead
+of the previous instant pop-in, and that it disappears entirely with
+the OS "reduce motion" setting on.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add frontend/next.config.ts frontend/src/app/stories/page.tsx frontend/src/app/stories/[contentKey]/page.tsx
-git commit -m "feat(stories): cross-fade between vault and detail via React ViewTransition
+git add frontend/src/app/stories/page.tsx frontend/src/app/stories/[contentKey]/page.tsx frontend/src/app/globals.css
+git commit -m "feat(stories): fade-in on vault/detail arrival via GSAP
 
 'Same collection, different item' signal per the Motion Contract's
-One-Motion-Moment Rule — was a hard navigation cut. Uses Next 16's
-native experimental.viewTransition + React 19.2's ViewTransition
-component rather than a hand-rolled GSAP route transition."
+One-Motion-Moment Rule — was an instant pop-in. Originally planned as
+a cross-route crossfade via React's ViewTransition component, but
+that's canary-channel-only in the installed react@19.2.4 (stable);
+this uses GSAP instead, matching every other motion moment already in
+this codebase. Also removes the now-unused view-transition CSS Task 2
+added for the superseded approach."
 ```
 
 ---
@@ -1011,5 +1065,7 @@ scoped, not-yet-designed follow-on cycles."
   the exact shape defined in `frontend/src/lib/storiesApi.ts:3-21` (all
   16 fields present). `StoryBeats`'s `{ segments: string[] }` prop is
   unchanged from Task 5 through `StoryDetailPage`'s existing call site.
-  `ViewTransition` import path (`"react"`) is consistent across Task 6's
-  two file edits.
+  Task 6's `gsap.context`/`prefersReducedMotion()` usage matches the
+  exact pattern already established by `[contentKey]/page.tsx`'s
+  pre-existing beat-reveal effect and `stories/page.tsx`'s pre-existing
+  grid-stagger effect (post-ruling revision — see Task 6's header note).
