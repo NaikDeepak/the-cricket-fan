@@ -10,7 +10,6 @@ import OnThisDayRail from "@/components/stories/OnThisDayRail";
 import WireStrip from "@/components/stories/WireStrip";
 import {
   HERO_REVEAL_VARIANTS,
-  SPRING_PRESET,
   STAGGER_CONTAINER_VARIANTS,
   prefersReducedMotion,
 } from "@/lib/motion";

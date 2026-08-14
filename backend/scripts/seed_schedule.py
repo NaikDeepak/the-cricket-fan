@@ -9,7 +9,7 @@ from sqlalchemy import delete
 from app.database import engine, AsyncSessionLocal
 from app.models.base import Base
 from app.models.match import Team, Match
-from app.models.player import Player, PlayerVsPlayer, VenueStats, DailyCache
+from app.models.player import DailyCache
 
 TEAMS = {
     "MI":   {"name": "Mumbai Indians",             "color": "#004BA0"},

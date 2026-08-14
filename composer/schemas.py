@@ -135,6 +135,41 @@ class PostOut(BaseModel):
     team_b: str | None = None
 
 
+class MatchParseIn(BaseModel):
+    raw_text: str | None = None
+    url: str | None = None
+
+
+class MatchInputSchema(BaseModel):
+    team_a: str
+    team_b: str
+    league: str = "T20"
+    venue: str = ""
+    toss_winner: str | None = None
+    toss_decision: str | None = None  # 'bat' | 'field'
+    innings1_team: str | None = None
+    innings1_runs: int | None = None
+    innings1_wickets: int | None = None
+    innings1_overs: float | None = None
+    innings2_team: str | None = None
+    innings2_runs: int | None = None
+    innings2_wickets: int | None = None
+    innings2_overs: float | None = None
+    phase: str = "pre_match"  # 'pre_match' | 'innings_break' | 'chase_in_progress' | 'completed'
+
+
+class LivePredictionOut(BaseModel):
+    team_a: str
+    team_b: str
+    prob_team_a: float
+    reasons: list[str]
+    phase: str
+    score_projection: dict
+    tweet_text: str
+    card_meta: dict
+
+
+
 def row_to_out(row) -> DraftOut:
     return DraftOut(
         id=row.id,

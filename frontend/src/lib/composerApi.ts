@@ -61,6 +61,35 @@ export type Post = {
   team_b: string | null;
 };
 
+export type MatchInput = {
+  team_a: string;
+  team_b: string;
+  league?: string;
+  venue?: string;
+  toss_winner?: string | null;
+  toss_decision?: "bat" | "field" | null;
+  innings1_team?: string | null;
+  innings1_runs?: number | null;
+  innings1_wickets?: number | null;
+  innings1_overs?: number | null;
+  innings2_team?: string | null;
+  innings2_runs?: number | null;
+  innings2_wickets?: number | null;
+  innings2_overs?: number | null;
+  phase: "pre_match" | "innings_break" | "chase_in_progress" | "completed";
+};
+
+export type LivePredictionResult = {
+  team_a: string;
+  team_b: string;
+  prob_team_a: number;
+  reasons: string[];
+  phase: string;
+  score_projection: Record<string, unknown>;
+  tweet_text: string;
+  card_meta: CardMeta;
+};
+
 export type DraftIn = {
   source: Draft["source"];
   category?: string | null;
@@ -150,4 +179,14 @@ export const composerApi = {
     const p = new URLSearchParams(q as Record<string, string>).toString();
     return req<Post[]>(`/posts${p ? `?${p}` : ""}`);
   },
+  parseLiveMatch: (body: { raw_text?: string; url?: string }) =>
+    req<MatchInput>("/live-predict/parse", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  runLivePrediction: (body: MatchInput) =>
+    req<LivePredictionResult>("/live-predict/run", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 };

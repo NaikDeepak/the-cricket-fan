@@ -150,3 +150,53 @@ def format_post_match_news_tweet(
     return _truncate_reserving_tag(body, tag)
 
 
+def live_prediction_post(
+    team_a: str,
+    team_b: str,
+    prob_a: float,
+    reasons: list[str],
+    phase: str = "pre_match",
+    league: str = "T20",
+    score_summary: str | None = None,
+) -> str:
+    """Compose tweet copy for live/mid-innings predictions. No emojis; statistical language."""
+    fav, other, p = (
+        (team_a, team_b, prob_a) if prob_a >= 0.5 else (team_b, team_a, 1 - prob_a)
+    )
+    p_pct = round(p * 100)
+    tag = " #Cricket #TheCricketFan"
+
+    why_parts = [_phrase(r) if r in FEATURE_PHRASES else r for r in reasons if r]
+    why = ", ".join(dict.fromkeys(why_parts))
+
+    if phase == "innings_break":
+        score_part = f" ({score_summary})" if score_summary else ""
+        content = (
+            f"INNINGS BREAK: {team_a} vs {team_b}{score_part}.\n"
+            f"Model win probability: {fav} {p_pct}% vs {other} {100 - p_pct}%.\n"
+            f"{f'Factors: {why}.' if why else ''}"
+        ).strip()
+    elif phase == "chase_in_progress":
+        score_part = f" ({score_summary})" if score_summary else ""
+        content = (
+            f"LIVE UPDATE: {team_a} vs {team_b}{score_part}.\n"
+            f"Live win probability: {fav} {p_pct}% vs {other} {100 - p_pct}%.\n"
+            f"{f'Key drivers: {why}.' if why else ''}"
+        ).strip()
+    elif phase == "completed":
+        content = (
+            f"MATCH RESULT: {fav} won vs {other}.\n"
+            f"Final model assessment: {fav} {p_pct}%.\n"
+            f"Tracked on The Cricket Fan."
+        ).strip()
+    else:
+        content = (
+            f"{league}: {fav} {p_pct}% to beat {other}.\n"
+            f"{f'Why: {why}.' if why else 'Statistical model pick.'}\n"
+            f"Tracked pre-match projection."
+        ).strip()
+
+    return _truncate_reserving_tag(content, tag)
+
+
+
