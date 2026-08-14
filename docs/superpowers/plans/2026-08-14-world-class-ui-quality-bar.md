@@ -601,7 +601,8 @@ governing layout above that width — additive, not conflicting.)
 - [ ] **Step 8: Run test to verify it passes**
 
 Run: `npm test -- stories/__tests__/page.test.tsx`
-Expected: PASS — all four cases green.
+Expected: PASS — all three cases green (2 placeholder-tile cases from
+Step 1 + 1 tag-scroll case from Step 5).
 
 - [ ] **Step 9: Commit**
 
