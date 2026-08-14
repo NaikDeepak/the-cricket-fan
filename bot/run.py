@@ -21,8 +21,8 @@ from .trivia_standalone import pick_standalone_trivia
 
 logger = logging.getLogger(__name__)
 
-PREDICTION_WINDOW_H = 3
-TRIVIA_WINDOW_H = 1
+PREDICTION_WINDOW_H = 6
+TRIVIA_WINDOW_H = 4
 MAX_ATTEMPTS = 3
 STANDALONE_TRIVIA_MIN_GAP_H = (
     5  # ~3x/day cadence; window (not exact hour) survives cron drift

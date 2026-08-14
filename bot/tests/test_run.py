@@ -43,7 +43,7 @@ class SpyPoster:
         return self.thread_sent == len(segments), self.thread_sent
 
 
-def _fixture(match_id="m1", hours_from_now=2.5):
+def _fixture(match_id="m1", hours_from_now=5.5):
     return Fixture(
         provider_match_id=match_id,
         team_a="Chennai Super Kings",
@@ -146,10 +146,10 @@ def test_home_team_at_venue_neutral_when_no_history():
 
 def test_prediction_posted_inside_window(conn, art):
     poster = SpyPoster()
-    tick(conn, FakeProvider([_fixture(hours_from_now=2.5)], []), art, poster, NOW)
+    tick(conn, FakeProvider([_fixture(hours_from_now=5.5)], []), art, poster, NOW)
     states = _post_states(conn)
     assert states["prediction"] == "posted"
-    assert states.get("trivia", "scheduled") == "scheduled"  # T-1h not reached
+    assert states.get("trivia", "scheduled") == "scheduled"  # T-4h not reached
     assert len(poster.sent) == 1 and "%" in poster.sent[0]
     assert (
         conn.execute(sa.select(sa.func.count()).select_from(predictions)).scalar_one()
@@ -164,7 +164,7 @@ def test_upsert_fixtures_syncs_reschedule(conn, art):
     poster = SpyPoster()
     tick(conn, FakeProvider([_fixture(hours_from_now=5)], []), art, poster, NOW)
 
-    rescheduled = _fixture(hours_from_now=2.5)
+    rescheduled = _fixture(hours_from_now=5.5)
     rescheduled = Fixture(
         provider_match_id=rescheduled.provider_match_id,
         team_a=rescheduled.team_a,
@@ -194,7 +194,7 @@ def test_posted_state_survives_later_failure_in_same_tick(conn, art, monkeypatch
     tick raises. The posts.state="posted" write has to be durable independent
     of the rest of the tick's transaction (see bot/run.py:_try_post commit)."""
     poster = SpyPoster()
-    tick(conn, FakeProvider([_fixture(hours_from_now=2.5)], []), art, poster, NOW)
+    tick(conn, FakeProvider([_fixture(hours_from_now=5.5)], []), art, poster, NOW)
     assert _post_states(conn)["prediction"] == "posted"
 
     import bot.run as run_mod
@@ -204,11 +204,11 @@ def test_posted_state_survives_later_failure_in_same_tick(conn, art, monkeypatch
 
     monkeypatch.setattr(run_mod, "trivia_post", boom)
     with pytest.raises(RuntimeError):
-        # Same fixture as tick #1 (unchanged start_time == NOW+2.5h); only
+        # Same fixture as tick #1 (unchanged start_time == NOW+5.5h); only
         # `now` advances, so trivia (not due at NOW) becomes due here.
         tick(
             conn,
-            FakeProvider([_fixture(hours_from_now=2.5)], []),
+            FakeProvider([_fixture(hours_from_now=5.5)], []),
             art,
             poster,
             NOW + timedelta(hours=2),
@@ -219,7 +219,7 @@ def test_posted_state_survives_later_failure_in_same_tick(conn, art, monkeypatch
 
 def test_idempotent_second_tick_no_duplicate(conn, art):
     poster = SpyPoster()
-    provider = FakeProvider([_fixture(hours_from_now=2.5)], [])
+    provider = FakeProvider([_fixture(hours_from_now=5.5)], [])
     tick(conn, provider, art, poster, NOW)
     tick(conn, provider, art, poster, NOW + timedelta(minutes=5))
     assert len(poster.sent) == 1
@@ -245,7 +245,7 @@ def test_late_tick_guard_abandons_prediction(conn, art):
 
 def test_failed_post_retries_then_abandons(conn, art):
     bad = SpyPoster(ok=False)
-    provider = FakeProvider([_fixture(hours_from_now=2.5)], [])
+    provider = FakeProvider([_fixture(hours_from_now=5.5)], [])
     for i in range(4):
         tick(conn, provider, art, bad, NOW + timedelta(minutes=i))
     states = _post_states(conn)
@@ -260,7 +260,7 @@ def test_result_flow_correct_and_record(conn, art):
         trivia_log.insert().values(content_key="k", posted_at=NOW + timedelta(hours=2))
     )
     poster = SpyPoster()
-    provider = FakeProvider([_fixture(hours_from_now=2.5)], [])
+    provider = FakeProvider([_fixture(hours_from_now=5.5)], [])
     tick(conn, provider, art, poster, NOW)
     prob = conn.execute(sa.select(predictions.c.prob_team_a)).scalar_one()
     winner = "Chennai Super Kings" if prob >= 0.5 else "Mumbai Indians"
@@ -274,7 +274,7 @@ def test_result_flow_correct_and_record(conn, art):
 
 def test_abandoned_match_voids_prediction(conn, art):
     poster = SpyPoster()
-    tick(conn, FakeProvider([_fixture(hours_from_now=2.5)], []), art, poster, NOW)
+    tick(conn, FakeProvider([_fixture(hours_from_now=5.5)], []), art, poster, NOW)
     void = FakeProvider([], [Result("m1", winner=None, no_result=True)])
     tick(conn, void, art, poster, NOW + timedelta(hours=6))
     assert conn.execute(sa.select(predictions.c.outcome)).scalar_one() == "void"
