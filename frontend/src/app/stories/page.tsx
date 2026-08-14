@@ -200,7 +200,7 @@ function Vault() {
         />
 
         {allTags.length > 0 && (
-          <div style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
+          <div className="ds-tag-scroll" style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={() => selectTag(null)}
@@ -283,6 +283,28 @@ function Vault() {
               <StoryCard story={story} />
             </Link>
           ))}
+          {filteredStories.length < 6 && (
+            <div
+              className="card-container"
+              style={{
+                padding: "var(--space-lg)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                minHeight: 148,
+              }}
+            >
+              <p
+                className="text-tool-headline"
+                style={{ margin: 0, fontSize: 22, color: "var(--muted)" }}
+              >
+                MORE STORIES COMING
+              </p>
+              <p style={{ margin: "var(--space-sm) 0 0 0", fontSize: 13, color: "var(--muted)" }}>
+                The vault grows with every match — check back soon.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
