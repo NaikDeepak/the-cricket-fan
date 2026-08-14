@@ -13,30 +13,39 @@ colors:
   floodlight-cyan: "#5dc4d9"
   floodlight-cyan-deep: "#3a9fb3"
 typography:
+  scale:
+    xs: "11px"
+    sm: "13px"
+    base: "15px"
+    lg: "18px"
+    xl: "24px"
+    2xl: "32px"
+    3xl: "clamp(36px, 5.5vw, 60px)"
+    4xl: "clamp(56px, 9vw, 96px)"
   display:
     fontFamily: "Oswald, sans-serif"
-    fontSize: "clamp(32px, 6vw, 64px)"
+    fontSize: "var(--text-3xl)"
     fontWeight: 700
     lineHeight: 1.1
-    letterSpacing: "-0.02em"
+    letterSpacing: "-0.03em"
   title:
     fontFamily: "Space Grotesk, sans-serif"
-    fontSize: "18px"
+    fontSize: "var(--text-lg)"
     fontWeight: 600
     lineHeight: 1.3
     letterSpacing: "-0.01em"
   body:
     fontFamily: "Space Grotesk, sans-serif"
-    fontSize: "15px"
+    fontSize: "var(--text-base)"
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: "normal"
   label:
     fontFamily: "Space Grotesk, sans-serif"
-    fontSize: "11px"
+    fontSize: "var(--text-xs)"
     fontWeight: 600
     lineHeight: 1.4
-    letterSpacing: "0.15em"
+    letterSpacing: "0.18em"
 rounded:
   sm: "4px"
   md: "8px"
@@ -130,23 +139,35 @@ The palette is Restrained-to-Committed: near-black neutrals dominate almost the 
 
 **Character:** Oswald is condensed, heavy, all-caps — it's the shout of a section headline or a stat, used sparingly. Space Grotesk is where the actual work happens: geometric but warm enough not to feel clinical, used for every editable field, button label, and paragraph of body copy.
 
-### Hierarchy
-- **Display** (Oswald 700, `clamp(32px, 6vw, 64px)`, 1.1 line-height, -0.02em tracking, uppercase): Page-level section headers only ("DRAFTS & GENERATORS" / "EDITOR & PREVIEW"). Reuses the app's existing `.text-section-headline` class.
-- **Title** (Space Grotesk 600, 18px, 1.3 line-height, -0.01em tracking): Card titles, draft preview headings, modal/panel titles.
-- **Body** (Space Grotesk 400, 15px, 1.5 line-height): Draft text, editor textarea, paragraph copy. Cap measure at ~70ch inside the editor so long drafts don't stretch edge-to-edge.
-- **Label** (Space Grotesk 600, 11px, 1.4 line-height, 0.15em tracking, uppercase): Meta rows, form labels, chip text, timestamps. Reuses the app's existing `.text-micro` class and color (`--muted`).
+### Modular Scale
+The typography system uses a strict 8-tier modular scale bound to CSS custom properties (`--text-xs` through `--text-4xl`). No hardcoded pixel font sizes exist in component code.
+
+- **4XL Watermark** (`--text-4xl`: `clamp(56px, 9vw, 96px)`): Oversized background watermark numerals (e.g. years or stats) at low opacity (4–6%).
+- **3XL Hero** (`--text-3xl`: `clamp(36px, 5.5vw, 60px)`): Page-level spatial section headers ("THE VAULT").
+- **2XL Title** (`--text-2xl`: `32px`): Sub-hero headlines and major detail titles.
+- **XL Featured** (`--text-xl`: `24px`): Featured lead story titles and panel section headers.
+- **LG Subhead** (`--text-lg`: `18px`): Standard story card titles and preview headings.
+- **Base Body** (`--text-base`: `15px`): Standard body text, story beats, and editor text.
+- **SM Caption** (`--text-sm`: `13px`): Secondary summaries, card metadata, and tool captions.
+- **XS Micro Label** (`--text-xs`: `11px`, 0.18em tracking, uppercase): Category badges, form labels, timestamps.
 
 ### Named Rules
 
-**The Loud-Then-Quiet Rule.** A view gets exactly one Display-weight moment at its top; everything below drops straight to Title/Body/Label. No intermediate "Headline" tier — the contrast between the one loud line and everything quiet under it is the hierarchy.
+**The Modular Scale Rule.** Every font size in the app must map to one of the system custom properties `--text-*`. Inline pixel numbers for font sizes are strictly disallowed.
 
-## 4. Elevation
+**The Loud-Then-Quiet Rule.** A view gets exactly one Display-weight moment at its top; everything below drops straight to Title/Body/Label. Contrast between the single loud line and quiet structure creates immediate visual hierarchy.
 
-Flat by design — no box-shadows anywhere in the system. Depth is conveyed entirely through tonal layering (Void Black → Ash Surface → a 1px Border Line) and through the Wire Red accent, which reads as "raised" purely because it's the only saturated thing in the frame. This matches the main app's existing `.card-container` convention and keeps the stadium-floodlight character: crisp edges, no soft glow, no glass.
+## 4. Elevation & Spatial Depth
+
+**Spatial Dark Glassmorphism:** Depth is created through translucent dark surfaces (`rgba(15, 15, 18, 0.75)` with `backdrop-filter: blur(24px)`), floating spatial tiles, and crisp 1px glowing borders (`rgba(255, 255, 255, 0.08)` at rest → Wire Red `#e8432e` hover aura). Inspired by Apple Vision Pro spatial landing pages, UI containers float with subtle backdrop blur and clean tonal contrast (Void Black `#030303` base → Ash Glass surface → 1px Border Line).
 
 ### Named Rules
 
-**The Flat-By-Default Rule.** If an element needs to look "elevated," change its surface tone or add the 1px border — never add a shadow. The one exception is a deliberate, sparing glow behind the Wire Red primary action on hover (a soft `filter: drop-shadow` at low opacity), used only there, never on cards or panels.
+**The Spatial Glass Rule.** Containers use translucent dark glass (`.ds-spatial-card`, `.ds-glass-panel`) with high-contrast text and 1px border lighting. Depth reads as floating translucent tiles without muddy heavy shadows.
+
+**The Focal Hero Rule.** Every top-level page opens with an immersive spatial hero moment combining media/graphic backdrop assets, bold display typography, and stadium lighting ambiance.
+
+**The Dynamic Rhythm Rule.** Story grids feature visual hierarchy: a lead spatial card spanning 2 columns with full visual prominence, followed by balanced floating cards.
 
 ## 5. Components
 
@@ -209,38 +230,25 @@ not an afterthought bolted on after the "real" UI ships.
 
 ## 7. Motion Contract
 
-**Tokens only.** Every transition/animation duration is
-`var(--duration-fast)` (150ms) or `var(--duration-standard)` (250ms);
-every easing is `var(--ease-out-quart)`. No inline `300ms`, no
-`ease-in-out`, no bespoke curve — if a moment needs a duration not on
-this list, that's a signal to use the existing token closest to it, not
-to add a new one.
+**Declarative Framer Motion & Spring Physics.** All animation logic uses `framer-motion`. Transition durations and spring curves map to system design tokens (`var(--duration-fast)`, `var(--duration-standard)`, `var(--duration-slow)`).
+
+- **Spring Preset**: `type: "spring", stiffness: 300, damping: 28` for spatial tile hover lifts and subtle interactive responses.
+- **Stagger Preset**: `staggerChildren: 0.06` for grid reveals.
 
 **Animates:**
-- Vault grid mount/filter-change stagger (existing, `stories/page.tsx`).
-- On-this-day rail entrance on real data arrival (existing).
-- A short cross-fade between the Vault and a story detail page —
-  "same collection, different item," not a directional navigation.
+- Spatial hero section entry stagger on page arrival.
+- Vault grid card stagger reveal (`motion.div` with Framer variants).
+- Spatial card interactive hover elevation (`whileHover={{ y: -4, scale: 1.01 }}`).
+- Primary Wire Red action button hover glow expansion (`filter: drop-shadow(0 0 12px rgba(232, 67, 46, 0.4))` + smooth scale).
 
 **Does not animate:**
-- Hover states on secondary/non-primary elements — motion marks the one
-  primary action per view, mirroring the One Red Rule. A card border
-  color change on hover (already flat, no motion) stays as-is; it does
-  not gain a scale/shadow/glow treatment.
+- Secondary meta text rows, static labels, or background elements.
 
-**Reduced motion.** Every animation degrades to an instant state swap
-under `prefers-reduced-motion: reduce`. GSAP-driven motion checks
-`prefersReducedMotion()` from `frontend/src/lib/motion.ts` before
-running; CSS-only transitions are covered by the global
-`@media (prefers-reduced-motion: reduce)` block that already zeroes all
-animation/transition durations (`globals.css`).
+**Reduced Motion:** Framer Motion handles reduced motion via `<MotionConfig reducedMotion="user">` or checking `prefersReducedMotion()` in `lib/motion.ts`. Under reduced motion, all Framer Motion components instantly snap to final state without layout transitions, matching the global `@media (prefers-reduced-motion: reduce)` block in `globals.css`.
 
 ### Named Rule
 
-**The One-Motion-Moment Rule.** A route or state change gets exactly
-one motion moment — the stagger, the reveal, or the cross-fade, never
-several competing at once. This is the Loud-Then-Quiet rule applied to
-time instead of type scale.
+**The One-Motion-Moment Rule.** A route or state change gets exactly one primary motion moment — the hero reveal, grid stagger, or detail cross-fade. This is the Loud-Then-Quiet rule applied to time.
 
 ## 8. Mobile
 

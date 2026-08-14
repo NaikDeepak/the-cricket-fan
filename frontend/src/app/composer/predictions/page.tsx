@@ -55,11 +55,11 @@ function PredictionRow({ p }: { p: Prediction }) {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", flex: 1 }}>
           <TeamBadge team={p.team_a} />
-          <span style={{ fontSize: 15, fontWeight: 600 }}>{p.team_a}</span>
+          <span style={{ fontSize: "var(--text-base)", fontWeight: 600 }}>{p.team_a}</span>
         </div>
         <span
           style={{
-            fontSize: 20,
+            fontSize: "var(--text-lg)",
             fontWeight: 700,
             fontVariantNumeric: "tabular-nums",
             color: pctA >= pctB ? "var(--wire-red)" : "var(--fg)",
@@ -93,11 +93,11 @@ function PredictionRow({ p }: { p: Prediction }) {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", flex: 1 }}>
           <TeamBadge team={p.team_b} />
-          <span style={{ fontSize: 15, fontWeight: 600 }}>{p.team_b}</span>
+          <span style={{ fontSize: "var(--text-base)", fontWeight: 600 }}>{p.team_b}</span>
         </div>
         <span
           style={{
-            fontSize: 20,
+            fontSize: "var(--text-lg)",
             fontWeight: 700,
             fontVariantNumeric: "tabular-nums",
             color: pctB > pctA ? "var(--wire-red)" : "var(--fg)",
@@ -110,7 +110,7 @@ function PredictionRow({ p }: { p: Prediction }) {
       {p.reasons.length > 0 && (
         <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
           {p.reasons.map((r, i) => (
-            <li key={i} style={{ fontSize: 13, color: "var(--muted)" }}>
+            <li key={i} style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}>
               {r}
             </li>
           ))}
@@ -144,16 +144,16 @@ export default function PredictionsPage() {
       </h1>
 
       {loading && (
-        <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading predictions…</p>
+        <p style={{ color: "var(--muted)", fontSize: "var(--text-sm)" }}>Loading predictions…</p>
       )}
 
       {!loading && error && (
-        <p style={{ color: "var(--wire-red)", fontSize: 13 }}>{error}</p>
+        <p style={{ color: "var(--wire-red)", fontSize: "var(--text-sm)" }}>{error}</p>
       )}
 
       {!loading && !error && predictions.length === 0 && (
         <div className="ds-card" style={{ cursor: "default", padding: "var(--space-xl)" }}>
-          <p style={{ margin: 0, color: "var(--muted)", fontSize: 14 }}>
+          <p style={{ margin: 0, color: "var(--muted)", fontSize: "var(--text-sm)" }}>
             No predictions yet. The bot generates these once fixtures are in
             the DB — see <code>bot/run.py</code> and the tracked
             upcoming-fixtures fetch fix.

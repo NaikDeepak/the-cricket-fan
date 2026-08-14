@@ -70,7 +70,7 @@ function StatTile({ label, value, detail }: { label: string; value: number; deta
       </span>
       <div
         style={{
-          fontSize: 40,
+          fontSize: "var(--text-2xl)",
           fontWeight: 700,
           fontVariantNumeric: "tabular-nums",
           color: "var(--fg)",
@@ -78,7 +78,7 @@ function StatTile({ label, value, detail }: { label: string; value: number; deta
       >
         {value}
       </div>
-      <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>{detail}</p>
+      <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--muted)" }}>{detail}</p>
     </div>
   );
 }
@@ -98,12 +98,12 @@ export default function AnalyticsPage() {
   }, []);
 
   if (loading) {
-    return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading analytics…</p>;
+    return <p style={{ color: "var(--muted)", fontSize: "var(--text-sm)" }}>Loading analytics…</p>;
   }
 
   if (!data) {
     return (
-      <p style={{ color: "var(--wire-red)", fontSize: 14 }}>
+      <p style={{ color: "var(--wire-red)", fontSize: "var(--text-sm)" }}>
         Failed to load analytics.
       </p>
     );
@@ -141,7 +141,7 @@ export default function AnalyticsPage() {
             <span className="text-micro" style={{ margin: 0 }}>
               Prediction accuracy
             </span>
-            <p style={{ margin: "var(--space-xs) 0 0 0", fontSize: 13, color: "var(--muted)" }}>
+            <p style={{ margin: "var(--space-xs) 0 0 0", fontSize: "var(--text-sm)", color: "var(--muted)" }}>
               {correct} correct / {total} total predictions
             </p>
           </div>
@@ -172,7 +172,7 @@ export default function AnalyticsPage() {
           Drafts by category
         </h2>
         {data.by_category.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>
+          <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--muted)" }}>
             No drafts created yet.
           </p>
         ) : (
@@ -201,7 +201,7 @@ export default function AnalyticsPage() {
                 </span>
                 <span
                   style={{
-                    fontSize: 13,
+                    fontSize: "var(--text-sm)",
                     fontWeight: 600,
                     fontVariantNumeric: "tabular-nums",
                   }}

@@ -201,7 +201,7 @@ export default function SourceBar({
         </div>
       </div>
 
-      <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: "var(--muted)" }}>
+      <p style={{ margin: 0, fontSize: "var(--text-sm)", lineHeight: 1.5, color: "var(--muted)" }}>
         <strong style={{ color: "var(--fg)" }}>Blank</strong>: freeform card,
         no setup. <strong style={{ color: "var(--fg)" }}>Browse Bank</strong>:
         needs content_bank seeded (see below).{" "}
@@ -215,7 +215,7 @@ export default function SourceBar({
       </p>
 
       {error && (
-        <p style={{ color: "var(--wire-red)", fontSize: 13, margin: 0 }}>
+        <p style={{ color: "var(--wire-red)", fontSize: "var(--text-sm)", margin: 0 }}>
           {error}
         </p>
       )}
@@ -244,17 +244,17 @@ export default function SourceBar({
             }}
           >
             {loadingBank && (
-              <p style={{ color: "var(--muted)", fontSize: 14, margin: 0 }}>
+              <p style={{ color: "var(--muted)", fontSize: "var(--text-sm)", margin: 0 }}>
                 Loading bank items…
               </p>
             )}
             {!loadingBank && bankError && (
-              <p style={{ color: "var(--wire-red)", fontSize: 13, margin: 0 }}>
+              <p style={{ color: "var(--wire-red)", fontSize: "var(--text-sm)", margin: 0 }}>
                 {bankError}
               </p>
             )}
             {!loadingBank && !bankError && bankItems.length === 0 && (
-              <p style={{ color: "var(--muted)", fontSize: 14, margin: 0 }}>
+              <p style={{ color: "var(--muted)", fontSize: "var(--text-sm)", margin: 0 }}>
                 Content bank is empty. Seed it with{" "}
                 <code>python -m bot.scripts.seed_content_bank</code> (owner
                 reviews content before commit — see script docstring).
@@ -363,14 +363,14 @@ export default function SourceBar({
                         style={{
                           cursor: "pointer",
                           opacity: item.is_published ? 1 : 0.4,
-                          fontSize: 14,
+                          fontSize: "var(--text-sm)",
                         }}
                       >
                         {item.is_published ? "\u{1F441}" : "\u{1F6AB}"}
                       </span>
                     </div>
                   </div>
-                  <p style={{ margin: 0, fontSize: 14, color: "var(--fg)" }}>
+                  <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--fg)" }}>
                     {item.segments[0]}
                   </p>
                 </button>

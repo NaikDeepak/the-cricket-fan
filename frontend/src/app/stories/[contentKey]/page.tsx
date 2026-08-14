@@ -2,15 +2,13 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import gsap from "gsap";
+import { motion } from "framer-motion";
 import { Story, storiesApi } from "@/lib/storiesApi";
 import StoryBeats from "@/components/stories/StoryBeats";
 import StoryCardImg from "@/components/stories/StoryCardImg";
 import { captureCard, downloadCard } from "@/lib/share";
-import { prefersReducedMotion } from "@/lib/motion";
+import { HERO_REVEAL_VARIANTS, prefersReducedMotion } from "@/lib/motion";
 
-// Mirrors StoryCard.tsx's local CATEGORY_LABEL map — not exported there, so
-// duplicated here rather than reaching into a sibling component's internals.
 const CATEGORY_LABEL: Record<string, string> = {
   wiki_record: "Record",
   anecdote: "Anecdote",
@@ -32,8 +30,8 @@ export default function StoryDetailPage({
   const [siblings, setSiblings] = useState<Story[]>([]);
   const [notFound, setNotFound] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  const pageRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
+  const isReduced = prefersReducedMotion();
 
   useEffect(() => {
     let cancelled = false;
@@ -61,49 +59,6 @@ export default function StoryDetailPage({
     };
   }, [key]);
 
-  useEffect(() => {
-    if (!story || prefersReducedMotion()) return;
-    // `active` guards against a stale run: if `story` changes again (fast
-    // prev/next navigation) before the dynamic import below resolves,
-    // cleanup fires first and flips this to false, so the ctx created after
-    // the await is reverted immediately instead of leaking.
-    let active = true;
-    let ctx: ReturnType<typeof gsap.context> | undefined;
-    (async () => {
-      const { ScrollTrigger } = await import("gsap/ScrollTrigger");
-      gsap.registerPlugin(ScrollTrigger);
-      if (!active) return;
-      ctx = gsap.context(() => {
-        gsap.utils.toArray<HTMLElement>("[data-beat]").forEach((el) => {
-          gsap.from(el, {
-            y: 20,
-            duration: 0.45,
-            ease: "power4.out",
-            scrollTrigger: { trigger: el, start: "top 85%" },
-          });
-        });
-      });
-    })();
-    return () => {
-      active = false;
-      ctx?.revert();
-    };
-  }, [story]);
-
-  // Fade the whole page in once the story loads — softens the hard cut
-  // arriving from the Vault, mirroring the fade-in there.
-  useEffect(() => {
-    if (!story || prefersReducedMotion() || !pageRef.current) return;
-    const ctx = gsap.context(() => {
-      gsap.from(pageRef.current, {
-        opacity: 0,
-        duration: 0.25,
-        ease: "power4.out",
-      });
-    }, pageRef);
-    return () => ctx.revert();
-  }, [story]);
-
   async function handleDownload() {
     if (!cardRef.current || !story) return;
     setExporting(true);
@@ -118,16 +73,21 @@ export default function StoryDetailPage({
     }
   }
 
-  const containerStyle = { maxWidth: 680, margin: "0 auto", padding: "var(--space-xl) var(--space-lg)" };
+  const containerStyle = {
+    maxWidth: 800,
+    margin: "0 auto",
+    padding: "0 var(--space-lg) var(--space-xl)",
+    position: "relative" as const,
+  };
 
   if (notFound) {
     return (
-      <div style={{ ...containerStyle, textAlign: "center" }}>
-        <p className="text-micro" style={{ margin: "0 0 var(--space-md) 0" }}>
+      <div style={{ ...containerStyle, textAlign: "center", paddingTop: "var(--space-xl)" }}>
+        <p className="text-micro" style={{ margin: "0 0 var(--space-md) 0", color: "var(--wire-red)" }}>
           STORY NOT FOUND
         </p>
-        <Link href="/stories" className="ds-nav-link">
-          ← The Vault
+        <Link href="/stories" className="ds-btn-pill ds-btn-pill-dark" style={{ textDecoration: "none" }}>
+          ← Return to Vault
         </Link>
       </div>
     );
@@ -136,7 +96,7 @@ export default function StoryDetailPage({
   if (!story) {
     return (
       <div style={containerStyle}>
-        <div className="ds-skeleton" style={{ maxWidth: 680 }} />
+        <div className="ds-skeleton" style={{ maxWidth: 800, minHeight: 400, marginTop: "var(--space-xl)" }} />
       </div>
     );
   }
@@ -147,60 +107,132 @@ export default function StoryDetailPage({
   const sourceIsLink = story.source_ref?.startsWith("http");
 
   return (
-    <div ref={pageRef} style={containerStyle}>
-      <Link href="/stories" className="ds-nav-link" style={{ display: "inline-block", marginBottom: "var(--space-lg)" }}>
-        ← The Vault
-      </Link>
-
-      <div
+    <motion.div
+      style={containerStyle}
+      initial={isReduced ? false : { opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {/* Apple Header Bar */}
+      <header
         style={{
           display: "flex",
+          justifyContent: "space-between",
           alignItems: "center",
-          gap: "var(--space-sm)",
-          marginBottom: "var(--space-md)",
+          padding: "var(--space-md) 0 var(--space-lg)",
+          borderBottom: "1px solid var(--border)",
+          marginBottom: "var(--space-xl)",
         }}
       >
-        <span className="ds-chip ds-chip-category">
-          {CATEGORY_LABEL[story.category] ?? story.category}
-        </span>
-        {story.match_format && <span className="ds-chip">{story.match_format}</span>}
-        {story.year && (
-          <span className="text-micro" style={{ margin: 0 }}>
-            {story.year}
+        <Link href="/stories" style={{ textDecoration: "none" }}>
+          <span style={{ fontSize: 22, fontWeight: 800, color: "#000000", letterSpacing: "-0.03em" }}>
+            TCH.
           </span>
-        )}
+        </Link>
+        <Link href="/stories" className="ds-btn-pill ds-btn-pill-dark" style={{ textDecoration: "none", fontSize: 13, padding: "8px 18px" }}>
+          ← The Vault
+        </Link>
+      </header>
+
+      {/* Watermark Year Numeral */}
+      {story.year && (
+        <div
+          aria-hidden
+          className="text-watermark"
+          style={{
+            position: "absolute",
+            top: 100,
+            right: 0,
+            fontSize: "var(--text-4xl)",
+            lineHeight: 0.8,
+            zIndex: 0,
+          }}
+        >
+          {story.year}
+        </div>
+      )}
+
+      {/* Apple Vision Pro Spatial Detail Hero Panel */}
+      <motion.div
+        className="ds-spatial-card-dark"
+        style={{
+          borderRadius: 20,
+          padding: "var(--space-xl)",
+          marginBottom: "var(--space-xl)",
+          position: "relative",
+          zIndex: 1,
+          backgroundImage: "linear-gradient(135deg, rgba(10, 10, 16, 0.95) 0%, rgba(20, 20, 32, 0.9) 100%), url('/images/hero_stadium.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+        variants={HERO_REVEAL_VARIANTS}
+        initial={isReduced ? false : "hidden"}
+        animate="visible"
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-sm)",
+            marginBottom: "var(--space-md)",
+          }}
+        >
+          <span className="ds-chip" style={{ background: "#0071e3", color: "#ffffff" }}>
+            {CATEGORY_LABEL[story.category] ?? story.category}
+          </span>
+          {story.match_format && (
+            <span className="ds-chip" style={{ background: "rgba(255, 255, 255, 0.15)", color: "#ffffff" }}>
+              {story.match_format}
+            </span>
+          )}
+          {story.year && (
+            <span className="text-micro" style={{ margin: 0, color: "rgba(255, 255, 255, 0.7)" }}>
+              YEAR {story.year}
+            </span>
+          )}
+        </div>
+
+        <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, color: "#ffffff", margin: "0 0 var(--space-md) 0", lineHeight: 1.15, letterSpacing: "-0.02em" }}>
+          {story.title}
+        </h1>
+        <p style={{ margin: 0, fontSize: "var(--text-base)", color: "rgba(255, 255, 255, 0.85)", lineHeight: 1.6, maxWidth: 640 }}>
+          {story.summary}
+        </p>
+      </motion.div>
+
+      {/* Story Beats Section */}
+      <div style={{ position: "relative", zIndex: 1, marginBottom: "var(--space-xl)" }}>
+        <StoryBeats segments={story.segments} />
       </div>
 
-      <h1 className="text-tool-headline" style={{ margin: "0 0 var(--space-sm) 0" }}>
-        {story.title}
-      </h1>
-      <p style={{ margin: "0 0 var(--space-xl) 0", fontSize: 16, color: "var(--muted)" }}>
-        {story.summary}
-      </p>
-
-      <StoryBeats segments={story.segments} />
-
+      {/* Tags & Metadata */}
       <div
         style={{
           display: "flex",
           flexWrap: "wrap",
           gap: "var(--space-sm)",
           margin: "var(--space-xl) 0",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         {story.teams.map((t) => (
-          <span key={`team-${t}`} className="ds-chip">
+          <span key={`team-${t}`} className="ds-chip ds-chip-category">
             {t}
           </span>
         ))}
         {story.players.map((p) => (
-          <span key={`player-${p}`} className="ds-chip">
+          <span key={`player-${p}`} className="ds-chip ds-chip-category">
             {p}
           </span>
         ))}
-        {story.venue && <span className="ds-chip">{story.venue}</span>}
+        {story.venue && (
+          <span className="ds-chip ds-chip-category">
+            {story.venue}
+          </span>
+        )}
         {story.tags.map((t) => (
-          <Link key={`tag-${t}`} href={`/stories?tag=${encodeURIComponent(t)}`} className="ds-chip">
+          <Link key={`tag-${t}`} href={`/stories?tag=${encodeURIComponent(t)}`} className="ds-chip" style={{ background: "#000000", color: "#ffffff", textDecoration: "none" }}>
             #{t}
           </Link>
         ))}
@@ -211,7 +243,9 @@ export default function StoryDetailPage({
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: "var(--space-md)",
+          marginBottom: "var(--space-lg)",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <span>
@@ -221,7 +255,7 @@ export default function StoryDetailPage({
               <>
                 {" "}
                 (
-                <a href={story.source_ref} target="_blank" rel="noreferrer">
+                <a href={story.source_ref} target="_blank" rel="noreferrer" style={{ color: "#0071e3" }}>
                   {story.source_ref}
                 </a>
                 )
@@ -236,24 +270,24 @@ export default function StoryDetailPage({
       <button
         onClick={handleDownload}
         disabled={exporting}
-        className="ds-btn-primary"
-        style={{ marginBottom: "var(--space-xl)" }}
+        className="ds-btn-pill ds-btn-pill-dark"
+        style={{ marginBottom: "var(--space-xl)", position: "relative", zIndex: 1 }}
       >
-        {exporting ? "Rendering..." : "Download card"}
+        {exporting ? "Rendering..." : "Download PNG Card ↗"}
       </button>
 
       {(prev || next) && (
-        <div style={{ display: "flex", justifyContent: "space-between", gap: "var(--space-md)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "var(--space-md)", position: "relative", zIndex: 1 }}>
           {prev ? (
-            <Link href={`/stories/${encodeURIComponent(prev.content_key)}`} className="ds-btn-secondary">
-              ← {truncate(prev.title, 40)}
+            <Link href={`/stories/${encodeURIComponent(prev.content_key)}`} className="ds-btn-pill ds-btn-pill-light" style={{ textDecoration: "none" }}>
+              ← {truncate(prev.title, 36)}
             </Link>
           ) : (
             <span />
           )}
           {next ? (
-            <Link href={`/stories/${encodeURIComponent(next.content_key)}`} className="ds-btn-secondary">
-              {truncate(next.title, 40)} →
+            <Link href={`/stories/${encodeURIComponent(next.content_key)}`} className="ds-btn-pill ds-btn-pill-light" style={{ textDecoration: "none" }}>
+              {truncate(next.title, 36)} →
             </Link>
           ) : (
             <span />
@@ -261,17 +295,12 @@ export default function StoryDetailPage({
         </div>
       )}
 
-      {/* Off-screen card wrapper for html-to-image capture.
-          Use fixed position off-viewport, not display:none — html-to-image
-          can't capture undisplayed nodes. */}
-      <div
-        style={{ position: "fixed", left: -20000, top: 0 }}
-        aria-hidden
-      >
+      {/* Off-screen card wrapper for html-to-image capture */}
+      <div style={{ position: "fixed", left: -20000, top: 0 }} aria-hidden>
         <div ref={cardRef}>
           <StoryCardImg story={story} />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

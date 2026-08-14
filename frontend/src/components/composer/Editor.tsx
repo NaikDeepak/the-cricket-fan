@@ -77,7 +77,7 @@ export default function Editor({
         style={{
           width: "100%",
           fontFamily: "inherit",
-          fontSize: 15,
+          fontSize: "var(--text-base)",
           lineHeight: 1.5,
           resize: "vertical",
           borderColor: over ? "var(--wire-red)" : undefined,
@@ -109,7 +109,7 @@ export default function Editor({
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="ds-input"
-            style={{ padding: "6px 10px", fontSize: 13, width: "100%", minWidth: 0 }}
+            style={{ padding: "6px 10px", fontSize: "var(--text-sm)", width: "100%", minWidth: 0 }}
           />
         </label>
 

@@ -49,7 +49,7 @@ function PostRow({ post }: { post: Post }) {
           {post.team_a && post.team_b && (
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <TeamBadge team={post.team_a} size={20} />
-              <span style={{ fontSize: 13, color: "var(--muted)" }}>vs</span>
+              <span style={{ fontSize: "var(--text-xs)", color: "var(--muted)" }}>vs</span>
               <TeamBadge team={post.team_b} size={20} />
             </div>
           )}
@@ -59,11 +59,11 @@ function PostRow({ post }: { post: Post }) {
         </span>
       </div>
 
-      <p style={{ margin: 0, fontSize: 14, color: "var(--fg)", lineHeight: 1.5 }}>
+      <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--fg)", lineHeight: 1.5 }}>
         {post.text || "(no text)"}
       </p>
 
-      <p style={{ margin: "var(--space-sm) 0 0 0", fontSize: 12, color: "var(--muted)" }}>
+      <p style={{ margin: "var(--space-sm) 0 0 0", fontSize: "var(--text-xs)", color: "var(--muted)" }}>
         {formatWhen(post.posted_at)}
         {post.tweet_count > 1 ? ` · ${post.tweet_count} tweets` : ""}
       </p>
@@ -108,10 +108,10 @@ export default function PostsPage() {
         Automated Posts
       </h1>
 
-      {loading && <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading posts…</p>}
+      {loading && <p style={{ color: "var(--muted)", fontSize: "var(--text-sm)" }}>Loading posts…</p>}
 
       {!loading && error && (
-        <p style={{ color: "var(--wire-red)", fontSize: 13 }}>{error}</p>
+        <p style={{ color: "var(--wire-red)", fontSize: "var(--text-sm)" }}>{error}</p>
       )}
 
       {!loading && !error && (
