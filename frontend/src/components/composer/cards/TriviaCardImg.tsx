@@ -120,8 +120,9 @@ export default function TriviaCardImg({
         }}
       >
         <span>THE CRICKET FAN</span>
-        <span>#CricketTrivia</span>
+        <span>#TheCricketFan</span>
       </div>
     </div>
   );
 }
+

@@ -41,6 +41,14 @@ def _truncate(text: str) -> str:
     return text if len(text) <= 280 else text[:277] + "..."
 
 
+def _truncate_reserving_tag(content: str, tag: str) -> str:
+    """Truncate content so the trailing branding tag always fits within 280 chars."""
+    max_content_len = 280 - len(tag)
+    if len(content) > max_content_len:
+        content = content[: max_content_len - 3] + "..."
+    return content + tag
+
+
 def prediction_post(
     team_a: str, team_b: str, prob_a: float, reasons: list[str], league: str
 ) -> str:
@@ -48,25 +56,27 @@ def prediction_post(
         (team_a, team_b, prob_a) if prob_a >= 0.5 else (team_b, team_a, 1 - prob_a)
     )
     why = ", ".join(dict.fromkeys(_phrase(r) for r in reasons))
-    text = (
+    tag = " #Cricket #TheCricketFan"
+    content = (
         f"🔮 {league}: {fav} {round(p * 100)}% to beat {other}.\n"
         f"Why: {why}.\n"
-        f"Model pick, publicly tracked. #Cricket"
+        f"Model pick, publicly tracked."
     )
-    return _truncate(text)
+    return _truncate_reserving_tag(content, tag)
 
 
 def trivia_post(df: pd.DataFrame, team_a: str, team_b: str, venue: str) -> str:
+    tag = " #Cricket #TheCricketFan"
     if len(df):
         h2h = df[(df["team"] == team_a) & (df["opponent"] == team_b)]
         if len(h2h) >= 3:
             wins_a = int(h2h["won"].sum())
-            text = (
+            content = (
                 f"📊 {team_a} vs {team_b}: {team_a} lead {wins_a}-"
                 f"{len(h2h) - wins_a} in their last {len(h2h)} meetings.\n"
-                f"Today's chapter starts soon. #Cricket"
+                f"Today's chapter starts soon."
             )
-            return _truncate(text)
+            return _truncate_reserving_tag(content, tag)
         at_venue = df[df["venue"] == venue]
         # team_matches has one row per team per match; average over all rows
         # is tautologically ~50% (each match contributes one win, one loss).
@@ -75,16 +85,14 @@ def trivia_post(df: pd.DataFrame, team_a: str, team_b: str, venue: str) -> str:
         if len(home_rows) >= 5:
             win_rate = home_rows["won"].mean()
             first = venue.split(",")[0]
-            text = (
+            content = (
                 f"📊 {first}: home teams have won "
                 f"{round(win_rate * 100)}% of recent matches here.\n"
-                f"{team_a} vs {team_b} today. #Cricket"
+                f"{team_a} vs {team_b} today."
             )
-            return _truncate(text)
-    return _truncate(
-        f"📊 {team_a} vs {team_b} today. "
-        f"Two lineups, one result. Numbers at stumps. #Cricket"
-    )
+            return _truncate_reserving_tag(content, tag)
+    content = f"📊 {team_a} vs {team_b} today. Two lineups, one result. Numbers at stumps."
+    return _truncate_reserving_tag(content, tag)
 
 
 def result_post(
@@ -100,9 +108,45 @@ def result_post(
     hit = winner == fav
     mark = "✅" if hit else "❌"
     verdict = "Called it" if hit else "Missed"
-    text = (
+    tag = " #Cricket #TheCricketFan"
+    content = (
         f"{mark} {verdict}: {fav} {round(p * 100)}% — {winner} won.\n"
         f"Season record: {season_correct}/{season_total}. "
-        f"Every pick tracked, hits and misses. #Cricket"
+        f"Every pick tracked, hits and misses."
     )
-    return _truncate(text)
+    return _truncate_reserving_tag(content, tag)
+
+
+def format_post_match_news_tweet(
+    team_a: str,
+    team_b: str,
+    headline: str,
+    summary: str,
+    source_url: str | None = None,
+) -> str:
+    """Format the post-match recap news tweet; branding tag always fits.
+
+    The source URL, when present, is treated as an atomic unit: it is either
+    included in full or dropped entirely. Google News RSS links are long
+    redirect URLs (often 200-500 chars), so the body text (headline/summary)
+    is truncated to make room for it, but the URL itself is never cut
+    mid-string — a partial URL is unusable.
+    """
+    tag = "\n#Cricket #TheCricketFan"
+    body = f"📰 {team_a} vs {team_b}: {headline}\n{summary}"
+
+    if source_url:
+        read_clause = f"\nRead: {source_url}"
+        max_body_len = 280 - len(tag) - len(read_clause)
+        if max_body_len >= 0:
+            if len(body) > max_body_len:
+                body = (
+                    body[: max_body_len - 3] + "..." if max_body_len >= 3 else body[:max_body_len]
+                )
+            return body + read_clause + tag
+        # Full URL + tag alone don't fit within 280 chars — drop the
+        # clause entirely rather than truncate the URL mid-string.
+
+    return _truncate_reserving_tag(body, tag)
+
+

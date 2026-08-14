@@ -140,19 +140,71 @@ def commit_reviewed(conn, path: Path, now: datetime) -> int:
         bounds = CONTENT_FORMATS.get(e["format"])  # unknown format / bad cardinality
         if bounds is None or not bounds[0] <= len(e["segments"]) <= bounds[1]:
             continue
-        conn.execute(
-            content_bank.insert().values(
-                category=e["category"],
-                format=e["format"],
-                segments_json=json.dumps(e["segments"]),
-                content_key=e["content_key"],
-                source=e["source"],
-                created_at=now,
-            )
-        )
+        values = {
+            "category": e["category"],
+            "format": e["format"],
+            "segments_json": json.dumps(e["segments"]),
+            "content_key": e["content_key"],
+            "source": e["source"],
+            "created_at": now,
+        }
+        if "title" in e:
+            values["title"] = e["title"]
+        if "summary" in e:
+            values["summary"] = e["summary"]
+        if "teams" in e:
+            values["teams_json"] = json.dumps(e["teams"])
+        if "players" in e:
+            values["players_json"] = json.dumps(e["players"])
+        if "venue" in e:
+            values["venue"] = e["venue"]
+        if "year" in e:
+            values["year"] = e["year"]
+        if "match_format" in e:
+            values["match_format"] = e["match_format"]
+        if "tags" in e:
+            values["tags_json"] = json.dumps(e["tags"])
+        values["is_published"] = True
+
+        conn.execute(content_bank.insert().values(**values))
         existing.add(e["content_key"])
         inserted += 1
     return inserted
+
+
+def seed_real_stories(conn: sa.Connection, now: datetime) -> int:
+    """Insert real Wikipedia historical stories directly into content_bank."""
+    from bot.scripts.harvest_wikipedia_stories import harvest_wikipedia_story_candidates
+
+    existing = set(conn.execute(sa.select(content_bank.c.content_key)).scalars().all())
+    stories = harvest_wikipedia_story_candidates()
+    inserted = 0
+    for s in stories:
+        if s["content_key"] in existing:
+            continue
+        conn.execute(
+            content_bank.insert().values(
+                category=s["category"],
+                format=s["format"],
+                segments_json=json.dumps(s["segments"]),
+                content_key=s["content_key"],
+                source=s["source"],
+                title=s["title"],
+                summary=s["summary"],
+                teams_json=json.dumps(s["teams"]),
+                players_json=json.dumps(s["players"]),
+                venue=s["venue"],
+                year=s["year"],
+                match_format=s["match_format"],
+                tags_json=json.dumps(s["tags"]),
+                is_published=True,
+                created_at=now,
+            )
+        )
+        existing.add(s["content_key"])
+        inserted += 1
+    return inserted
+
 
 
 def main(argv: list[str] | None = None) -> None:

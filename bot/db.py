@@ -111,6 +111,19 @@ content_bank = sa.Table(
     sa.Column("source", sa.String(256), nullable=False),
     # e.g. "wikipedia:List_of_Test_cricket_records" -- traceability, not shown
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("event_month_day", sa.String(5), nullable=True),
+    # "MM-DD" the item's anniversary falls on, e.g. "07-24"; null if undated
+    sa.Column("title", sa.String(128), nullable=True),
+    sa.Column("summary", sa.Text, nullable=True),
+    sa.Column("source_type", sa.String(32), nullable=True),
+    sa.Column("source_ref", sa.String(256), nullable=True),
+    sa.Column("teams_json", sa.Text, nullable=True),
+    sa.Column("players_json", sa.Text, nullable=True),
+    sa.Column("venue", sa.String(128), nullable=True),
+    sa.Column("year", sa.Integer, nullable=True),
+    sa.Column("match_format", sa.String(16), nullable=True),
+    sa.Column("tags_json", sa.Text, nullable=True),
+    sa.Column("is_published", sa.Boolean, nullable=False, default=True),
 )
 
 drafts = sa.Table(
@@ -183,8 +196,35 @@ def ensure_schema(conn: sa.Connection) -> None:
                 "tweet_count INTEGER NOT NULL DEFAULT 1"
             )
         )
+    # Plain ADD COLUMN (no "IF NOT EXISTS" -- SQLite's ALTER TABLE grammar
+    # doesn't support that clause, unlike Postgres) is valid on both
+    # dialects, so these aren't dialect-guarded. They must also patch
+    # pre-existing local dev SQLite files, which create_all() won't touch.
+    inspector = sa.inspect(conn)
+    draft_cols = {c["name"] for c in inspector.get_columns("drafts")}
+    if "content_key" not in draft_cols:
+        conn.execute(sa.text("ALTER TABLE drafts ADD COLUMN content_key VARCHAR(128)"))
+    bank_cols = {c["name"] for c in inspector.get_columns("content_bank")}
+    if "event_month_day" not in bank_cols:
         conn.execute(
-            sa.text(
-                "ALTER TABLE drafts ADD COLUMN IF NOT EXISTS content_key VARCHAR(128)"
-            )
+            sa.text("ALTER TABLE content_bank ADD COLUMN event_month_day VARCHAR(5)")
         )
+    story_cols = {
+        "title": "VARCHAR(128)",
+        "summary": "TEXT",
+        "source_type": "VARCHAR(32)",
+        "source_ref": "VARCHAR(256)",
+        "teams_json": "TEXT",
+        "players_json": "TEXT",
+        "venue": "VARCHAR(128)",
+        "year": "INTEGER",
+        "match_format": "VARCHAR(16)",
+        "tags_json": "TEXT",
+        "is_published": "BOOLEAN NOT NULL DEFAULT TRUE",
+    }
+    for col_name, col_type in story_cols.items():
+        if col_name not in bank_cols:
+            conn.execute(
+                sa.text(f"ALTER TABLE content_bank ADD COLUMN {col_name} {col_type}")
+            )
+

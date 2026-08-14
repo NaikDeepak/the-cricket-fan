@@ -38,12 +38,48 @@ class EventIn(BaseModel):
 
 
 class ContentBankOut(BaseModel):
+    id: int
     content_key: str
     category: str
     format: str
     segments: list[str]
     source: str
-    used: bool = False
+    last_used_days: int | None = None
+    event_month_day: str | None = None
+    on_this_day: bool = False
+    is_published: bool = True
+
+
+class PublishIn(BaseModel):
+    is_published: bool
+
+
+class StoryOut(BaseModel):
+    content_key: str
+    category: str
+    format: str
+    segments: list[str]
+    source: str
+    title: str | None = None
+    summary: str | None = None
+    source_type: str | None = None
+    source_ref: str | None = None
+    teams: list[str] = []
+    players: list[str] = []
+    venue: str | None = None
+    year: int | None = None
+    match_format: str | None = None
+    tags: list[str] = []
+    is_published: bool = True
+    event_month_day: str | None = None
+
+
+class WireItemOut(BaseModel):
+    id: int
+    category: str | None = None
+    text: str
+    posted_at: object
+    content_key: str | None = None
 
 
 class GenerateBotIn(BaseModel):
@@ -56,6 +92,11 @@ class GenerateLlmIn(BaseModel):
     category: str | None = None
 
 
+class GenerateRecapIn(BaseModel):
+    team_a: str
+    team_b: str
+
+
 class CategoryCount(BaseModel):
     category: str | None
     drafts: int
@@ -66,6 +107,32 @@ class AnalyticsOut(BaseModel):
     event_totals: dict[str, int]
     by_category: list[CategoryCount]
     prediction_record: dict[str, int]
+
+
+class PredictionOut(BaseModel):
+    id: int
+    fixture_id: int
+    team_a: str
+    team_b: str
+    venue: str
+    league: str
+    start_time: object
+    prob_team_a: float
+    reasons: list[str]
+    outcome: str
+    created_at: object
+
+
+class PostOut(BaseModel):
+    id: int
+    fixture_id: int | None
+    post_type: str
+    state: str
+    text: str | None
+    tweet_count: int
+    posted_at: object
+    team_a: str | None = None
+    team_b: str | None = None
 
 
 def row_to_out(row) -> DraftOut:

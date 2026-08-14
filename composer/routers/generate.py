@@ -1,11 +1,13 @@
+import random
 from datetime import datetime, timezone
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from bot.compose import prediction_post, trivia_post
-from bot.db import fixtures
+from bot.db import drafts, fixtures, team_matches
 from bot.features import build_features
+from bot.news_fetcher import get_match_recap_tweet
 from bot.predict import predict
 from bot.run import _home_team_at_venue, _load_team_matches
 from bot.trivia_standalone import build_candidates
@@ -13,7 +15,7 @@ from bot.trivia_standalone import build_candidates
 from ..deps import get_conn
 from ..gemini import GeminiUnavailable
 from ..gemini import generate_content as gemini_generate
-from ..schemas import DraftIn, DraftOut, GenerateBotIn, GenerateLlmIn
+from ..schemas import DraftIn, DraftOut, GenerateBotIn, GenerateLlmIn, GenerateRecapIn
 from .drafts import create_draft
 
 router = APIRouter()
@@ -32,9 +34,13 @@ def _resolve_fixture(conn, fixture_id: int | None):
         return row
     row = conn.execute(
         sa.select(fixtures)
-        .where(fixtures.c.status == "upcoming")
+        .where(fixtures.c.status.in_(["upcoming", "live"]))
         .order_by(fixtures.c.start_time.asc())
     ).first()
+    if row is None:
+        row = conn.execute(
+            sa.select(fixtures).order_by(fixtures.c.start_time.desc())
+        ).first()
     if row is None:
         raise HTTPException(409, "no upcoming fixture to generate from")
     return row
@@ -100,12 +106,29 @@ def generate_bot(
         raise HTTPException(
             409, f"no {body.kind} candidate available from current data"
         )
-    key, _fmt, segments = matches[0]
+    recent = _recent_content_keys(conn)
+    pool = [c for c in matches if c[0] not in recent]
+    if not pool:
+        pool = matches  # every candidate already drafted -- repeat beats a dead end
+    key, _fmt, segments = random.choice(pool)
     return create_draft(
         conn,
-        DraftIn(source="bot", category=body.kind, text=segments[0], card_type="record"),
+        DraftIn(
+            source="bot",
+            category=body.kind,
+            text=segments[0],
+            card_type="record",
+            content_key=key,
+        ),
         log_generated=True,
     )
+
+
+def _recent_content_keys(conn) -> set[str]:
+    rows = conn.execute(
+        sa.select(drafts.c.content_key).where(drafts.c.content_key.is_not(None))
+    ).all()
+    return {r.content_key for r in rows}
 
 
 def _gemini_key() -> str:
@@ -132,3 +155,22 @@ def generate_llm(body: GenerateLlmIn, conn=Depends(get_conn)) -> DraftOut:
         ),
         log_generated=True,
     )
+
+
+@router.post("/generate/recap", response_model=DraftOut, status_code=201)
+def generate_recap(body: GenerateRecapIn, conn=Depends(get_conn)) -> DraftOut:
+    text = get_match_recap_tweet(body.team_a, body.team_b)
+    return create_draft(
+        conn,
+        DraftIn(source="bot", category="recap", text=text),
+        log_generated=True,
+    )
+
+
+@router.get("/teams", response_model=list[str])
+def list_teams(conn=Depends(get_conn)) -> list[str]:
+    names: set[str] = set()
+    names.update(r[0] for r in conn.execute(sa.select(team_matches.c.team).distinct()))
+    names.update(r[0] for r in conn.execute(sa.select(fixtures.c.team_a).distinct()))
+    names.update(r[0] for r in conn.execute(sa.select(fixtures.c.team_b).distinct()))
+    return sorted(n for n in names if n)

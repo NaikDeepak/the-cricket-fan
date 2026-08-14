@@ -2,6 +2,87 @@
 import { useEffect, useState } from "react";
 import { type Analytics, composerApi } from "@/lib/composerApi";
 
+const RADIUS = 54;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+function AccuracyRing({ pct }: { pct: number }) {
+  const offset = CIRCUMFERENCE * (1 - pct / 100);
+  return (
+    <svg
+      width={140}
+      height={140}
+      viewBox="0 0 140 140"
+      role="img"
+      aria-label={`${pct}% prediction accuracy`}
+    >
+      <circle
+        cx={70}
+        cy={70}
+        r={RADIUS}
+        fill="none"
+        stroke="var(--border)"
+        strokeWidth={10}
+      />
+      <circle
+        cx={70}
+        cy={70}
+        r={RADIUS}
+        fill="none"
+        stroke="var(--wire-red)"
+        strokeWidth={10}
+        strokeLinecap="round"
+        strokeDasharray={CIRCUMFERENCE}
+        strokeDashoffset={offset}
+        transform="rotate(-90 70 70)"
+        style={{
+          transition: "stroke-dashoffset var(--duration-standard) var(--ease-out-quart)",
+        }}
+      />
+      <text
+        x={70}
+        y={70}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fill="var(--fg)"
+        fontFamily="var(--font-oswald), sans-serif"
+        fontSize={30}
+        fontWeight={700}
+      >
+        {pct}%
+      </text>
+    </svg>
+  );
+}
+
+function StatTile({ label, value, detail }: { label: string; value: number; detail: string }) {
+  return (
+    <div
+      className="card-container"
+      style={{
+        padding: "var(--space-lg)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-xs)",
+      }}
+    >
+      <span className="text-micro" style={{ margin: 0 }}>
+        {label}
+      </span>
+      <div
+        style={{
+          fontSize: 40,
+          fontWeight: 700,
+          fontVariantNumeric: "tabular-nums",
+          color: "var(--fg)",
+        }}
+      >
+        {value}
+      </div>
+      <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>{detail}</p>
+    </div>
+  );
+}
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -17,142 +98,114 @@ export default function AnalyticsPage() {
   }, []);
 
   if (loading) {
-    return <p className="text-micro">Loading analytics…</p>;
+    return <p style={{ color: "var(--muted)", fontSize: 14 }}>Loading analytics…</p>;
   }
 
   if (!data) {
-    return <p className="text-micro">Failed to load analytics.</p>;
+    return (
+      <p style={{ color: "var(--wire-red)", fontSize: 14 }}>
+        Failed to load analytics.
+      </p>
+    );
   }
 
   const { correct, total } = data.prediction_record;
   const accuracyPct = total > 0 ? Math.round((correct / total) * 100) : 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <h1 className="text-micro" style={{ fontSize: 18 }}>
-        COMPOSER & PREDICTION ANALYTICS
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: "var(--space-xl)" }}
+    >
+      <h1 className="text-tool-headline" style={{ margin: 0 }}>
+        Composer &amp; Prediction Analytics
       </h1>
 
-      {/* Grid of stat cards */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: 16,
+          gap: "var(--space-md)",
         }}
       >
-        {/* Prediction Accuracy Card */}
         <div
           className="card-container"
           style={{
-            padding: 20,
-            background: "linear-gradient(135deg, #09090b 0%, #1e1b4b 100%)",
+            padding: "var(--space-lg)",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-lg)",
           }}
         >
-          <span className="text-micro" style={{ color: "#a5b4fc" }}>
-            PREDICTION ACCURACY
-          </span>
-          <div
-            style={{
-              fontSize: 48,
-              fontWeight: 800,
-              color: "#38bdf8",
-              margin: "12px 0 4px 0",
-            }}
-          >
-            {accuracyPct}%
+          <AccuracyRing pct={accuracyPct} />
+          <div>
+            <span className="text-micro" style={{ margin: 0 }}>
+              Prediction accuracy
+            </span>
+            <p style={{ margin: "var(--space-xs) 0 0 0", fontSize: 13, color: "var(--muted)" }}>
+              {correct} correct / {total} total predictions
+            </p>
           </div>
-          <p className="text-micro" style={{ color: "var(--muted)", margin: 0 }}>
-            {correct} correct / {total} total predictions
-          </p>
         </div>
 
-        {/* Funnel: Generated */}
-        <div className="card-container" style={{ padding: 20 }}>
-          <span className="text-micro" style={{ color: "var(--muted)" }}>
-            DRAFTS GENERATED
-          </span>
-          <div
-            style={{
-              fontSize: 48,
-              fontWeight: 800,
-              margin: "12px 0 4px 0",
-            }}
-          >
-            {data.funnel.generated ?? 0}
-          </div>
-          <p className="text-micro" style={{ color: "var(--muted)", margin: 0 }}>
-            {data.funnel.generated ?? 0} generated
-          </p>
-        </div>
-
-        {/* Funnel: Copied */}
-        <div className="card-container" style={{ padding: 20 }}>
-          <span className="text-micro" style={{ color: "var(--muted)" }}>
-            DRAFTS COPIED
-          </span>
-          <div
-            style={{
-              fontSize: 48,
-              fontWeight: 800,
-              color: "#f59e0b",
-              margin: "12px 0 4px 0",
-            }}
-          >
-            {data.funnel.copied ?? 0}
-          </div>
-          <p className="text-micro" style={{ color: "var(--muted)", margin: 0 }}>
-            {data.funnel.copied ?? 0} copied
-          </p>
-        </div>
-
-        {/* Funnel: Posted */}
-        <div className="card-container" style={{ padding: 20 }}>
-          <span className="text-micro" style={{ color: "var(--muted)" }}>
-            DRAFTS POSTED
-          </span>
-          <div
-            style={{
-              fontSize: 48,
-              fontWeight: 800,
-              color: "#22c55e",
-              margin: "12px 0 4px 0",
-            }}
-          >
-            {data.funnel.posted ?? 0}
-          </div>
-          <p className="text-micro" style={{ color: "var(--muted)", margin: 0 }}>
-            {data.funnel.posted ?? 0} posted
-          </p>
-        </div>
+        <StatTile
+          label="Drafts generated"
+          value={data.funnel.generated ?? 0}
+          detail={`${data.funnel.generated ?? 0} generated`}
+        />
+        <StatTile
+          label="Drafts copied"
+          value={data.funnel.copied ?? 0}
+          detail={`${data.funnel.copied ?? 0} copied`}
+        />
+        <StatTile
+          label="Drafts posted"
+          value={data.funnel.posted ?? 0}
+          detail={`${data.funnel.posted ?? 0} posted`}
+        />
       </div>
 
-      {/* Breakdown by Category */}
-      <div className="card-container" style={{ padding: 20 }}>
-        <h2 className="text-micro" style={{ marginBottom: 16 }}>
-          DRAFTS BY CATEGORY
+      <div
+        className="card-container"
+        style={{ padding: "var(--space-lg)" }}
+      >
+        <h2 className="text-title" style={{ margin: "0 0 var(--space-md) 0" }}>
+          Drafts by category
         </h2>
         {data.by_category.length === 0 ? (
-          <p className="text-micro" style={{ color: "var(--muted)" }}>
+          <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>
             No drafts created yet.
           </p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-sm)",
+            }}
+          >
             {data.by_category.map((cat, idx) => (
               <div
                 key={idx}
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  padding: "8px 12px",
-                  background: "var(--surface)",
-                  borderRadius: 6,
+                  alignItems: "center",
+                  padding: "var(--space-sm) var(--space-md)",
+                  background: "var(--bg)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 4,
                 }}
               >
-                <span className="text-micro">
-                  {cat.category ? cat.category.toUpperCase() : "UNASSIGNED"}
+                <span className="ds-chip ds-chip-category">
+                  {cat.category ?? "unassigned"}
                 </span>
-                <span className="text-micro" style={{ fontWeight: 700 }}>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
                   {cat.drafts} drafts
                 </span>
               </div>

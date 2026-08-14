@@ -16,12 +16,16 @@ export type Draft = {
 };
 
 export type ContentBankItem = {
+  id: number;
   content_key: string;
   category: string;
   format: string;
   segments: string[];
   source: string;
-  used: boolean;
+  last_used_days: number | null;
+  event_month_day: string | null;
+  on_this_day: boolean;
+  is_published: boolean;
 };
 
 export type Analytics = {
@@ -29,6 +33,32 @@ export type Analytics = {
   event_totals: Record<string, number>;
   by_category: { category: string | null; drafts: number }[];
   prediction_record: { correct: number; total: number };
+};
+
+export type Prediction = {
+  id: number;
+  fixture_id: number;
+  team_a: string;
+  team_b: string;
+  venue: string;
+  league: string;
+  start_time: string;
+  prob_team_a: number;
+  reasons: string[];
+  outcome: "pending" | "correct" | "incorrect" | "void";
+  created_at: string;
+};
+
+export type Post = {
+  id: number;
+  fixture_id: number | null;
+  post_type: "prediction" | "trivia" | "result" | "standalone_trivia";
+  state: "scheduled" | "posted" | "partial" | "failed" | "abandoned";
+  text: string | null;
+  tweet_count: number;
+  posted_at: string | null;
+  team_a: string | null;
+  team_b: string | null;
 };
 
 export type DraftIn = {
@@ -80,6 +110,7 @@ export const composerApi = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+  deleteDraft: (id: number) => req<void>(`/drafts/${id}`, { method: "DELETE" }),
   logEvent: (id: number, body: EventIn) =>
     req<void>(`/drafts/${id}/event`, {
       method: "POST",
@@ -89,6 +120,11 @@ export const composerApi = {
     req<ContentBankItem[]>(
       `/content-bank${category ? `?category=${encodeURIComponent(category)}` : ""}`
     ),
+  setBankPublished: (id: number, is_published: boolean) =>
+    req<ContentBankItem>(`/content-bank/${id}/publish`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_published }),
+    }),
   generateBot: (kind: string, fixtureId?: number) =>
     req<Draft>("/generate/bot", {
       method: "POST",
@@ -99,5 +135,19 @@ export const composerApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  generateRecap: (team_a: string, team_b: string) =>
+    req<Draft>("/generate/recap", {
+      method: "POST",
+      body: JSON.stringify({ team_a, team_b }),
+    }),
+  teams: () => req<string[]>("/teams"),
   analytics: () => req<Analytics>("/analytics"),
+  predictions: (q: { outcome?: string } = {}) => {
+    const p = new URLSearchParams(q as Record<string, string>).toString();
+    return req<Prediction[]>(`/predictions${p ? `?${p}` : ""}`);
+  },
+  posts: (q: { state?: string; post_type?: string } = {}) => {
+    const p = new URLSearchParams(q as Record<string, string>).toString();
+    return req<Post[]>(`/posts${p ? `?${p}` : ""}`);
+  },
 };

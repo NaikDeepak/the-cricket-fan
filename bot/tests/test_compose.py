@@ -2,7 +2,13 @@ from datetime import date
 
 import pandas as pd
 
-from bot.compose import FEATURE_PHRASES, prediction_post, result_post, trivia_post
+from bot.compose import (
+    FEATURE_PHRASES,
+    format_post_match_news_tweet,
+    prediction_post,
+    result_post,
+    trivia_post,
+)
 from bot.features import FEATURE_NAMES
 
 BANNED = ["bet", "odds", "stake", "wager", "gamble"]
@@ -46,6 +52,41 @@ def test_prediction_post_length_and_content():
 def test_prediction_post_unknown_feature_falls_back():
     text = prediction_post("A", "B", 0.55, ["mystery_feature"], "IPL")
     assert len(text) <= 280  # falls back to generic phrase, no KeyError
+
+
+def test_prediction_post_long_content_keeps_branding_tag():
+    """Near the 280 limit, the branding tag must survive truncation, not get
+    sliced off along with the rest of the content (regression for blind
+    text[:277] truncation that cut the tag)."""
+    text = prediction_post(
+        "Royal Challengers Bangalore",
+        "Kolkata Knight Riders",
+        0.64,
+        [
+            "form5_a",
+            "form5_b",
+            "form10_a",
+            "form10_b",
+            "h2h_a_rate",
+            "venue_a_rate",
+            "venue_b_rate",
+            "venue_avg_1st_innings",
+            "venue_chase_win_rate",
+            "bat_rr_a",
+            "bat_rr_b",
+            "bowl_econ_a",
+            "bowl_econ_b",
+            "bat_pp_rr_a",
+            "bat_pp_rr_b",
+            "bowl_death_econ_a",
+            "bowl_death_econ_b",
+            "home_a",
+            "home_b",
+        ],
+        "Indian Premier League",
+    )
+    assert "#TheCricketFan" in text
+    assert len(text) <= 280
 
 
 def test_trivia_h2h_when_enough_meetings():
@@ -101,3 +142,49 @@ def test_result_post_correct_and_wrong():
     assert "23/31" in right and len(right) <= 280
     assert "23/31" in wrong and len(wrong) <= 280
     assert right != wrong
+
+
+def test_post_match_news_tweet_never_truncates_url_mid_string():
+    """Regression: Google News RSS links are long redirect URLs (200-500
+    chars). Truncating from the tail to fit 280 chars can slice straight
+    through the URL, producing a broken link. The URL must either appear in
+    full, or the "Read: {url}" clause must be dropped entirely."""
+    long_url = (
+        "https://news.google.com/rss/articles/"
+        "CBMiqAFBVV95cUxNc29tZVZlcnlMb25nQmFzZTY0RW5jb2RlZFN0cmluZ1RoYXRSZXByZXNlbnRz"
+        "QVJlYWxHb29nbGVOZXdzUlNTQXJ0aWNsZUxpbmtXaXRoTW9yZVRoYW4yMDBDaGFyYWN0ZXJzSW5J"
+        "dFRvU2ltdWxhdGVBUmVhbGlzdGljUmVkaXJlY3RVUkxUaGF0SXNWZXJ5TG9uZ0FuZFVudHJ1bmNh"
+        "dGFibGVBbmRIYXNFbm91Z2hDaGFyYWN0ZXJzVG9FeGNlZWRUaHJlZUh1bmRyZWRUb3RhbA"
+        "?oc=5"
+    )
+    assert len(long_url) > 300
+
+    tweet = format_post_match_news_tweet(
+        "Chennai Super Kings",
+        "Mumbai Indians",
+        "Dhoni Magic Seals Last-Ball Thriller",
+        "A last-ball six from the finisher sealed a stunning chase after a "
+        "roller-coaster middle overs collapse threatened to derail the innings.",
+        source_url=long_url,
+    )
+
+    assert len(tweet) <= 280
+    assert "#TheCricketFan" in tweet
+    if "Read:" in tweet:
+        # URL must be complete, never a partial/broken fragment.
+        assert f"Read: {long_url}" in tweet
+    else:
+        assert long_url not in tweet
+
+
+def test_post_match_news_tweet_short_url_included_as_before():
+    tweet = format_post_match_news_tweet(
+        "CSK",
+        "MI",
+        "CSK triumph over MI in IPL classic",
+        "Dhoni hits last-ball six to secure dramatic victory for Chennai Super Kings.",
+        source_url="https://example.com/csk-mi",
+    )
+    assert len(tweet) <= 280
+    assert "Read: https://example.com/csk-mi" in tweet
+    assert "#TheCricketFan" in tweet

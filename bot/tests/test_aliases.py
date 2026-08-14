@@ -94,3 +94,12 @@ def test_seed_idempotent(conn):
     seed_aliases(conn)
     seed_aliases(conn)  # second run must not raise IntegrityError
     assert resolve(conn, "team", "RCB") == "Royal Challengers Bengaluru"
+
+
+def test_seed_resolves_international_teams_and_venues(conn):
+    seed_aliases(conn)
+    assert resolve(conn, "team", "IND") == "India"
+    assert resolve(conn, "team", "AUS") == "Australia"
+    assert resolve(conn, "team", "PAK") == "Pakistan"
+    assert resolve(conn, "venue", "wankhede stadium") == "Wankhede Stadium, Mumbai"
+

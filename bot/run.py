@@ -196,7 +196,7 @@ def _has_upcoming_fixture_within_24h(conn, now: datetime) -> bool:
             if r.start_time.tzinfo
             else r.start_time.replace(tzinfo=timezone.utc)
         )
-        if now <= start <= now + timedelta(hours=24):
+        if start.date() == now.date() or (now - timedelta(hours=2) <= start <= now + timedelta(hours=24)):
             return True
     return False
 
@@ -374,6 +374,37 @@ def tick(
                 frow.team_a, frow.team_b, pred.prob_team_a, res.winner, correct, total
             )
             _try_post(conn, poster, prow, text, now)
+
+
+
+        # Post-Match News Recap Tweet
+        news_post_existing = conn.execute(
+            sa.select(posts.c.id).where(
+                posts.c.fixture_id == frow.id, posts.c.post_type == "post_match_news"
+            )
+        ).first()
+        if not news_post_existing:
+            conn.execute(
+                posts.insert().values(
+                    fixture_id=frow.id,
+                    post_type="post_match_news",
+                    state="scheduled",
+                    attempts=0,
+                )
+            )
+        news_prow = conn.execute(
+            sa.select(posts).where(
+                posts.c.fixture_id == frow.id,
+                posts.c.post_type == "post_match_news",
+                posts.c.state.in_(["scheduled", "failed"]),
+            )
+        ).first()
+        if news_prow:
+            from .news_fetcher import get_match_recap_tweet
+
+            news_text = get_match_recap_tweet(frow.team_a, frow.team_b)
+            _try_post(conn, poster, news_prow, news_text, now)
+
 
     # Standalone trivia (quiet-day filler, no fixture involved)
     if (force_trivia or _standalone_trivia_due(conn, now)) and not (
