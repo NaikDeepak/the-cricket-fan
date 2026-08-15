@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -258,27 +258,20 @@ def run_backtest_endpoint(
 @router.get("/predictions/today", response_model=list[TodayMatchOut])
 def get_today_matches(conn=Depends(get_conn)) -> list[TodayMatchOut]:
     """Return today's fixtures joined with any existing model predictions."""
-    from datetime import date
+    today_dt = datetime.now(timezone.utc)
+    start_of_today = today_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_tomorrow = start_of_today + timedelta(days=2)
 
-    today = date.today()
-
-    # All fixtures for today (UTC start_time)
     fixture_rows = conn.execute(
         sa.select(fixtures)
-        .where(sa.func.date(fixtures.c.start_time) == today.isoformat())
+        .where(
+            sa.and_(
+                fixtures.c.start_time >= start_of_today,
+                fixtures.c.start_time < end_of_tomorrow,
+            )
+        )
         .order_by(fixtures.c.start_time)
     ).all()
-
-    if not fixture_rows:
-        # Also look at tomorrow for pre-match purposes if nothing today
-        from datetime import timedelta
-
-        tomorrow = today + timedelta(days=1)
-        fixture_rows = conn.execute(
-            sa.select(fixtures)
-            .where(sa.func.date(fixtures.c.start_time) == tomorrow.isoformat())
-            .order_by(fixtures.c.start_time)
-        ).all()
 
     result: list[TodayMatchOut] = []
     for f in fixture_rows:

@@ -18,7 +18,7 @@ def generate_content(prompt: str, category: str | None, api_key: str) -> dict:
     import google.generativeai as genai
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash")
     full = f"{_SCHEMA_HINT}\nCategory: {category or 'anecdote'}\nRequest: {prompt}"
     resp = model.generate_content(
         full, generation_config={"response_mime_type": "application/json"}
