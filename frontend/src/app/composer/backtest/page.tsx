@@ -681,6 +681,32 @@ export default function BacktestPage() {
             />
           </div>
 
+          {/* ── Upcoming Fixtures / Future Predictions ─────────────────── */}
+          {result.upcoming_games && result.upcoming_games.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)", marginTop: "var(--space-md)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-xs)" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "#6366f1",
+                    boxShadow: "0 0 8px #6366f1",
+                  }}
+                />
+                <span className="text-micro" style={{ color: "#6366f1", fontWeight: 800 }}>
+                  UPCOMING FIXTURES & MODEL PREDICTIONS ({result.upcoming_games.length})
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
+                {result.upcoming_games.map((game, i) => (
+                  <MatchBacktestCard key={`upcoming-${game.date}-${game.team_a}-${game.team_b}-${i}`} game={game} />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ── Matches List ────────────────────────────────────────────── */}
           {filteredGames.length === 0 ? (
             <div
@@ -754,6 +780,7 @@ export default function BacktestPage() {
 function MatchBacktestCard({ game }: { game: BacktestGame }) {
   const probA = Math.round(game.prob_team_a * 100);
   const probB = 100 - probA;
+  const isUpcoming = game.status === "upcoming" || game.actual_winner === null || game.actual_winner === undefined;
 
   return (
     <div
@@ -765,6 +792,7 @@ function MatchBacktestCard({ game }: { game: BacktestGame }) {
         display: "flex",
         flexDirection: "column",
         gap: "var(--space-sm)",
+        border: isUpcoming ? "1px solid rgba(99, 102, 241, 0.3)" : undefined,
       }}
     >
       {/* Header: Date + Venue + Status Pill */}
@@ -787,12 +815,28 @@ function MatchBacktestCard({ game }: { game: BacktestGame }) {
           </span>
         </div>
 
-        <span
-          className={`status-pill ${game.correct ? "status-pill--correct" : "status-pill--incorrect"}`}
-          style={{ fontSize: 12, padding: "2px 10px", fontWeight: 700 }}
-        >
-          {game.correct ? "Hit" : "Miss"}
-        </span>
+        {isUpcoming ? (
+          <span
+            style={{
+              fontSize: 11,
+              padding: "3px 10px",
+              fontWeight: 700,
+              borderRadius: 999,
+              background: "rgba(99, 102, 241, 0.12)",
+              color: "#6366f1",
+              border: "1px solid rgba(99, 102, 241, 0.25)",
+            }}
+          >
+            UPCOMING / PREDICTED
+          </span>
+        ) : (
+          <span
+            className={`status-pill ${game.correct ? "status-pill--correct" : "status-pill--incorrect"}`}
+            style={{ fontSize: 12, padding: "2px 10px", fontWeight: 700 }}
+          >
+            {game.correct ? "Hit" : "Miss"}
+          </span>
+        )}
       </div>
 
       {/* Matchup Teams & Probability Bar */}
@@ -812,7 +856,7 @@ function MatchBacktestCard({ game }: { game: BacktestGame }) {
             <span
               style={{
                 fontSize: "var(--text-sm)",
-                fontWeight: game.actual_winner === game.team_a ? 800 : 500,
+                fontWeight: game.actual_winner === game.team_a || (!game.actual_winner && game.predicted_winner === game.team_a) ? 800 : 500,
                 color: "var(--fg)",
               }}
             >
@@ -837,16 +881,22 @@ function MatchBacktestCard({ game }: { game: BacktestGame }) {
           <div style={{ fontSize: "var(--text-xs)", color: "var(--fg-muted)" }}>
             Predicted: <strong style={{ color: "var(--fg)" }}>{game.predicted_winner}</strong>
           </div>
-          <div style={{ fontSize: "var(--text-xs)", color: "var(--fg-muted)" }}>
-            Winner:{" "}
-            <strong
-              style={{
-                color: game.correct ? "var(--success)" : "var(--wire-red)",
-              }}
-            >
-              {game.actual_winner}
-            </strong>
-          </div>
+          {isUpcoming ? (
+            <div style={{ fontSize: "var(--text-xs)", color: "#6366f1", fontWeight: 600 }}>
+              Match Scheduled / Pending
+            </div>
+          ) : (
+            <div style={{ fontSize: "var(--text-xs)", color: "var(--fg-muted)" }}>
+              Winner:{" "}
+              <strong
+                style={{
+                  color: game.correct ? "var(--success)" : "var(--wire-red)",
+                }}
+              >
+                {game.actual_winner}
+              </strong>
+            </div>
+          )}
         </div>
 
         {/* Team B */}

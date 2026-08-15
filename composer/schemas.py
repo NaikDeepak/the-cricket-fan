@@ -234,8 +234,9 @@ class BacktestGame(BaseModel):
     venue: str
     prob_team_a: float
     predicted_winner: str
-    actual_winner: str
-    correct: bool
+    actual_winner: str | None = None
+    correct: bool | None = None
+    status: str = "completed"  # 'completed' | 'upcoming'
 
 
 class BacktestResult(BaseModel):
@@ -247,6 +248,7 @@ class BacktestResult(BaseModel):
     elo_accuracy_pct: int
     home_accuracy_pct: int
     games: list[BacktestGame]
+    upcoming_games: list[BacktestGame] = []
 
 
 class PostOut(BaseModel):

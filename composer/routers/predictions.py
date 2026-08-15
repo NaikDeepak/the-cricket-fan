@@ -251,7 +251,7 @@ def run_backtest_endpoint(
     from bot.run import _load_team_matches
 
     df = _load_team_matches(conn)
-    res = run_backtest(df, artifact, league=league, season=season)
+    res = run_backtest(df, artifact, league=league, season=season, conn=conn)
     return BacktestResult(**res)
 
 

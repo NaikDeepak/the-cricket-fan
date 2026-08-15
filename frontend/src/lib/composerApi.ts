@@ -184,8 +184,9 @@ export type BacktestGame = {
   venue: string;
   prob_team_a: number;
   predicted_winner: string;
-  actual_winner: string;
-  correct: boolean;
+  actual_winner?: string | null;
+  correct?: boolean | null;
+  status?: "completed" | "upcoming";
 };
 
 export type BacktestResult = {
@@ -197,6 +198,7 @@ export type BacktestResult = {
   elo_accuracy_pct: number;
   home_accuracy_pct: number;
   games: BacktestGame[];
+  upcoming_games?: BacktestGame[];
 };
 
 export type MatchInput = {
