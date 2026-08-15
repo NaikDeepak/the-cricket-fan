@@ -107,6 +107,8 @@ SEED: list[tuple[str, str, str]] = [
     ("venue", "arun jaitley stadium, delhi", "Arun Jaitley Stadium, Delhi"),
     ("venue", "ma chidambaram stadium", "MA Chidambaram Stadium, Chepauk, Chennai"),
     ("venue", "narendra modi stadium", "Narendra Modi Stadium, Ahmedabad"),
+    # CricAPI prefixes the current sponsor name; Cricsheet doesn't.
+    ("venue", "emirates old trafford, manchester", "Old Trafford, Manchester"),
 ]
 
 
