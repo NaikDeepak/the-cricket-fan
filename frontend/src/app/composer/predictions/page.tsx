@@ -9,10 +9,11 @@ import {
   type TodayMatch,
 } from "@/lib/composerApi";
 import { getTeamTheme } from "@/lib/teamColors";
+import { teamInitials, teamLogoPath } from "@/lib/teamLogo";
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-const RADIUS = 48;
+const RADIUS = 54;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -22,7 +23,7 @@ function pct(n: number) {
 }
 
 function fmtTime(iso: string | null) {
-  if (!iso) return "TBD";
+  if (!iso) return "Time TBD";
   const d = new Date(iso);
   return d.toLocaleTimeString("en-IN", {
     hour: "2-digit",
@@ -53,192 +54,238 @@ function groupByDate(predictions: Prediction[]): Record<string, Prediction[]> {
   return groups;
 }
 
-// ─── Accuracy Ring ─────────────────────────────────────────────────────────
+const OUTCOME_LABEL: Record<string, string> = {
+  correct: "Hit",
+  incorrect: "Miss",
+  pending: "Pending",
+  void: "Void",
+};
 
-function AccuracyRing({ stats }: { stats: PredictionAccuracyStats }) {
-  const dash =
-    stats.evaluated > 0 ? (stats.accuracy_pct / 100) * CIRCUMFERENCE : 0;
-  const gap = CIRCUMFERENCE - dash;
-  const streakIcon =
-    stats.streak_type === "win"
-      ? "🔥"
-      : stats.streak_type === "loss"
-        ? "❄️"
-        : "";
+// ─── Small shared bits ──────────────────────────────────────────────────────
+
+function StatusPill({ outcome }: { outcome: "correct" | "incorrect" | "pending" | "void" }) {
+  return <span className={`status-pill status-pill--${outcome}`}>{OUTCOME_LABEL[outcome]}</span>;
+}
+
+function Crest({ team, size = 28 }: { team: string; size?: number }) {
+  const logo = teamLogoPath(team);
+  if (logo) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={logo} alt="" className="team-crest" style={{ width: size, height: size }} />;
+  }
+  const theme = getTeamTheme(team);
+  return (
+    <span
+      className="team-crest-fallback"
+      style={{ width: size, height: size, background: theme.primary }}
+      aria-hidden
+    >
+      {teamInitials(team)}
+    </span>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      style={{
+        transform: open ? "rotate(180deg)" : "rotate(0deg)",
+        transition: "transform var(--duration-fast) var(--ease-apple)",
+        flexShrink: 0,
+      }}
+      aria-hidden
+    >
+      <path d="M2.5 4.5L6 8L9.5 4.5" stroke="var(--fg-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// ─── Accuracy summary ───────────────────────────────────────────────────────
+
+function AccuracySummary({ stats }: { stats: PredictionAccuracyStats | null }) {
+  if (!stats) {
+    return (
+      <div className="card-container" style={{ padding: "var(--space-lg)", display: "flex", gap: "var(--space-lg)" }}>
+        <div className="ds-skeleton" style={{ width: 128, height: 128, minHeight: 0, borderRadius: "50%" }} />
+        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "var(--space-sm)" }}>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="ds-skeleton" style={{ minHeight: 64, borderRadius: "16px" }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const offset = stats.evaluated > 0 ? CIRCUMFERENCE * (1 - stats.accuracy_pct / 100) : CIRCUMFERENCE;
+  const streakLabel =
+    stats.streak > 1
+      ? `${stats.streak} ${stats.streak_type === "win" ? "correct" : "incorrect"} in a row`
+      : null;
 
   return (
-    <div className="accuracy-ring-card">
-      <div className="ring-wrap">
-        <svg width="120" height="120" viewBox="0 0 120 120">
+    <div
+      className="card-container"
+      style={{
+        padding: "var(--space-lg)",
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-xl)",
+        flexWrap: "wrap",
+      }}
+    >
+      <div style={{ position: "relative", width: 128, height: 128, flexShrink: 0 }}>
+        <svg width={128} height={128} viewBox="0 0 128 128" role="img" aria-label={`${stats.accuracy_pct}% prediction accuracy`}>
+          <circle cx={64} cy={64} r={RADIUS} fill="none" stroke="var(--border)" strokeWidth={10} />
           <circle
-            cx="60"
-            cy="60"
+            cx={64}
+            cy={64}
             r={RADIUS}
             fill="none"
-            stroke="rgba(255,255,255,0.08)"
-            strokeWidth="10"
-          />
-          <circle
-            cx="60"
-            cy="60"
-            r={RADIUS}
-            fill="none"
-            stroke={
-              stats.accuracy_pct >= 60
-                ? "#22c55e"
-                : stats.accuracy_pct >= 45
-                  ? "#f59e0b"
-                  : "#ef4444"
-            }
-            strokeWidth="10"
+            stroke="var(--wire-red)"
+            strokeWidth={10}
             strokeLinecap="round"
-            strokeDasharray={`${dash} ${gap}`}
-            strokeDashoffset={CIRCUMFERENCE / 4}
-            style={{ transition: "stroke-dasharray 0.8s ease" }}
+            strokeDasharray={CIRCUMFERENCE}
+            strokeDashoffset={offset}
+            transform="rotate(-90 64 64)"
+            style={{ transition: `stroke-dashoffset var(--duration-slow) var(--ease-apple)` }}
           />
         </svg>
-        <div className="ring-inner">
-          <span className="ring-pct">{stats.accuracy_pct}%</span>
-          <span className="ring-label">accuracy</span>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-oswald), sans-serif",
+              fontSize: 28,
+              fontWeight: 700,
+              color: "var(--fg)",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {stats.accuracy_pct}%
+          </span>
+          <span className="text-micro" style={{ margin: 0 }}>Accuracy</span>
         </div>
       </div>
-      <div className="accuracy-stats">
-        <div className="acc-stat correct">
-          <span className="acc-val">{stats.correct}</span>
-          <span className="acc-key">Correct</span>
+
+      <div style={{ flex: 1, minWidth: 260, display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))", gap: "var(--space-sm)" }}>
+          <div className="ds-metric-pill">
+            <span style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{stats.correct}</span>
+            <span className="text-micro" style={{ margin: 0 }}>Correct</span>
+          </div>
+          <div className="ds-metric-pill">
+            <span style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{stats.incorrect}</span>
+            <span className="text-micro" style={{ margin: 0 }}>Incorrect</span>
+          </div>
+          <div className="ds-metric-pill">
+            <span style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{stats.pending}</span>
+            <span className="text-micro" style={{ margin: 0 }}>Pending</span>
+          </div>
+          <div className="ds-metric-pill">
+            <span style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{stats.void}</span>
+            <span className="text-micro" style={{ margin: 0 }}>Void</span>
+          </div>
         </div>
-        <div className="acc-stat incorrect">
-          <span className="acc-val">{stats.incorrect}</span>
-          <span className="acc-key">Wrong</span>
-        </div>
-        <div className="acc-stat pending">
-          <span className="acc-val">{stats.pending}</span>
-          <span className="acc-key">Pending</span>
-        </div>
-        <div className="acc-stat void">
-          <span className="acc-val">{stats.void}</span>
-          <span className="acc-key">Void</span>
-        </div>
+        {streakLabel && (
+          <span
+            className={`status-pill status-pill--${stats.streak_type === "win" ? "correct" : "incorrect"}`}
+            style={{ alignSelf: "flex-start" }}
+          >
+            {streakLabel}
+          </span>
+        )}
       </div>
-      {stats.streak > 1 && (
-        <div className="streak-badge">
-          {streakIcon} {stats.streak} in a row
-        </div>
-      )}
     </div>
   );
 }
 
 // ─── Today Match Card ───────────────────────────────────────────────────────
 
-function TodayCard({
-  match,
-  onRunModel,
-}: {
-  match: TodayMatch;
-  onRunModel: () => void;
-}) {
+function MatchCard({ match, onRunModel, running }: { match: TodayMatch; onRunModel: () => void; running: boolean }) {
   const themeA = getTeamTheme(match.team_a);
   const themeB = getTeamTheme(match.team_b);
   const pred = match.prediction;
 
   const probA = pred ? pred.prob_team_a : 0.5;
   const probB = 1 - probA;
-  const predictedWinner = pred ? pred.predicted_winner : null;
-  const outcome = pred?.outcome ?? "pending";
-  const isSettled =
-    outcome === "correct" || outcome === "incorrect" || outcome === "void";
+  const outcome = (pred?.outcome ?? "pending") as "correct" | "incorrect" | "pending" | "void";
+  const isSettled = outcome === "correct" || outcome === "incorrect" || outcome === "void";
 
   return (
-    <div className={`today-card outcome-${outcome}`}>
-      <div className="today-card-header">
-        <span className="today-league">{match.league}</span>
-        <span className="today-time">🕐 {fmtTime(match.start_time)}</span>
-        <span className="today-venue">📍 {match.venue}</span>
+    <div className="card-container match-card">
+      <div className="match-card-header">
+        <span className="ds-chip ds-chip-category">{match.league}</span>
+        <span className="text-caption" style={{ textAlign: "right" }}>
+          {fmtTime(match.start_time)} &middot; {match.venue}
+        </span>
       </div>
 
-      <div className="today-teams">
-        <div className="today-team">
-          <div className="team-dot" style={{ background: themeA.primary }} />
-          <span className="team-name">{match.team_a}</span>
-          {match.winner === match.team_a && (
-            <span className="winner-crown">👑</span>
-          )}
+      <div className="match-teams-row">
+        <div className="team-slot">
+          <Crest team={match.team_a} />
+          <span className="team-name-sm">{match.team_a}</span>
         </div>
-        <div className="vs-chip">VS</div>
-        <div className="today-team today-team-right">
-          {match.winner === match.team_b && (
-            <span className="winner-crown">👑</span>
-          )}
-          <span className="team-name">{match.team_b}</span>
-          <div className="team-dot" style={{ background: themeB.primary }} />
+        <span className="vs-divider">VS</span>
+        <div className="team-slot team-slot--end">
+          <Crest team={match.team_b} />
+          <span className="team-name-sm">{match.team_b}</span>
         </div>
       </div>
 
       {pred ? (
-        <div className="prob-section">
-          <div className="prob-bar-wrap">
-            <div
-              className="prob-bar-fill"
-              style={{ width: pct(probA * 100), background: themeA.primary }}
-            />
-            <div
-              className="prob-bar-fill"
-              style={{ width: pct(probB * 100), background: themeB.primary }}
-            />
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xs)" }}>
+          <div className="prob-track">
+            <div className="prob-fill" style={{ width: pct(probA * 100), background: themeA.primary }} />
+            <div className="prob-fill" style={{ width: pct(probB * 100), background: themeB.primary }} />
           </div>
-          <div className="prob-labels">
-            <span className="prob-val" style={{ color: themeA.primary }}>
-              {pct(probA * 100)}
-            </span>
-            <span className="prob-pick">
-              Model pick: <strong>{predictedWinner}</strong>
-            </span>
-            <span className="prob-val" style={{ color: themeB.primary }}>
-              {pct(probB * 100)}
-            </span>
+          <div className="prob-readout">
+            <span style={{ color: themeA.primary }}>{pct(probA * 100)}</span>
+            <span style={{ color: themeB.primary }}>{pct(probB * 100)}</span>
           </div>
+          <p className="text-caption" style={{ margin: 0 }}>
+            Model pick: <strong style={{ color: "var(--fg)" }}>{pred.predicted_winner}</strong>
+          </p>
           {pred.reasons.length > 0 && (
-            <div className="reasons">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
               {pred.reasons.slice(0, 2).map((r, i) => (
-                <span key={i} className="reason-chip">
-                  📊 {r.replace(/_/g, " ")}
+                <span key={i} className="ds-chip ds-chip-category" style={{ fontSize: 10 }}>
+                  {r.replace(/_/g, " ")}
                 </span>
               ))}
             </div>
           )}
         </div>
       ) : (
-        <div className="model-pending">
-          <span className="pending-chip">MODEL PENDING</span>
-          <button className="run-btn" onClick={onRunModel}>
-            ▶ Run Model
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-sm)" }}>
+          <span className="text-caption">Model hasn&apos;t run for this fixture yet.</span>
+          <button
+            className="ds-btn-primary"
+            style={{ padding: "8px 16px", fontSize: 12, flexShrink: 0 }}
+            onClick={onRunModel}
+            disabled={running}
+          >
+            {running ? "Running…" : "Run Model"}
           </button>
         </div>
       )}
 
       {isSettled && (
-        <div className={`outcome-overlay outcome-${outcome}`}>
-          {outcome === "correct" && (
-            <>
-              <span className="outcome-icon">✓</span>
-              <span>HIT</span>
-            </>
-          )}
-          {outcome === "incorrect" && (
-            <>
-              <span className="outcome-icon">✗</span>
-              <span>MISS</span>
-            </>
-          )}
-          {outcome === "void" && (
-            <>
-              <span className="outcome-icon">○</span>
-              <span>VOID</span>
-            </>
-          )}
+        <div className="match-card-footer">
+          <StatusPill outcome={outcome} />
           {match.winner && outcome !== "void" && (
-            <span className="outcome-winner">Winner: {match.winner}</span>
+            <span className="text-caption">Winner: {match.winner}</span>
           )}
         </div>
       )}
@@ -256,99 +303,77 @@ function PredictionRow({ p }: { p: Prediction }) {
   const probB = 1 - probA;
 
   return (
-    <div
-      className={`pred-row outcome-${p.outcome}`}
-      onClick={() => setExpanded(!expanded)}
-    >
-      <div className="pred-row-main">
-        <div className={`pred-badge badge-${p.outcome}`}>
-          {p.outcome === "correct" && "✓"}
-          {p.outcome === "incorrect" && "✗"}
-          {p.outcome === "pending" && "⏳"}
-          {p.outcome === "void" && "○"}
-        </div>
+    <div className="history-row" onClick={() => setExpanded((v) => !v)}>
+      <div className="history-row-main">
+        <StatusPill outcome={p.outcome} />
 
-        <div className="pred-teams">
-          <span className="pred-team-a" style={{ color: themeA.primary }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", flex: 1, minWidth: 220 }}>
+          <span className="text-caption" style={{ color: themeA.primary, fontWeight: 600 }}>
             {p.team_a}
           </span>
-          <div className="pred-mini-bar">
-            <div
-              style={{
-                width: pct(probA * 100),
-                background: themeA.primary,
-                height: "100%",
-                borderRadius: "2px 0 0 2px",
-              }}
-            />
-            <div
-              style={{
-                width: pct(probB * 100),
-                background: themeB.primary,
-                height: "100%",
-                borderRadius: "0 2px 2px 0",
-              }}
-            />
+          <div className="prob-track" style={{ flex: 1, minWidth: 60 }}>
+            <div className="prob-fill" style={{ width: pct(probA * 100), background: themeA.primary }} />
+            <div className="prob-fill" style={{ width: pct(probB * 100), background: themeB.primary }} />
           </div>
-          <span className="pred-team-b" style={{ color: themeB.primary }}>
+          <span className="text-caption" style={{ color: themeB.primary, fontWeight: 600 }}>
             {p.team_b}
           </span>
         </div>
 
-        <div className="pred-pick">
-          <span className="pick-label">Pick</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 110 }}>
+          <span className="text-micro" style={{ margin: 0 }}>Pick</span>
           <span
-            className="pick-val"
-            style={{ color: probA >= 0.5 ? themeA.primary : themeB.primary }}
+            className="text-caption"
+            style={{ fontWeight: 600, color: probA >= 0.5 ? themeA.primary : themeB.primary }}
           >
-            {p.predicted_winner} {pct(Math.max(probA, probB) * 100)}
+            {p.predicted_winner} &middot; {pct(Math.max(probA, probB) * 100)}
           </span>
         </div>
 
-        <div className="pred-actual">
+        <div style={{ minWidth: 90 }}>
           {p.actual_winner ? (
-            <span className="actual-val">{p.actual_winner}</span>
+            <span className="text-caption" style={{ fontWeight: 600 }}>{p.actual_winner}</span>
           ) : (
-            <span className="actual-pending">—</span>
+            <span className="text-caption">—</span>
           )}
         </div>
 
-        <div className="pred-league">{p.league}</div>
-        <span className="pred-expand">{expanded ? "▲" : "▼"}</span>
+        <span className="ds-chip ds-chip-category">{p.league}</span>
+        <span style={{ marginLeft: "auto" }}>
+          <ChevronIcon open={expanded} />
+        </span>
       </div>
 
       {expanded && (
-        <div className="pred-detail">
-          <div className="pred-detail-row">
-            <span className="detail-label">Venue</span>
-            <span className="detail-val">📍 {p.venue}</span>
+        <div className="history-row-detail" onClick={(e) => e.stopPropagation()}>
+          <div className="history-detail-item">
+            <span className="text-micro" style={{ width: 90, flexShrink: 0 }}>Venue</span>
+            <span className="text-caption">{p.venue}</span>
           </div>
           {p.start_time && (
-            <div className="pred-detail-row">
-              <span className="detail-label">Match time</span>
-              <span className="detail-val">
-                {new Date(p.start_time).toLocaleString("en-IN", {
-                  timeZone: "Asia/Kolkata",
-                })}
+            <div className="history-detail-item">
+              <span className="text-micro" style={{ width: 90, flexShrink: 0 }}>Match time</span>
+              <span className="text-caption">
+                {new Date(p.start_time).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
               </span>
             </div>
           )}
           {p.reasons.length > 0 && (
-            <div className="pred-detail-row">
-              <span className="detail-label">SHAP reasons</span>
-              <div className="reasons">
+            <div className="history-detail-item">
+              <span className="text-micro" style={{ width: 90, flexShrink: 0 }}>Reasons</span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {p.reasons.map((r, i) => (
-                  <span key={i} className="reason-chip">
-                    📊 {r.replace(/_/g, " ")}
+                  <span key={i} className="ds-chip ds-chip-category" style={{ fontSize: 10 }}>
+                    {r.replace(/_/g, " ")}
                   </span>
                 ))}
               </div>
             </div>
           )}
           {p.result_summary && (
-            <div className="pred-detail-row">
-              <span className="detail-label">Result</span>
-              <span className="detail-val">{p.result_summary}</span>
+            <div className="history-detail-item">
+              <span className="text-micro" style={{ width: 90, flexShrink: 0 }}>Result</span>
+              <span className="text-caption">{p.result_summary}</span>
             </div>
           )}
         </div>
@@ -454,484 +479,168 @@ export default function PredictionsPage() {
   const grouped = useMemo(() => groupByDate(filtered), [filtered]);
 
   return (
-    <div className="pred-page">
-      <style>{`
-        .pred-page {
-          min-height: 100vh;
-          background: #0a0a0f;
-          color: #e2e8f0;
-          font-family: "Inter", sans-serif;
-          padding: 0 0 80px;
-        }
-        .pred-topbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 28px 32px 0;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-        .pred-title {
-          font-size: 26px;
-          font-weight: 800;
-          letter-spacing: -0.5px;
-          background: linear-gradient(135deg, #a78bfa, #38bdf8);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-        .action-btns { display: flex; gap: 10px; flex-wrap: wrap; }
-        .action-btn {
-          padding: 8px 18px;
-          border-radius: 8px;
-          border: none;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.18s;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-run { background: linear-gradient(135deg, #7c3aed, #2563eb); color: white; }
-        .btn-run:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(124,58,237,0.4); }
-        .btn-settle { background: rgba(255,255,255,0.06); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); }
-        .btn-settle:hover:not(:disabled) { background: rgba(255,255,255,0.1); color: #e2e8f0; }
-        .btn-sync { background: rgba(255,255,255,0.04); color: #64748b; border: 1px solid rgba(255,255,255,0.06); font-size: 12px; }
-        .btn-sync:hover:not(:disabled) { background: rgba(255,255,255,0.08); color: #94a3b8; }
-        .run-result {
-          margin: 16px 32px 0;
-          padding: 12px 16px;
-          border-radius: 10px;
-          background: rgba(34,197,94,0.1);
-          border: 1px solid rgba(34,197,94,0.25);
-          font-size: 13px;
-          color: #86efac;
-          display: flex;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-        .error-banner {
-          margin: 16px 32px 0;
-          padding: 12px 16px;
-          border-radius: 10px;
-          background: rgba(239,68,68,0.1);
-          border: 1px solid rgba(239,68,68,0.25);
-          font-size: 13px;
-          color: #fca5a5;
-        }
-        .pred-top-grid {
-          display: grid;
-          grid-template-columns: 280px 1fr;
-          gap: 24px;
-          padding: 24px 32px;
-        }
-        @media (max-width: 900px) { .pred-top-grid { grid-template-columns: 1fr; } }
-        .accuracy-ring-card {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 16px;
-          padding: 24px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 20px;
-        }
-        .ring-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
-        .ring-inner { position: absolute; display: flex; flex-direction: column; align-items: center; }
-        .ring-pct { font-size: 26px; font-weight: 800; }
-        .ring-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-        .accuracy-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
-        .acc-stat {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 10px;
-          border-radius: 10px;
-          background: rgba(255,255,255,0.03);
-        }
-        .acc-stat.correct { border: 1px solid rgba(34,197,94,0.25); }
-        .acc-stat.incorrect { border: 1px solid rgba(239,68,68,0.25); }
-        .acc-stat.pending { border: 1px solid rgba(251,191,36,0.2); }
-        .acc-stat.void { border: 1px solid rgba(100,116,139,0.2); }
-        .acc-val { font-size: 22px; font-weight: 700; }
-        .acc-stat.correct .acc-val { color: #22c55e; }
-        .acc-stat.incorrect .acc-val { color: #ef4444; }
-        .acc-stat.pending .acc-val { color: #fbbf24; }
-        .acc-stat.void .acc-val { color: #64748b; }
-        .acc-key { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
-        .streak-badge {
-          padding: 6px 14px;
-          border-radius: 20px;
-          background: rgba(251,191,36,0.15);
-          border: 1px solid rgba(251,191,36,0.3);
-          font-size: 13px;
-          font-weight: 600;
-          color: #fbbf24;
-        }
-        .today-section { display: flex; flex-direction: column; gap: 12px; }
-        .today-section-title {
-          font-size: 12px;
-          font-weight: 700;
-          letter-spacing: 1.5px;
-          text-transform: uppercase;
-          color: #475569;
-          padding-bottom: 4px;
-        }
-        .today-cards-list { display: flex; flex-direction: column; gap: 12px; }
-        .today-empty {
-          background: rgba(255,255,255,0.02);
-          border: 1px dashed rgba(255,255,255,0.08);
-          border-radius: 12px;
-          padding: 32px;
-          text-align: center;
-          color: #475569;
-          font-size: 14px;
-        }
-        .today-card {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 14px;
-          padding: 16px 20px;
-          position: relative;
-          overflow: hidden;
-          transition: border-color 0.2s;
-        }
-        .today-card.outcome-correct { border-color: rgba(34,197,94,0.3); }
-        .today-card.outcome-incorrect { border-color: rgba(239,68,68,0.3); }
-        .today-card-header {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-          font-size: 12px;
-          color: #475569;
-          margin-bottom: 14px;
-          flex-wrap: wrap;
-        }
-        .today-league {
-          padding: 2px 8px;
-          border-radius: 4px;
-          background: rgba(167,139,250,0.15);
-          color: #a78bfa;
-          font-weight: 600;
-          font-size: 11px;
-          text-transform: uppercase;
-        }
-        .today-teams {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 16px;
-          gap: 8px;
-        }
-        .today-team { display: flex; align-items: center; gap: 8px; flex: 1; }
-        .today-team-right { justify-content: flex-end; }
-        .team-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-        .team-name { font-size: 17px; font-weight: 700; }
-        .winner-crown { font-size: 16px; }
-        .vs-chip {
-          padding: 4px 10px;
-          background: rgba(255,255,255,0.06);
-          border-radius: 6px;
-          font-size: 11px;
-          font-weight: 700;
-          color: #475569;
-          flex-shrink: 0;
-        }
-        .prob-section { display: flex; flex-direction: column; gap: 8px; }
-        .prob-bar-wrap {
-          height: 8px;
-          border-radius: 4px;
-          overflow: hidden;
-          display: flex;
-          background: rgba(255,255,255,0.04);
-        }
-        .prob-bar-fill { height: 100%; transition: width 0.6s ease; }
-        .prob-labels {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 12px;
-        }
-        .prob-val { font-weight: 700; font-size: 14px; }
-        .prob-pick { font-size: 12px; color: #94a3b8; text-align: center; }
-        .prob-pick strong { color: #e2e8f0; }
-        .reasons { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-        .reason-chip {
-          padding: 3px 8px;
-          border-radius: 6px;
-          background: rgba(56,189,248,0.1);
-          border: 1px solid rgba(56,189,248,0.15);
-          font-size: 11px;
-          color: #7dd3fc;
-        }
-        .model-pending { display: flex; align-items: center; gap: 12px; padding: 12px 0 4px; }
-        .pending-chip {
-          padding: 4px 10px;
-          border-radius: 6px;
-          background: rgba(251,191,36,0.1);
-          border: 1px solid rgba(251,191,36,0.25);
-          font-size: 12px;
-          font-weight: 600;
-          color: #fbbf24;
-          letter-spacing: 0.5px;
-        }
-        .run-btn {
-          padding: 6px 14px;
-          border-radius: 8px;
-          border: none;
-          background: linear-gradient(135deg, #7c3aed, #2563eb);
-          color: white;
-          font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.18s;
-        }
-        .run-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.4); }
-        .outcome-overlay {
-          margin-top: 14px;
-          padding: 10px 14px;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-weight: 700;
-          font-size: 14px;
-        }
-        .outcome-overlay.outcome-correct { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
-        .outcome-overlay.outcome-incorrect { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); }
-        .outcome-overlay.outcome-void { background: rgba(100,116,139,0.1); color: #94a3b8; border: 1px solid rgba(100,116,139,0.15); }
-        .outcome-icon { font-size: 18px; }
-        .outcome-winner { margin-left: auto; font-size: 13px; font-weight: 500; }
-        .pred-history { padding: 0 32px; }
-        .history-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 16px;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-        .history-title { font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #475569; }
-        .filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-        .filter-select {
-          padding: 6px 12px;
-          border-radius: 8px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.1);
-          color: #94a3b8;
-          font-size: 13px;
-          cursor: pointer;
-          outline: none;
-        }
-        option { background: #1e293b; }
-        .date-group { margin-bottom: 24px; }
-        .date-label {
-          font-size: 12px;
-          font-weight: 600;
-          color: #475569;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          padding: 0 0 8px;
-          border-bottom: 1px solid rgba(255,255,255,0.05);
-          margin-bottom: 8px;
-        }
-        .pred-row {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 10px;
-          margin-bottom: 6px;
-          cursor: pointer;
-          transition: background 0.15s, border-color 0.15s;
-          overflow: hidden;
-        }
-        .pred-row:hover { background: rgba(255,255,255,0.05); }
-        .pred-row.outcome-correct { border-color: rgba(34,197,94,0.2); }
-        .pred-row.outcome-incorrect { border-color: rgba(239,68,68,0.15); }
-        .pred-row-main {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px 16px;
-          flex-wrap: wrap;
-        }
-        .pred-badge {
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 13px;
-          font-weight: 700;
-          flex-shrink: 0;
-        }
-        .badge-correct { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
-        .badge-incorrect { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
-        .badge-pending { background: rgba(251,191,36,0.1); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
-        .badge-void { background: rgba(100,116,139,0.1); color: #64748b; border: 1px solid rgba(100,116,139,0.2); }
-        .pred-teams { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px; }
-        .pred-team-a, .pred-team-b { font-weight: 700; font-size: 14px; }
-        .pred-mini-bar { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; display: flex; min-width: 60px; }
-        .pred-pick { display: flex; flex-direction: column; gap: 2px; min-width: 110px; }
-        .pick-label { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
-        .pick-val { font-size: 13px; font-weight: 600; }
-        .pred-actual { min-width: 80px; }
-        .actual-val { font-size: 13px; font-weight: 600; color: #e2e8f0; }
-        .actual-pending { color: #334155; font-size: 18px; }
-        .pred-league {
-          font-size: 11px;
-          color: #475569;
-          background: rgba(255,255,255,0.04);
-          padding: 2px 8px;
-          border-radius: 4px;
-        }
-        .pred-expand { color: #334155; font-size: 10px; margin-left: auto; }
-        .pred-detail {
-          padding: 12px 16px 14px 56px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          border-top: 1px solid rgba(255,255,255,0.05);
-        }
-        .pred-detail-row { display: flex; gap: 16px; align-items: flex-start; }
-        .detail-label { font-size: 11px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; width: 90px; flex-shrink: 0; }
-        .detail-val { font-size: 13px; color: #94a3b8; }
-        .history-empty { text-align: center; padding: 48px; color: #475569; font-size: 14px; }
-      `}</style>
-
-      {/* Top bar */}
-      <div className="pred-topbar">
-        <h1 className="pred-title">Predictions</h1>
-        <div className="action-btns">
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xl)" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--space-md)", flexWrap: "wrap" }}>
+        <div>
+          <h1 className="text-tool-headline" style={{ margin: 0 }}>Predictions</h1>
+          <p className="text-caption" style={{ margin: "4px 0 0" }}>
+            LightGBM win-probability picks, tracked against real results.
+          </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)", flexWrap: "wrap" }}>
           <button
             id="run-model-btn"
-            className="action-btn btn-run"
+            className="ds-btn-primary"
             onClick={handleRunModel}
             disabled={runningModel}
           >
-            {runningModel ? "⚙ Running…" : "▶ Run Model"}
+            {runningModel ? "Running…" : "Run Model"}
           </button>
           <button
             id="settle-api-btn"
-            className="action-btn btn-settle"
+            className="ds-btn-secondary"
             onClick={handleSettle}
             disabled={settling}
           >
-            {settling ? "⏳ Settling…" : "🔄 Settle from API"}
+            {settling ? "Settling…" : "Settle from API"}
           </button>
           <button
             id="sync-results-btn"
-            className="action-btn btn-sync"
+            className="ds-nav-link"
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
             onClick={async () => {
               await composerApi.syncPredictionResults();
               await loadHistory();
             }}
           >
-            ↻ Sync DB
+            Sync DB
           </button>
         </div>
       </div>
 
-      {error && <div className="error-banner">⚠ {error}</div>}
+      {error && (
+        <div
+          className="text-caption"
+          style={{
+            background: "var(--error-tint)",
+            border: "1px solid rgba(255, 59, 48, 0.25)",
+            borderRadius: 16,
+            padding: "var(--space-sm) var(--space-md)",
+            color: "var(--error)",
+            fontWeight: 600,
+          }}
+        >
+          {error}
+        </div>
+      )}
       {runResult && (
-        <div className="run-result">
-          <span>✓ Model ran</span>
-          <span>
-            Created: <strong>{runResult.predictions_created}</strong>
-          </span>
+        <div
+          className="text-caption"
+          style={{
+            background: "var(--success-tint)",
+            border: "1px solid rgba(52, 199, 89, 0.25)",
+            borderRadius: 16,
+            padding: "var(--space-sm) var(--space-md)",
+            display: "flex",
+            gap: "var(--space-lg)",
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ fontWeight: 700, color: "#1c8a3f" }}>Model ran</span>
+          <span>Created: <strong>{runResult.predictions_created}</strong></span>
           <span>Skipped: {runResult.predictions_skipped}</span>
           <span>Fixtures found: {runResult.fixtures_found}</span>
-          {runResult.errors.length > 0 && (
-            <span>⚠ {runResult.errors[0]}</span>
-          )}
+          {runResult.errors.length > 0 && <span>{runResult.errors[0]}</span>}
         </div>
       )}
 
-      {/* Top grid */}
-      <div className="pred-top-grid">
-        {stats ? (
-          <AccuracyRing stats={stats} />
+      {/* Accuracy summary */}
+      <AccuracySummary stats={loadingHistory ? null : stats} />
+
+      {/* Today's Matches */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+        <span className="text-micro">Today&apos;s Matches</span>
+        {loadingToday ? (
+          <div className="match-grid">
+            {[0, 1].map((i) => (
+              <div key={i} className="ds-skeleton" style={{ minHeight: 190 }} />
+            ))}
+          </div>
+        ) : todayMatches.length === 0 ? (
+          <div
+            className="card-container"
+            style={{ padding: "var(--space-xl)", textAlign: "center", display: "flex", flexDirection: "column", gap: 4 }}
+          >
+            <span className="text-title" style={{ margin: 0 }}>No fixtures for today</span>
+            <span className="text-caption">
+              Nothing kicking off in a tracked league right now. Click <strong>Run Model</strong> to check for newly published fixtures.
+            </span>
+          </div>
         ) : (
-          <div className="accuracy-ring-card">
-            <div style={{ color: "#334155", fontSize: 14 }}>
-              Loading stats…
-            </div>
+          <div className="match-grid">
+            {todayMatches.map((m) => (
+              <MatchCard key={m.fixture_id} match={m} onRunModel={handleRunModel} running={runningModel} />
+            ))}
           </div>
         )}
-
-        <div className="today-section">
-          <div className="today-section-title">📅 Today&apos;s Matches</div>
-          <div className="today-cards-list">
-            {loadingToday ? (
-              <div className="today-empty">Loading today&apos;s fixtures…</div>
-            ) : todayMatches.length === 0 ? (
-              <div className="today-empty">
-                No fixtures for today.
-                <br />
-                <small style={{ marginTop: 8, display: "block" }}>
-                  Click <strong>▶ Run Model</strong> to fetch &amp; predict
-                  upcoming matches.
-                </small>
-              </div>
-            ) : (
-              todayMatches.map((m) => (
-                <TodayCard
-                  key={m.fixture_id}
-                  match={m}
-                  onRunModel={handleRunModel}
-                />
-              ))
-            )}
-          </div>
-        </div>
       </div>
 
       {/* History */}
-      <div className="pred-history">
-        <div className="history-header">
-          <span className="history-title">
-            📜 Prediction History ({filtered.length})
-          </span>
-          <div className="filter-row">
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-sm)" }}>
+          <span className="text-micro">Prediction History ({filtered.length})</span>
+          <div style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
             <select
               id="outcome-filter"
-              className="filter-select"
+              className="ds-select"
               value={outcomeFilter}
               onChange={(e) => setOutcomeFilter(e.target.value)}
             >
               <option value="all">All outcomes</option>
-              <option value="correct">✓ Correct</option>
-              <option value="incorrect">✗ Incorrect</option>
-              <option value="pending">⏳ Pending</option>
-              <option value="void">○ Void</option>
+              <option value="correct">Correct</option>
+              <option value="incorrect">Incorrect</option>
+              <option value="pending">Pending</option>
+              <option value="void">Void</option>
             </select>
             <select
               id="league-filter"
-              className="filter-select"
+              className="ds-select"
               value={leagueFilter}
               onChange={(e) => setLeagueFilter(e.target.value)}
             >
               {leagues.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
+                <option key={l} value={l}>{l}</option>
               ))}
             </select>
           </div>
         </div>
 
         {loadingHistory ? (
-          <div className="history-empty">Loading…</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="ds-skeleton" style={{ minHeight: 56, borderRadius: 16 }} />
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="history-empty">
-            No predictions yet. Click <strong>▶ Run Model</strong> to generate
-            your first prediction.
+          <div
+            className="card-container"
+            style={{ padding: "var(--space-xl)", textAlign: "center", display: "flex", flexDirection: "column", gap: 4 }}
+          >
+            <span className="text-title" style={{ margin: 0 }}>No predictions yet</span>
+            <span className="text-caption">
+              Click <strong>Run Model</strong> above to generate your first prediction.
+            </span>
           </div>
         ) : (
           Object.entries(grouped).map(([date, preds]) => (
-            <div key={date} className="date-group">
-              <div className="date-label">{date}</div>
+            <div key={date}>
+              <div
+                className="text-micro"
+                style={{ borderBottom: "1px solid var(--border)", paddingBottom: 6, marginBottom: 8 }}
+              >
+                {date}
+              </div>
               {preds.map((p) => (
                 <PredictionRow key={p.id} p={p} />
               ))}

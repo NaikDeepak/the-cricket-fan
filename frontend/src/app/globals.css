@@ -27,6 +27,15 @@
   --floodlight-cyan: #0071e3; /* Apple Electric Blue / Cyan */
   --floodlight-cyan-tint: #f0f7ff;
 
+  /* Status semantics (outcome badges, health indicators) — distinct from
+     Wire Red so a "brand action" and a "negative result" never share a hue */
+  --success: #34c759; /* Apple System Green */
+  --success-tint: #eafaf0;
+  --warning: #ff9500; /* Apple System Orange */
+  --warning-tint: #fff4e5;
+  --error: #ff3b30; /* Apple System Red */
+  --error-tint: #ffefed;
+
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 16px;
@@ -426,3 +435,156 @@ body { margin: 0; overflow-x: hidden; }
     gap: var(--space-lg);
   }
 }
+
+/* Status pills — outcome/health badges (correct/incorrect/pending/void) */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.status-pill--correct { background: var(--success-tint); color: #1c8a3f; }
+.status-pill--incorrect { background: var(--error-tint); color: var(--error); }
+.status-pill--pending { background: var(--warning-tint); color: #b25f00; }
+.status-pill--void { background: #f0f0f2; color: var(--fg-muted); }
+
+/* Match cards (Today's Matches grid) */
+.match-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: var(--space-md);
+}
+.match-card {
+  position: relative;
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.match-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+.match-teams-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+.team-slot {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  min-width: 0;
+  flex: 1;
+}
+.team-slot--end { flex-direction: row-reverse; text-align: right; }
+.team-crest {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: contain;
+  background: var(--bg);
+  margin-top: 2px;
+}
+.team-crest-fallback {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-top: 2px;
+}
+.team-name-sm {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--fg);
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.vs-divider {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fg-muted);
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+  padding: 0 var(--space-xs);
+}
+.prob-track {
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  background: var(--border);
+}
+.prob-fill {
+  height: 100%;
+  transition: width var(--duration-slow) var(--ease-apple);
+}
+.prob-readout {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.match-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border);
+}
+
+/* History list rows */
+.history-row {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  margin-bottom: var(--space-sm);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-apple),
+    box-shadow var(--duration-fast) var(--ease-apple);
+}
+.history-row:hover {
+  border-color: rgba(0, 0, 0, 0.16);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+.history-row-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  flex-wrap: wrap;
+}
+.history-row-detail {
+  padding: var(--space-sm) var(--space-md) var(--space-md) var(--space-md);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.history-detail-item { display: flex; gap: var(--space-md); align-items: flex-start; }
