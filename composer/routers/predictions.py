@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from bot.db import fixtures, predictions
 from bot.match_input import parse_match_text
 
+from ..config import get_settings
 from ..deps import get_conn
 from ..schemas import (
     BacktestOptions,
@@ -681,8 +682,9 @@ def settle_from_api(conn=Depends(get_conn)) -> SettleFromApiOut:
     import os
     from datetime import datetime, timezone as _tz
 
-    api_key = os.getenv("CRICKET_API_KEY", "")
-    api_base = os.getenv("CRICKET_API_BASE", "https://api.cricapi.com/v1")
+    settings = get_settings()
+    api_key = settings.cricket_api_key or os.getenv("CRICKET_API_KEY", "")
+    api_base = settings.cricket_api_base or os.getenv("CRICKET_API_BASE", "https://api.cricapi.com/v1")
 
     if not api_key:
         raise HTTPException(
