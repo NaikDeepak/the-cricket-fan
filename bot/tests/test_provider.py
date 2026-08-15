@@ -77,3 +77,39 @@ def test_fetch_supports_t20i_and_ipl_match_types(conn):
     fixtures, _ = p.fetch(conn)
     assert len(fixtures) == 1
     assert fixtures[0].provider_match_id == "t20i-1"
+
+
+def test_fetch_supports_the_hundred_match_type(conn):
+    # Real-world shape: CricAPI tags The Hundred matches with matchType
+    # "hundred" and a series name that doesn't contain "t20"/"ipl" — must
+    # not be silently dropped by the t20/ipl-only filter.
+    payload = {
+        "status": "success",
+        "data": [
+            {
+                "id": "hnd-1",
+                "matchType": "hundred",
+                "teams": ["Trent Rockets", "Manchester Originals"],
+                "venue": "Lord's, London",
+                "dateTimeGMT": "2026-08-30T18:00:00",
+                "series": "The Hundred Men's Competition, 2026",
+                "matchStarted": False,
+                "matchEnded": False,
+            }
+        ],
+    }
+
+    def handler(request):
+        return httpx.Response(200, json=payload)
+
+    p = CricApiProvider(
+        "https://api.example.com/v1",
+        "k",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    fixtures, _ = p.fetch(conn)
+    assert len(fixtures) == 1
+    assert fixtures[0].provider_match_id == "hnd-1"
+    assert fixtures[0].team_a == "Manchester Originals"  # sorted
+    assert fixtures[0].team_b == "Trent Rockets"
+    assert fixtures[0].venue == "Lord's, London"

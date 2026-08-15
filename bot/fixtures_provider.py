@@ -53,13 +53,15 @@ class CricApiProvider:
         for m in payload.get("data", []):
             match_type = m.get("matchType", "").lower()
             series_name = m.get("series", "").lower()
-            is_t20 = (
+            is_supported_format = (
                 "t20" in match_type
                 or "ipl" in match_type
+                or "hundred" in match_type
                 or "t20" in series_name
                 or "ipl" in series_name
+                or "hundred" in series_name
             )
-            if not is_t20:
+            if not is_supported_format:
                 continue
             try:
                 teams = sorted(resolve(conn, "team", t) for t in m.get("teams", []))
