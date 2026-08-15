@@ -1,10 +1,15 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SourceBar from "@/components/composer/SourceBar";
-import { composerApi } from "@/lib/composerApi";
+import { composerApi, type TeamRecord } from "@/lib/composerApi";
+
+const MOCK_TEAMS: TeamRecord[] = [
+  { id: 1, name: "CSK", short_name: "CSK", league: "IPL", primary_color: "#FDB913", secondary_color: "#F3A100", accent_color: null, gradient: null, glow: null, text_dark: true, logo_url: null, aliases: [], is_active: true, theme: { primary: "#FDB913", secondary: "#F3A100" } },
+  { id: 2, name: "MI", short_name: "MI", league: "IPL", primary_color: "#004BA0", secondary_color: "#0077D4", accent_color: null, gradient: null, glow: null, text_dark: false, logo_url: null, aliases: [], is_active: true, theme: { primary: "#004BA0", secondary: "#0077D4" } },
+];
 
 beforeEach(() => {
-  vi.spyOn(composerApi, "teams").mockResolvedValue(["CSK", "MI"]);
+  vi.spyOn(composerApi, "teams").mockResolvedValue(MOCK_TEAMS);
 });
 afterEach(() => vi.restoreAllMocks());
 

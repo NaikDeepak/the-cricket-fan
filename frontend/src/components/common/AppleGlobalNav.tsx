@@ -61,7 +61,7 @@ export default function AppleGlobalNav() {
             🏏
           </span>
           <span style={{ fontSize: 18, fontWeight: 800, color: "#000000", letterSpacing: "-0.03em" }}>
-            TCH.
+            TCF.
           </span>
         </Link>
 

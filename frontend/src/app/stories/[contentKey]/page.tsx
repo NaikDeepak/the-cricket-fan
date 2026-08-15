@@ -126,7 +126,7 @@ export default function StoryDetailPage({
       >
         <Link href="/stories" style={{ textDecoration: "none" }}>
           <span style={{ fontSize: 22, fontWeight: 800, color: "#000000", letterSpacing: "-0.03em" }}>
-            TCH.
+            TCF.
           </span>
         </Link>
         <Link href="/stories" className="ds-btn-pill ds-btn-pill-dark" style={{ textDecoration: "none", fontSize: 13, padding: "8px 18px" }}>

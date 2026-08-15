@@ -43,19 +43,95 @@ export type Analytics = {
   prediction_record: { correct: number; total: number };
 };
 
+export type LeagueAccuracyStats = {
+  league: string;
+  total: number;
+  evaluated: number;
+  correct: number;
+  incorrect: number;
+  accuracy_pct: number;
+};
+
+export type PredictionAccuracyStats = {
+  total: number;
+  evaluated: number;
+  pending: number;
+  correct: number;
+  incorrect: number;
+  void: number;
+  accuracy_pct: number;
+  streak: number;
+  streak_type: "win" | "loss" | "none";
+  recent_outcomes: string[];
+  by_league: LeagueAccuracyStats[];
+};
+
+export type PredictionIn = {
+  team_a: string;
+  team_b: string;
+  league?: string;
+  venue?: string;
+  prob_team_a: number;
+  reasons?: string[];
+  fixture_id?: number | null;
+  actual_winner?: string | null;
+  result_summary?: string | null;
+  outcome?: "pending" | "correct" | "incorrect" | "void";
+};
+
+export type PredictionPatch = Partial<PredictionIn>;
+
+export type PredictionResultIn = {
+  actual_winner: string;
+  result_summary?: string | null;
+  outcome?: "correct" | "incorrect" | "void" | null;
+};
+
 export type Prediction = {
   id: number;
-  fixture_id: number;
+  fixture_id?: number | null;
   team_a: string;
   team_b: string;
   venue: string;
   league: string;
-  start_time: string;
+  start_time?: string | null;
   prob_team_a: number;
   reasons: string[];
+  predicted_winner: string;
+  actual_winner?: string | null;
+  result_summary?: string | null;
   outcome: "pending" | "correct" | "incorrect" | "void";
   created_at: string;
+  evaluated_at?: string | null;
 };
+
+export type TodayMatch = {
+  fixture_id: number;
+  team_a: string;
+  team_b: string;
+  league: string;
+  venue: string;
+  start_time: string | null;
+  fixture_status: "upcoming" | "completed" | "void";
+  winner: string | null;
+  prediction: Prediction | null;
+};
+
+export type RunModelResult = {
+  status: string;
+  predictions_created: number;
+  predictions_skipped: number;
+  fixtures_found: number;
+  errors: string[];
+};
+
+export type SettleFromApiResult = {
+  status: string;
+  settled_count: number;
+  void_count: number;
+  errors: string[];
+};
+
 
 export type Post = {
   id: number;
@@ -236,10 +312,39 @@ export const composerApi = {
     }),
   deleteTeam: (id: number) => req<void>(`/teams/${id}`, { method: "DELETE" }),
   analytics: () => req<Analytics>("/analytics"),
-  predictions: (q: { outcome?: string } = {}) => {
-    const p = new URLSearchParams(q as Record<string, string>).toString();
+  predictions: (q: { outcome?: string; league?: string; search?: string; limit?: number } = {}) => {
+    const p = new URLSearchParams(
+      Object.fromEntries(Object.entries(q).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))
+    ).toString();
     return req<Prediction[]>(`/predictions${p ? `?${p}` : ""}`);
   },
+  predictionAccuracy: () => req<PredictionAccuracyStats>("/predictions/accuracy"),
+  createPrediction: (body: PredictionIn) =>
+    req<Prediction>("/predictions", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  recordPredictionResult: (id: number, body: PredictionResultIn) =>
+    req<Prediction>(`/predictions/${id}/result`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  settlePredictionFromText: (body: { raw_text?: string; url?: string }) =>
+    req<Prediction>("/predictions/settle-from-text", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  syncPredictionResults: () =>
+    req<{ status: string; settled_count: number }>("/predictions/sync-results", {
+      method: "POST",
+    }),
+  patchPrediction: (id: number, body: PredictionPatch) =>
+    req<Prediction>(`/predictions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deletePrediction: (id: number) =>
+    req<void>(`/predictions/${id}`, { method: "DELETE" }),
   posts: (q: { state?: string; post_type?: string } = {}) => {
     const p = new URLSearchParams(q as Record<string, string>).toString();
     return req<Post[]>(`/posts${p ? `?${p}` : ""}`);
@@ -254,4 +359,11 @@ export const composerApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  todayMatches: () =>
+    req<TodayMatch[]>("/predictions/today"),
+  runModel: () =>
+    req<RunModelResult>("/predictions/run-model", { method: "POST" }),
+  settleFromApi: () =>
+    req<SettleFromApiResult>("/predictions/settle-from-api", { method: "POST" }),
 };
+
