@@ -1,6 +1,15 @@
+import ctypes
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+# Preload OpenMP library for LightGBM on Linux serverless runtimes
+_libgomp = Path(__file__).resolve().parent.parent / "lib" / "libgomp.so.1"
+if _libgomp.exists():
+    try:
+        ctypes.CDLL(str(_libgomp), mode=ctypes.RTLD_GLOBAL)
+    except Exception:
+        pass
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,15 +33,17 @@ def create_app() -> FastAPI:
             ensure_schema(conn)
             conn.commit()
         try:
-            app.state.artifact = load_artifact(
+            model_path = (
                 Path(__file__).resolve().parent.parent
                 / "bot"
                 / "artifacts"
                 / "model.pkl"
             )
-        except Exception:
+            app.state.artifact = load_artifact(model_path)
+            logger.info("Successfully loaded prediction model artifact from %s", model_path)
+        except Exception as e:
             logger.warning(
-                "model artifact not loaded; /generate/bot prediction disabled"
+                "model artifact not loaded (%s); /generate/bot prediction disabled", e
             )
             app.state.artifact = None
         yield
