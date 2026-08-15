@@ -5,7 +5,11 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-import shap
+
+try:
+    import shap
+except ImportError:
+    shap = None
 
 
 def load_artifact(path: Path) -> dict:
@@ -14,7 +18,8 @@ def load_artifact(path: Path) -> dict:
     # never loaded from user input or fetched over the network. Do not point this
     # at untrusted files.
     art = joblib.load(path)
-    art["explainer"] = shap.TreeExplainer(art["model"])
+    if shap is not None:
+        art["explainer"] = shap.TreeExplainer(art["model"])
     return art
 
 

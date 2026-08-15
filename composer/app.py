@@ -38,9 +38,16 @@ def create_app() -> FastAPI:
         yield
 
     app = FastAPI(title="Cricket Composer API", lifespan=lifespan)
+
+    origins = [
+        settings.cors_origin,
+        "http://localhost:3000",
+        "https://the-cricket-fan.vercel.app",
+    ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.cors_origin],
+        allow_origins=["*"] if settings.cors_origin == "*" else origins,
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
