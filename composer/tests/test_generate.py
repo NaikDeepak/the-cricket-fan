@@ -1,7 +1,6 @@
-from datetime import datetime, timezone
 from unittest.mock import patch
 
-from bot.db import ensure_schema, fixtures, team_matches
+from bot.db import ensure_schema
 
 
 def test_generate_recap_creates_draft(client, engine):
@@ -33,4 +32,3 @@ def test_generate_recap_survives_rss_outage(client, engine):
 
     assert res.status_code == 201
     assert "RCB" in res.json()["text"]
-

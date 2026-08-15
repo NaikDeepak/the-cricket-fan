@@ -3,13 +3,15 @@ import logging
 from datetime import datetime, timezone
 
 import sqlalchemy as sa
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from bot.db import fixtures, predictions
 from bot.match_input import parse_match_text
 
 from ..deps import get_conn
 from ..schemas import (
+    BacktestOptions,
+    BacktestResult,
     LeagueAccuracyStats,
     PredictionAccuracyStats,
     PredictionIn,
@@ -43,10 +45,16 @@ def _build_prediction_select():
     return sa.select(
         predictions.c.id,
         predictions.c.fixture_id,
-        sa.func.coalesce(predictions.c.team_a, fixtures.c.team_a, "Team A").label("team_a"),
-        sa.func.coalesce(predictions.c.team_b, fixtures.c.team_b, "Team B").label("team_b"),
+        sa.func.coalesce(predictions.c.team_a, fixtures.c.team_a, "Team A").label(
+            "team_a"
+        ),
+        sa.func.coalesce(predictions.c.team_b, fixtures.c.team_b, "Team B").label(
+            "team_b"
+        ),
         sa.func.coalesce(predictions.c.venue, fixtures.c.venue, "TBD").label("venue"),
-        sa.func.coalesce(predictions.c.league, fixtures.c.league, "IPL").label("league"),
+        sa.func.coalesce(predictions.c.league, fixtures.c.league, "IPL").label(
+            "league"
+        ),
         fixtures.c.start_time,
         predictions.c.prob_team_a,
         predictions.c.reasons_json,
@@ -86,7 +94,9 @@ def _row_to_prediction_out(r) -> PredictionOut:
 
 @router.get("/predictions/accuracy", response_model=PredictionAccuracyStats)
 def get_prediction_accuracy(conn=Depends(get_conn)) -> PredictionAccuracyStats:
-    rows = conn.execute(_build_prediction_select().order_by(predictions.c.created_at.desc())).all()
+    rows = conn.execute(
+        _build_prediction_select().order_by(predictions.c.created_at.desc())
+    ).all()
 
     total = len(rows)
     pending = 0
@@ -101,7 +111,12 @@ def get_prediction_accuracy(conn=Depends(get_conn)) -> PredictionAccuracyStats:
         outcome = r.outcome or "pending"
         lg = r.league or "IPL"
         if lg not in league_stats:
-            league_stats[lg] = {"total": 0, "evaluated": 0, "correct": 0, "incorrect": 0}
+            league_stats[lg] = {
+                "total": 0,
+                "evaluated": 0,
+                "correct": 0,
+                "incorrect": 0,
+            }
 
         league_stats[lg]["total"] += 1
 
@@ -173,7 +188,11 @@ def list_predictions(
     limit: int = 100,
     conn=Depends(get_conn),
 ) -> list[PredictionOut]:
-    q = _build_prediction_select().order_by(predictions.c.created_at.desc()).limit(limit)
+    q = (
+        _build_prediction_select()
+        .order_by(predictions.c.created_at.desc())
+        .limit(limit)
+    )
 
     if outcome and outcome.strip() and outcome != "all":
         q = q.where(predictions.c.outcome == outcome.strip())
@@ -200,27 +219,64 @@ def list_predictions(
     return [_row_to_prediction_out(r) for r in rows]
 
 
+# ── Backtest ──────────────────────────────────────────────────────────────────
+
+
+@router.get("/predictions/backtest/options", response_model=BacktestOptions)
+def get_backtest_options_endpoint(conn=Depends(get_conn)) -> BacktestOptions:
+    """Returns available leagues, seasons, and dataset ingestion metrics for backtesting."""
+    from bot.backtest import get_backtest_options
+    from bot.run import _load_team_matches
+
+    df = _load_team_matches(conn)
+    return BacktestOptions(**get_backtest_options(df))
+
+
+@router.get("/predictions/backtest", response_model=BacktestResult)
+def run_backtest_endpoint(
+    league: str,
+    season: str,
+    request: Request,
+    conn=Depends(get_conn),
+) -> BacktestResult:
+    """Runs a leakage-guarded model backtest against the specified league and season."""
+    artifact = getattr(request.app.state, "artifact", None)
+    if artifact is None:
+        raise HTTPException(
+            status_code=503, detail="Prediction model artifact not loaded"
+        )
+
+    from bot.backtest import run_backtest
+    from bot.run import _load_team_matches
+
+    df = _load_team_matches(conn)
+    res = run_backtest(df, artifact, league=league, season=season)
+    return BacktestResult(**res)
+
+
 @router.get("/predictions/today", response_model=list[TodayMatchOut])
 def get_today_matches(conn=Depends(get_conn)) -> list[TodayMatchOut]:
     """Return today's fixtures joined with any existing model predictions."""
     from datetime import date
+
     today = date.today()
 
     # All fixtures for today (UTC start_time)
     fixture_rows = conn.execute(
-        sa.select(fixtures).where(
-            sa.func.date(fixtures.c.start_time) == today.isoformat()
-        ).order_by(fixtures.c.start_time)
+        sa.select(fixtures)
+        .where(sa.func.date(fixtures.c.start_time) == today.isoformat())
+        .order_by(fixtures.c.start_time)
     ).all()
 
     if not fixture_rows:
         # Also look at tomorrow for pre-match purposes if nothing today
         from datetime import timedelta
+
         tomorrow = today + timedelta(days=1)
         fixture_rows = conn.execute(
-            sa.select(fixtures).where(
-                sa.func.date(fixtures.c.start_time) == tomorrow.isoformat()
-            ).order_by(fixtures.c.start_time)
+            sa.select(fixtures)
+            .where(sa.func.date(fixtures.c.start_time) == tomorrow.isoformat())
+            .order_by(fixtures.c.start_time)
         ).all()
 
     result: list[TodayMatchOut] = []
@@ -230,17 +286,19 @@ def get_today_matches(conn=Depends(get_conn)) -> list[TodayMatchOut]:
         ).fetchone()
         pred_out = _row_to_prediction_out(pred_row) if pred_row else None
 
-        result.append(TodayMatchOut(
-            fixture_id=f.id,
-            team_a=f.team_a,
-            team_b=f.team_b,
-            league=f.league,
-            venue=f.venue,
-            start_time=f.start_time,
-            fixture_status=f.status,
-            winner=f.winner,
-            prediction=pred_out,
-        ))
+        result.append(
+            TodayMatchOut(
+                fixture_id=f.id,
+                team_a=f.team_a,
+                team_b=f.team_b,
+                league=f.league,
+                venue=f.venue,
+                start_time=f.start_time,
+                fixture_status=f.status,
+                winner=f.winner,
+                prediction=pred_out,
+            )
+        )
 
     return result
 
@@ -301,7 +359,9 @@ def record_prediction_result(
     body: PredictionResultIn,
     conn=Depends(get_conn),
 ) -> PredictionOut:
-    row = conn.execute(_build_prediction_select().where(predictions.c.id == pred_id)).fetchone()
+    row = conn.execute(
+        _build_prediction_select().where(predictions.c.id == pred_id)
+    ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Prediction not found")
 
@@ -315,7 +375,13 @@ def record_prediction_result(
 
     if body.outcome:
         outcome = body.outcome
-    elif actual_winner.lower() in ("no_result", "abandoned", "void", "tied", "no result"):
+    elif actual_winner.lower() in (
+        "no_result",
+        "abandoned",
+        "void",
+        "tied",
+        "no result",
+    ):
         outcome = "void"
     elif _matches_team(predicted_winner, actual_winner):
         outcome = "correct"
@@ -345,7 +411,9 @@ def record_prediction_result(
 
     conn.commit()
 
-    updated = conn.execute(_build_prediction_select().where(predictions.c.id == pred_id)).one()
+    updated = conn.execute(
+        _build_prediction_select().where(predictions.c.id == pred_id)
+    ).one()
     return _row_to_prediction_out(updated)
 
 
@@ -356,14 +424,18 @@ def settle_prediction_from_text(
 ) -> PredictionOut:
     raw_text = body.raw_text or ""
     if not raw_text.strip():
-        raise HTTPException(status_code=400, detail="Scorecard text or match summary is required.")
+        raise HTTPException(
+            status_code=400, detail="Scorecard text or match summary is required."
+        )
 
     parsed = parse_match_text(raw_text)
     team_a = parsed.innings1_team
     team_b = parsed.innings2_team
 
     if not team_a and not team_b:
-        raise HTTPException(status_code=422, detail="Could not detect cricket teams from input text.")
+        raise HTTPException(
+            status_code=422, detail="Could not detect cricket teams from input text."
+        )
 
     # Find pending prediction matching either team
     pending_rows = conn.execute(
@@ -373,8 +445,11 @@ def settle_prediction_from_text(
     matched_row = None
     for r in pending_rows:
         if (
-            (team_a and (_matches_team(r.team_a, team_a) or _matches_team(r.team_b, team_a)))
-            or (team_b and (_matches_team(r.team_a, team_b) or _matches_team(r.team_b, team_b)))
+            team_a
+            and (_matches_team(r.team_a, team_a) or _matches_team(r.team_b, team_a))
+        ) or (
+            team_b
+            and (_matches_team(r.team_a, team_b) or _matches_team(r.team_b, team_b))
         ):
             matched_row = r
             break
@@ -444,7 +519,9 @@ def update_prediction(
     body: PredictionPatch,
     conn=Depends(get_conn),
 ) -> PredictionOut:
-    row = conn.execute(sa.select(predictions).where(predictions.c.id == pred_id)).fetchone()
+    row = conn.execute(
+        sa.select(predictions).where(predictions.c.id == pred_id)
+    ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Prediction not found")
 
@@ -463,16 +540,22 @@ def update_prediction(
             values["evaluated_at"] = _now()
 
     if values:
-        conn.execute(predictions.update().where(predictions.c.id == pred_id).values(**values))
+        conn.execute(
+            predictions.update().where(predictions.c.id == pred_id).values(**values)
+        )
         conn.commit()
 
-    updated = conn.execute(_build_prediction_select().where(predictions.c.id == pred_id)).one()
+    updated = conn.execute(
+        _build_prediction_select().where(predictions.c.id == pred_id)
+    ).one()
     return _row_to_prediction_out(updated)
 
 
 @router.delete("/predictions/{pred_id}", status_code=204)
 def delete_prediction(pred_id: int, conn=Depends(get_conn)) -> Response:
-    row = conn.execute(sa.select(predictions).where(predictions.c.id == pred_id)).fetchone()
+    row = conn.execute(
+        sa.select(predictions).where(predictions.c.id == pred_id)
+    ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Prediction not found")
 
@@ -502,28 +585,38 @@ def run_model(conn=Depends(get_conn)) -> RunModelOut:
     errors: list[str] = []
 
     # Load model artifact
-    artifact_path = Path(__file__).resolve().parent.parent.parent / "bot" / "artifacts" / "model.pkl"
+    artifact_path = (
+        Path(__file__).resolve().parent.parent.parent
+        / "bot"
+        / "artifacts"
+        / "model.pkl"
+    )
     if not artifact_path.exists():
         raise HTTPException(
             status_code=503,
-            detail=f"Model artifact not found at {artifact_path}. Run 'python -m bot.train' first."
+            detail=f"Model artifact not found at {artifact_path}. Run 'python -m bot.train' first.",
         )
 
     try:
         from bot.predict import load_artifact, predict
         from bot.features import build_features
         from bot.run import _load_team_matches, _home_team_at_venue
+
         artifact = load_artifact(artifact_path)
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Failed to load model: {exc}") from exc
+        raise HTTPException(
+            status_code=503, detail=f"Failed to load model: {exc}"
+        ) from exc
 
     # Find upcoming fixtures without a prediction yet
     now = datetime.now(_tz.utc)
     upcoming = conn.execute(
-        sa.select(fixtures).where(
+        sa.select(fixtures)
+        .where(
             fixtures.c.status == "upcoming",
             fixtures.c.start_time > now,
-        ).order_by(fixtures.c.start_time)
+        )
+        .order_by(fixtures.c.start_time)
     ).all()
 
     df = _load_team_matches(conn)
@@ -540,7 +633,9 @@ def run_model(conn=Depends(get_conn)) -> RunModelOut:
 
         try:
             home_team = _home_team_at_venue(df, f.venue, f.team_a, f.team_b)
-            feats = build_features(df, f.team_a, f.team_b, f.venue, now.date(), home_team=home_team)
+            feats = build_features(
+                df, f.team_a, f.team_b, f.venue, now.date(), home_team=home_team
+            )
             prob, reasons = predict(artifact, feats)
         except Exception as exc:
             errors.append(f"Feature/predict error for {f.team_a} vs {f.team_b}: {exc}")
@@ -592,7 +687,7 @@ def settle_from_api(conn=Depends(get_conn)) -> SettleFromApiOut:
     if not api_key:
         raise HTTPException(
             status_code=503,
-            detail="CRICKET_API_KEY environment variable is not set. Cannot auto-settle via API."
+            detail="CRICKET_API_KEY environment variable is not set. Cannot auto-settle via API.",
         )
 
     errors: list[str] = []
@@ -600,17 +695,22 @@ def settle_from_api(conn=Depends(get_conn)) -> SettleFromApiOut:
 
     try:
         from bot.fixtures_provider import CricApiProvider
+
         provider = CricApiProvider(api_base, api_key)
         _fixture_list, result_list = provider.fetch(conn)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"CricAPI fetch failed: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"CricAPI fetch failed: {exc}"
+        ) from exc
 
     settled = 0
     voided = 0
 
     for res in result_list:
         frow = conn.execute(
-            sa.select(fixtures).where(fixtures.c.provider_match_id == res.provider_match_id)
+            sa.select(fixtures).where(
+                fixtures.c.provider_match_id == res.provider_match_id
+            )
         ).first()
         if not frow or frow.status != "upcoming":
             continue
@@ -625,17 +725,17 @@ def settle_from_api(conn=Depends(get_conn)) -> SettleFromApiOut:
             )
             if pred:
                 conn.execute(
-                    predictions.update().where(predictions.c.id == pred.id).values(
-                        outcome="void", evaluated_at=now
-                    )
+                    predictions.update()
+                    .where(predictions.c.id == pred.id)
+                    .values(outcome="void", evaluated_at=now)
                 )
                 voided += 1
             continue
 
         conn.execute(
-            fixtures.update().where(fixtures.c.id == frow.id).values(
-                status="completed", winner=res.winner
-            )
+            fixtures.update()
+            .where(fixtures.c.id == frow.id)
+            .values(status="completed", winner=res.winner)
         )
 
         if not pred:
@@ -646,7 +746,9 @@ def settle_from_api(conn=Depends(get_conn)) -> SettleFromApiOut:
         outcome = "correct" if predicted_a == actual_a else "incorrect"
 
         conn.execute(
-            predictions.update().where(predictions.c.id == pred.id).values(
+            predictions.update()
+            .where(predictions.c.id == pred.id)
+            .values(
                 actual_winner=res.winner,
                 outcome=outcome,
                 evaluated_at=now,

@@ -20,10 +20,15 @@ from .features import FEATURE_NAMES, build_features
 
 def build_team_matches(cricsheet_dir: Path, league_map: dict[str, str]) -> pd.DataFrame:
     """league_map: file-stem (or stem prefix before first '_') -> league label.
-    Files whose stem is not mapped are skipped."""
+    Supports '*' or 'default' fallback in league_map. Files whose stem is not mapped are skipped."""
     rows = []
     for f in sorted(cricsheet_dir.glob("*.json")):
-        league = league_map.get(f.stem) or league_map.get(f.stem.split("_")[0])
+        league = (
+            league_map.get(f.stem)
+            or league_map.get(f.stem.split("_")[0])
+            or league_map.get("*")
+            or league_map.get("default")
+        )
         if not league:
             continue
         for r in parse_result(f, league=league):

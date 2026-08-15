@@ -3,7 +3,7 @@ import sqlalchemy as sa
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 
-from bot.db import ensure_schema, metadata
+from bot.db import ensure_schema
 from composer.app import create_app
 from composer.deps import get_conn
 

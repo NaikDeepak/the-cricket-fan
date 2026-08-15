@@ -206,7 +206,6 @@ def seed_real_stories(conn: sa.Connection, now: datetime) -> int:
     return inserted
 
 
-
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group(required=True)

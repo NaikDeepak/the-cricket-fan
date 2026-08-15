@@ -24,7 +24,8 @@ def _row_to_story(r) -> StoryOut:
         source=r.source,
         title=r.title or r.content_key,
         summary=r.summary or (segments[0] if segments else ""),
-        source_type=r.source_type or ("wikipedia" if "wikipedia" in r.source else "cricsheet"),
+        source_type=r.source_type
+        or ("wikipedia" if "wikipedia" in r.source else "cricsheet"),
         source_ref=r.source_ref or r.source,
         teams=teams,
         players=players,
@@ -59,7 +60,9 @@ def list_stories(
     q = q.where(
         sa.or_(
             content_bank.c.is_published.is_(True),
-            content_bank.c.is_published.is_(None),  # pre-migration rows count as published
+            content_bank.c.is_published.is_(
+                None
+            ),  # pre-migration rows count as published
         )
     )
 
@@ -108,7 +111,9 @@ def get_contextual_stories(
     q = sa.select(content_bank).where(
         sa.or_(
             content_bank.c.is_published.is_(True),
-            content_bank.c.is_published.is_(None),  # pre-migration rows count as published
+            content_bank.c.is_published.is_(
+                None
+            ),  # pre-migration rows count as published
         )
     )
     rows = conn.execute(q).all()

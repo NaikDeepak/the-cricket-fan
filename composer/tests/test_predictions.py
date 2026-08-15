@@ -110,7 +110,10 @@ def test_create_and_settle_prediction(client, conn):
     # 2. Settle match result (winner is Kovai Kings -> correct)
     settle_res = client.post(
         f"/predictions/{pid}/result",
-        json={"actual_winner": "Lyca Kovai Kings", "result_summary": "Won by 4 wickets"},
+        json={
+            "actual_winner": "Lyca Kovai Kings",
+            "result_summary": "Won by 4 wickets",
+        },
     )
     assert settle_res.status_code == 200
     settled = settle_res.json()

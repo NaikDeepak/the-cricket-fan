@@ -145,6 +145,46 @@ export type Post = {
   team_b: string | null;
 };
 
+export type LastIngestedMatch = {
+  date: string;
+  league: string;
+  team_a: string;
+  team_b: string;
+  venue: string;
+};
+
+export type BacktestOptions = {
+  leagues: string[];
+  seasons_by_league: Record<string, string[]>;
+  total_matches: number;
+  earliest_date: string | null;
+  latest_date: string | null;
+  last_match: LastIngestedMatch | null;
+  matches_by_league: Record<string, number>;
+};
+
+export type BacktestGame = {
+  date: string;
+  team_a: string;
+  team_b: string;
+  venue: string;
+  prob_team_a: number;
+  predicted_winner: string;
+  actual_winner: string;
+  correct: boolean;
+};
+
+export type BacktestResult = {
+  league: string;
+  season: string;
+  total: number;
+  correct: number;
+  accuracy_pct: number;
+  elo_accuracy_pct: number;
+  home_accuracy_pct: number;
+  games: BacktestGame[];
+};
+
 export type MatchInput = {
   team_a: string;
   team_b: string;
@@ -365,5 +405,12 @@ export const composerApi = {
     req<RunModelResult>("/predictions/run-model", { method: "POST" }),
   settleFromApi: () =>
     req<SettleFromApiResult>("/predictions/settle-from-api", { method: "POST" }),
+  backtestOptions: () =>
+    req<BacktestOptions>("/predictions/backtest/options"),
+  runBacktest: (league: string, season: string) => {
+    const p = new URLSearchParams({ league, season }).toString();
+    return req<BacktestResult>(`/predictions/backtest?${p}`);
+  },
 };
+
 

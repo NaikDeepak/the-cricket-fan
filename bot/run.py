@@ -196,7 +196,9 @@ def _has_upcoming_fixture_within_24h(conn, now: datetime) -> bool:
             if r.start_time.tzinfo
             else r.start_time.replace(tzinfo=timezone.utc)
         )
-        if start.date() == now.date() or (now - timedelta(hours=2) <= start <= now + timedelta(hours=24)):
+        if start.date() == now.date() or (
+            now - timedelta(hours=2) <= start <= now + timedelta(hours=24)
+        ):
             return True
     return False
 
@@ -375,8 +377,6 @@ def tick(
             )
             _try_post(conn, poster, prow, text, now)
 
-
-
         # Post-Match News Recap Tweet
         news_post_existing = conn.execute(
             sa.select(posts.c.id).where(
@@ -404,7 +404,6 @@ def tick(
 
             news_text = get_match_recap_tweet(frow.team_a, frow.team_b)
             _try_post(conn, poster, news_prow, news_text, now)
-
 
     # Standalone trivia (quiet-day filler, no fixture involved)
     if (force_trivia or _standalone_trivia_due(conn, now)) and not (

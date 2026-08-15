@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 GOOGLE_NEWS_RSS_URL = "https://news.google.com/rss/search"
 
 
-def fetch_match_news_article(team_a: str, team_b: str, timeout: float = 10.0) -> dict | None:
+def fetch_match_news_article(
+    team_a: str, team_b: str, timeout: float = 10.0
+) -> dict | None:
     """Fetch the latest news article matching team_a vs team_b match report."""
     query = f'"{team_a}" "{team_b}" match report cricket'
     params = {
@@ -54,7 +56,9 @@ def fetch_match_news_article(team_a: str, team_b: str, timeout: float = 10.0) ->
         )
 
         return {
-            "headline": title.split(" - ")[0],  # Strip publisher name from Google RSS title
+            "headline": title.split(" - ")[
+                0
+            ],  # Strip publisher name from Google RSS title
             "summary": summary[:120],
             "source_url": link,
         }

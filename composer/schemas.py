@@ -209,6 +209,45 @@ class SettleFromApiOut(BaseModel):
     errors: list[str] = []
 
 
+class LastIngestedMatch(BaseModel):
+    date: str
+    league: str
+    team_a: str
+    team_b: str
+    venue: str
+
+
+class BacktestOptions(BaseModel):
+    leagues: list[str]
+    seasons_by_league: dict[str, list[str]]
+    total_matches: int
+    earliest_date: str | None = None
+    latest_date: str | None = None
+    last_match: LastIngestedMatch | None = None
+    matches_by_league: dict[str, int] = {}
+
+
+class BacktestGame(BaseModel):
+    date: str
+    team_a: str
+    team_b: str
+    venue: str
+    prob_team_a: float
+    predicted_winner: str
+    actual_winner: str
+    correct: bool
+
+
+class BacktestResult(BaseModel):
+    league: str
+    season: str
+    total: int
+    correct: int
+    accuracy_pct: int
+    elo_accuracy_pct: int
+    home_accuracy_pct: int
+    games: list[BacktestGame]
+
 
 class PostOut(BaseModel):
     id: int
@@ -242,7 +281,9 @@ class MatchInputSchema(BaseModel):
     innings2_runs: int | None = None
     innings2_wickets: int | None = None
     innings2_overs: float | None = None
-    phase: str = "pre_match"  # 'pre_match' | 'innings_break' | 'chase_in_progress' | 'completed'
+    phase: str = (
+        "pre_match"  # 'pre_match' | 'innings_break' | 'chase_in_progress' | 'completed'
+    )
     top_performers: list[dict] = []
 
 
@@ -360,4 +401,3 @@ def team_row_to_out(row) -> TeamOut:
         is_active=bool(row.is_active),
         theme=theme,
     )
-

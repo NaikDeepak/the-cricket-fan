@@ -274,7 +274,6 @@ def test_result_flow_correct_and_record(conn, art):
     assert "#TheCricketFan" in poster.sent[-1]
 
 
-
 def test_abandoned_match_voids_prediction(conn, art):
     poster = SpyPoster()
     tick(conn, FakeProvider([_fixture(hours_from_now=5.5)], []), art, poster, NOW)

@@ -94,9 +94,7 @@ def _innings_stats(data: dict) -> dict[str, dict[str, float]]:
     return stats
 
 
-def parse_result(filepath: Path, league: str) -> list[TeamMatchRow]:
-    with open(filepath) as f:
-        data = json.load(f)
+def parse_match_dict(data: dict, league: str) -> list[TeamMatchRow]:
     info = data.get("info", {})
     outcome = info.get("outcome", {})
     teams = info.get("teams", [])
@@ -146,3 +144,9 @@ def parse_result(filepath: Path, league: str) -> list[TeamMatchRow]:
             )
         )
     return rows
+
+
+def parse_result(filepath: Path, league: str) -> list[TeamMatchRow]:
+    with open(filepath) as f:
+        data = json.load(f)
+    return parse_match_dict(data, league)

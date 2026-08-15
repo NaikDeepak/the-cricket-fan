@@ -102,4 +102,3 @@ def test_seed_resolves_international_teams_and_venues(conn):
     assert resolve(conn, "team", "AUS") == "Australia"
     assert resolve(conn, "team", "PAK") == "Pakistan"
     assert resolve(conn, "venue", "wankhede stadium") == "Wankhede Stadium, Mumbai"
-

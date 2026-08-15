@@ -9,6 +9,7 @@ import httpx
 
 try:
     import lxml.html
+
     HAS_LXML = True
 except ImportError:
     HAS_LXML = False
@@ -167,8 +168,12 @@ class MatchInput:
     innings2_runs: int | None = None
     innings2_wickets: int | None = None
     innings2_overs: float | None = None
-    phase: str = "pre_match"  # 'pre_match' | 'innings_break' | 'chase_in_progress' | 'completed'
-    top_performers: list[dict] = None  # [{'name': '...', 'stat': '...', 'role': 'bat'|'bowl'}]
+    phase: str = (
+        "pre_match"  # 'pre_match' | 'innings_break' | 'chase_in_progress' | 'completed'
+    )
+    top_performers: list[dict] = (
+        None  # [{'name': '...', 'stat': '...', 'role': 'bat'|'bowl'}]
+    )
 
     def __post_init__(self):
         if self.top_performers is None:
@@ -240,10 +245,18 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
                     "Motera",
                 ]
             ):
-                clean_line = re.sub(r"^(?:at|,)\s+", "", line, flags=re.IGNORECASE).strip()
+                clean_line = re.sub(
+                    r"^(?:at|,)\s+", "", line, flags=re.IGNORECASE
+                ).strip()
                 if not any(
                     stop in clean_line.lower()
-                    for stop in ["vs", "premier league", "league", "toss", "won the toss"]
+                    for stop in [
+                        "vs",
+                        "premier league",
+                        "league",
+                        "toss",
+                        "won the toss",
+                    ]
                 ):
                     result.venue = clean_line
                     break
@@ -301,12 +314,16 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
         p_name = m.group(1).strip()
         runs_str = m.group(2)
         balls_str = m.group(3)
-        if len(p_name) > 2 and not any(k in p_name.lower() for k in ["overs", "runs", "target", "extras"]):
-            performers.append({
-                "name": p_name,
-                "stat": f"{runs_str} ({balls_str})",
-                "role": "bat",
-            })
+        if len(p_name) > 2 and not any(
+            k in p_name.lower() for k in ["overs", "runs", "target", "extras"]
+        ):
+            performers.append(
+                {
+                    "name": p_name,
+                    "stat": f"{runs_str} ({balls_str})",
+                    "role": "bat",
+                }
+            )
 
     bowl_pattern = re.compile(
         r"([A-Z][a-zA-Z\s.]+?)\s+(\d{1,2}/\d{1,3})\s*(?:\(([\d.]+)\s*(?:ov|overs)?\))?",
@@ -316,13 +333,17 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
         p_name = m.group(1).strip()
         fig_str = m.group(2)
         ov_str = m.group(3) or ""
-        if len(p_name) > 2 and not any(k in p_name.lower() for k in ["overs", "runs", "target", "extras"]):
+        if len(p_name) > 2 and not any(
+            k in p_name.lower() for k in ["overs", "runs", "target", "extras"]
+        ):
             stat_text = f"{fig_str} ({ov_str} ov)" if ov_str else fig_str
-            performers.append({
-                "name": p_name,
-                "stat": stat_text,
-                "role": "bowl",
-            })
+            performers.append(
+                {
+                    "name": p_name,
+                    "stat": stat_text,
+                    "role": "bowl",
+                }
+            )
     result.top_performers = performers[:6]
 
     # 5. Look for Innings / Scores
@@ -340,7 +361,11 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
             wickets = int(m.group(3))
             overs_str = m.group(4) or m.group(5) or "20"
             overs = float(overs_str)
-            team_norm = normalize_team_name(team_raw.strip(), conn) if team_raw.strip() else None
+            team_norm = (
+                normalize_team_name(team_raw.strip(), conn)
+                if team_raw.strip()
+                else None
+            )
             # Filter out false positives
             if runs <= 400 and wickets <= 10 and overs <= 50:
                 scores.append((team_norm, runs, wickets, overs))
@@ -368,24 +393,26 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
     # 6. Determine Phase
     if result.innings2_runs is not None:
         if (
-            result.innings2_overs is not None and result.innings2_overs >= 20.0
-        ) or (
-            result.innings2_wickets == 10
-        ) or (
-            result.innings1_runs is not None and result.innings2_runs > result.innings1_runs
-        ) or (
-            "won by" in text.lower()
+            (result.innings2_overs is not None and result.innings2_overs >= 20.0)
+            or (result.innings2_wickets == 10)
+            or (
+                result.innings1_runs is not None
+                and result.innings2_runs > result.innings1_runs
+            )
+            or ("won by" in text.lower())
         ):
             result.phase = "completed"
         else:
             result.phase = "chase_in_progress"
     elif result.innings1_runs is not None:
         if (
-            result.innings1_overs is not None and result.innings1_overs >= 20.0
-        ) or (
-            result.innings1_wickets == 10
-        ) or (
-            "innings break" in text.lower() or "opt to bowl" in text.lower() or "target" in text.lower()
+            (result.innings1_overs is not None and result.innings1_overs >= 20.0)
+            or (result.innings1_wickets == 10)
+            or (
+                "innings break" in text.lower()
+                or "opt to bowl" in text.lower()
+                or "target" in text.lower()
+            )
         ):
             result.phase = "innings_break"
         else:

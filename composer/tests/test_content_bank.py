@@ -130,7 +130,9 @@ def test_on_this_day_item_sorts_ahead_of_evergreen_sort(client, conn):
 
 
 def test_non_matching_event_month_day_does_not_get_on_this_day_boost(client, conn):
-    off_day = "01-01" if datetime.now(timezone.utc).strftime("%m-%d") != "01-01" else "02-02"
+    off_day = (
+        "01-01" if datetime.now(timezone.utc).strftime("%m-%d") != "01-01" else "02-02"
+    )
     conn.execute(
         content_bank.insert().values(
             category="anecdote",

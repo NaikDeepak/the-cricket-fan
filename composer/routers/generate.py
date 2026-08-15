@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from bot.compose import prediction_post, trivia_post
-from bot.db import drafts, fixtures, team_matches
+from bot.db import drafts, fixtures
 from bot.features import build_features
 from bot.news_fetcher import get_match_recap_tweet
 from bot.predict import predict
@@ -165,4 +165,3 @@ def generate_recap(body: GenerateRecapIn, conn=Depends(get_conn)) -> DraftOut:
         DraftIn(source="bot", category="recap", text=text),
         log_generated=True,
     )
-

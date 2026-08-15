@@ -90,7 +90,8 @@ CREATE TABLE IF NOT EXISTS content_bank (
 
         # Verify the column has NOT NULL constraint.
         is_pub_col = next(
-            c for c in inspector.get_columns("content_bank")
+            c
+            for c in inspector.get_columns("content_bank")
             if c["name"] == "is_published"
         )
         assert is_pub_col["nullable"] is False
@@ -111,9 +112,7 @@ VALUES (1, 'wiki_record', 'single', '["test"]', 'test:key', \
 
     # Read back and verify is_published is truthy.
     with eng.connect() as conn:
-        row = conn.execute(
-            sa.select(content_bank).where(content_bank.c.id == 1)
-        ).one()
+        row = conn.execute(sa.select(content_bank).where(content_bank.c.id == 1)).one()
         assert bool(row.is_published) is True
 
     eng.dispose()
