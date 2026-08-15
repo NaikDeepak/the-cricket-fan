@@ -35,6 +35,18 @@ export function formatDateStamp(iso: string): string {
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
+export function formatStoryTitle(title: string): string {
+  if (!title) return "Untitled Story";
+  if (title.includes(":") || (title.includes("-") && !title.includes(" "))) {
+    const cleaned = title
+      .replace(/^(wiki_record|anecdote|story|lore):/i, "")
+      .replace(/^(general|odi|t20|test|ipl):/i, "")
+      .replace(/[-_]+/g, " ");
+    return cleaned.replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return title;
+}
+
 export function todayMonthDay(now: Date = new Date()): string {
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");

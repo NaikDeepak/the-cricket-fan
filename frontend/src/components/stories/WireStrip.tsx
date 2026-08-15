@@ -17,20 +17,51 @@ export default function WireStrip({ items }: { items: WireItem[] }) {
       initial={isReduced ? "visible" : "hidden"}
       animate="visible"
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", marginBottom: "var(--space-sm)" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "var(--space-md)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              backgroundColor: "#0284c7",
+              boxShadow: "0 0 0 3px rgba(2, 132, 199, 0.15)",
+            }}
+          />
+          <p
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "#0369a1",
+              margin: 0,
+            }}
+          >
+            The Wire — Live Feed Updates
+          </p>
+        </div>
         <span
           style={{
-            display: "inline-block",
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: "#0071e3",
-            boxShadow: "0 0 8px #0071e3",
+            fontFamily: "var(--font-sans)",
+            fontSize: 11,
+            fontWeight: 600,
+            color: "#94a3b8",
+            textTransform: "uppercase",
+            letterSpacing: "0.04em",
           }}
-        />
-        <p className="text-micro" style={{ color: "#0071e3", margin: 0, fontWeight: 700 }}>
-          The Wire — Live Feed Updates
-        </p>
+        >
+          Live Matchday Feed
+        </span>
       </div>
 
       <div
@@ -45,7 +76,7 @@ export default function WireStrip({ items }: { items: WireItem[] }) {
         {items.map((item) => (
           <motion.div
             key={item.id}
-            style={{ flex: "0 0 auto", minWidth: 320 }}
+            style={{ flex: "0 0 auto", minWidth: 320, maxWidth: 420 }}
             variants={{
               hidden: { opacity: 0, x: 20 },
               visible: { opacity: 1, x: 0 },
@@ -54,27 +85,65 @@ export default function WireStrip({ items }: { items: WireItem[] }) {
               isReduced
                 ? undefined
                 : {
-                    y: -3,
+                    y: -2,
                     transition: SPRING_PRESET,
                   }
             }
           >
             <div
-              className="ds-card"
+              className="ds-editorial-card"
               style={{
-                minWidth: 320,
-                borderLeft: "4px solid #0071e3",
-                borderRadius: 16,
+                padding: "16px 20px",
+                borderLeft: "3px solid #0284c7",
+                background: "#ffffff",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--space-sm)" }}>
-                {item.category && <span className="ds-chip ds-chip-category">{item.category}</span>}
-                <span className="text-micro" style={{ margin: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
+                {item.category && (
+                  <span
+                    style={{
+                      fontFamily: "var(--font-sans)",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                      padding: "2px 8px",
+                      borderRadius: 999,
+                      background: "#f0f9ff",
+                      color: "#0369a1",
+                      border: "1px solid #e0f2fe",
+                    }}
+                  >
+                    {item.category}
+                  </span>
+                )}
+                <span
+                  className="text-ledger-mono"
+                  style={{
+                    fontSize: 11,
+                    color: "#94a3b8",
+                    marginLeft: "auto",
+                  }}
+                >
                   {formatDateStamp(item.posted_at)}
                 </span>
               </div>
-              <p className="text-caption" style={{ margin: 0, fontSize: "var(--text-sm)", lineHeight: 1.5, color: "#1d1d1f" }}>
-                {item.text.slice(0, 120)}
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 14,
+                  lineHeight: 1.55,
+                  color: "#334155",
+                }}
+              >
+                {item.text.slice(0, 140)}
               </p>
             </div>
           </motion.div>

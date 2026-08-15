@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import type { Story } from "@/lib/storiesApi";
+import { formatStoryTitle } from "@/lib/storiesApi";
 import { SPRING_PRESET, STAGGER_CONTAINER_VARIANTS, prefersReducedMotion } from "@/lib/motion";
 import OnThisDayCardImg from "./OnThisDayCardImg";
 import { captureCard, downloadCard } from "@/lib/share";
@@ -14,11 +15,11 @@ const MONTHS = [
 ];
 
 export default function OnThisDayRail({ stories }: { stories: Story[] }) {
-  if (stories.length === 0) return null;
   const isReduced = prefersReducedMotion();
-
   const [exportingKey, setExportingKey] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  if (stories.length === 0) return null;
 
   async function handleDownloadShareCard(e: React.MouseEvent, story: Story) {
     e.preventDefault();
@@ -51,26 +52,45 @@ export default function OnThisDayRail({ stories }: { stories: Story[] }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "var(--space-sm)",
+          marginBottom: "var(--space-md)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span
             style={{
               display: "inline-block",
               width: 8,
               height: 8,
               borderRadius: "50%",
-              background: "#f59e0b",
-              boxShadow: "0 0 10px #f59e0b",
+              backgroundColor: "#d97706",
+              boxShadow: "0 0 0 3px rgba(217, 119, 6, 0.15)",
             }}
           />
-          <p className="text-micro" style={{ color: "#d97706", margin: 0, fontWeight: 800, letterSpacing: "0.08em" }}>
-            ON THIS DAY IN CRICKET HISTORY
+          <p
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "#b45309",
+              margin: 0,
+            }}
+          >
+            On This Day in Cricket History
           </p>
         </div>
-        <span className="text-micro" style={{ opacity: 0.6 }}>
-          DAILY NOSTALGIA &amp; MILESTONES
+        <span
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontSize: 11,
+            fontWeight: 600,
+            color: "#94a3b8",
+            textTransform: "uppercase",
+            letterSpacing: "0.04em",
+          }}
+        >
+          Daily Nostalgia &amp; Milestones
         </span>
       </div>
 
@@ -86,6 +106,10 @@ export default function OnThisDayRail({ stories }: { stories: Story[] }) {
         {stories.map((s) => {
           const isExporting = exportingKey === s.content_key;
           const isBirthday = (s.tags || []).includes("birthday") || s.title.toLowerCase().includes("birthday");
+          const monthIdx = Number(s.event_month_day?.split("-")[0]) - 1;
+          const monthStr = MONTHS[monthIdx] || "";
+          const dayStr = s.event_month_day?.split("-")[1] || "";
+          const displayTitle = formatStoryTitle(s.title);
 
           return (
             <motion.div
@@ -99,58 +123,65 @@ export default function OnThisDayRail({ stories }: { stories: Story[] }) {
                 isReduced
                   ? undefined
                   : {
-                      y: -3,
+                      y: -2,
                       transition: SPRING_PRESET,
                     }
               }
             >
               <div
-                className="ds-card"
+                className="ds-editorial-card"
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
                   height: "100%",
-                  borderLeft: isBirthday ? "4px solid #ec4899" : "4px solid #f59e0b",
-                  borderRadius: 16,
-                  padding: "var(--space-md)",
-                  background: isBirthday
-                    ? "linear-gradient(135deg, rgba(253, 242, 248, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%)"
-                    : "linear-gradient(135deg, rgba(254, 243, 199, 0.8) 0%, rgba(255, 255, 255, 0.95) 100%)",
+                  padding: "20px 22px",
+                  background: isBirthday ? "#fffafc" : "#ffffff",
+                  borderLeft: isBirthday ? "3px solid #ec4899" : "3px solid #f59e0b",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-xs)" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 10,
+                  }}
+                >
                   <span
-                    className="text-micro"
                     style={{
-                      color: isBirthday ? "#db2777" : "#b45309",
-                      fontWeight: 800,
-                      margin: 0,
+                      fontFamily: "var(--font-sans)",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: "0.04em",
+                      color: isBirthday ? "#be185d" : "#b45309",
+                      background: isBirthday ? "#fdf2f8" : "#fef3c7",
+                      border: `1px solid ${isBirthday ? "#fbcfe8" : "#fde68a"}`,
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                      textTransform: "uppercase",
                     }}
                   >
-                    {isBirthday ? "🎂 " : "🏆 "}
-                    {s.event_month_day?.split("-")[1]}{" "}
-                    {MONTHS[Number(s.event_month_day?.split("-")[0]) - 1]}
-                    {s.year ? ` · ${s.year}` : ""}
+                    {isBirthday ? "Anniversary · " : "On This Day · "}
+                    {dayStr} {monthStr}
+                    {s.year ? ` (${s.year})` : ""}
                   </span>
 
                   <button
                     type="button"
                     onClick={(e) => handleDownloadShareCard(e, s)}
                     disabled={isExporting}
-                    className="ds-btn-pill"
                     style={{
+                      fontFamily: "var(--font-sans)",
                       fontSize: 11,
+                      fontWeight: 600,
                       padding: "4px 10px",
                       cursor: "pointer",
-                      background: "rgba(0, 0, 0, 0.08)",
-                      border: "none",
-                      fontWeight: 600,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 999,
+                      color: "#475569",
+                      transition: "all 0.15s ease",
                     }}
                   >
-                    <span>{isExporting ? "Exporting…" : "📸 Share Card"}</span>
+                    {isExporting ? "Exporting…" : "Share Card ↗"}
                   </button>
                 </div>
 
@@ -158,16 +189,24 @@ export default function OnThisDayRail({ stories }: { stories: Story[] }) {
                   href={`/stories/${encodeURIComponent(s.content_key)}`}
                   style={{ textDecoration: "none", color: "inherit", display: "block" }}
                 >
-                  <p className="text-title" style={{ margin: "var(--space-xs) 0", fontSize: 16, color: "#1d1d1f" }}>
-                    {s.title}
-                  </p>
+                  <h4
+                    className="text-editorial-serif"
+                    style={{
+                      margin: "0 0 6px 0",
+                      fontSize: 17,
+                      fontWeight: 700,
+                      color: "#0f172a",
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {displayTitle}
+                  </h4>
                   <p
-                    className="text-caption"
                     style={{
                       margin: 0,
-                      fontSize: 13,
-                      lineHeight: 1.45,
-                      color: "var(--fg-muted)",
+                      fontSize: 13.5,
+                      lineHeight: 1.55,
+                      color: "#475569",
                       display: "-webkit-box",
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: "vertical",

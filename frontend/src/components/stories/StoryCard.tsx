@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { Story } from "@/lib/storiesApi";
+import { formatStoryTitle } from "@/lib/storiesApi";
 import { SPRING_PRESET, prefersReducedMotion } from "@/lib/motion";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -13,49 +14,49 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const SOURCE_BADGES: Record<
   string,
-  { label: string; bg: string; color: string; border: string; icon: string }
+  { label: string; bg: string; color: string; border: string; accent: string }
 > = {
   reddit: {
     label: "r/Cricket Lore",
-    bg: "rgba(255, 69, 0, 0.12)",
-    color: "#ff4500",
-    border: "rgba(255, 69, 0, 0.25)",
-    icon: "👾",
+    bg: "#fff7ed",
+    color: "#c2410c",
+    border: "#ffedd5",
+    accent: "#ea580c",
   },
   quora: {
     label: "Quora Banter",
-    bg: "rgba(185, 43, 39, 0.12)",
-    color: "#b92b27",
-    border: "rgba(185, 43, 39, 0.25)",
-    icon: "⚡",
+    bg: "#fef2f2",
+    color: "#b91c1c",
+    border: "#fee2e2",
+    accent: "#dc2626",
   },
   memoir: {
     label: "Dressing Room Memoir",
-    bg: "rgba(217, 119, 6, 0.12)",
-    color: "#d97706",
-    border: "rgba(217, 119, 6, 0.25)",
-    icon: "📖",
+    bg: "#fefce8",
+    color: "#a16207",
+    border: "#fef08a",
+    accent: "#ca8a04",
   },
   interview: {
     label: "Player Interview",
-    bg: "rgba(13, 148, 136, 0.12)",
-    color: "#0d9488",
-    border: "rgba(13, 148, 136, 0.25)",
-    icon: "🎙️",
+    bg: "#f0fdfa",
+    color: "#0f766e",
+    border: "#ccfbf1",
+    accent: "#0d9488",
   },
   cricsheet: {
     label: "Match Thriller",
-    bg: "rgba(16, 185, 129, 0.12)",
-    color: "#059669",
-    border: "rgba(16, 185, 129, 0.25)",
-    icon: "🏏",
+    bg: "#f0fdf4",
+    color: "#15803d",
+    border: "#dcfce7",
+    accent: "#16a34a",
   },
   wikipedia: {
     label: "Wikipedia Archive",
-    bg: "rgba(37, 99, 235, 0.12)",
-    color: "#2563eb",
-    border: "rgba(37, 99, 235, 0.25)",
-    icon: "🏛️",
+    bg: "#eff6ff",
+    color: "#1d4ed8",
+    border: "#dbeafe",
+    accent: "#2563eb",
   },
 };
 
@@ -80,32 +81,47 @@ export default function StoryCard({
       ? SOURCE_BADGES.interview
       : SOURCE_BADGES.wikipedia);
 
+  const displayTitle = formatStoryTitle(story.title);
+
   if (featured) {
     return (
       <motion.div
-        className="ds-spatial-card-dark"
+        className="ds-editorial-card"
         style={{
           height: "100%",
           display: "flex",
           flexDirection: "column",
           position: "relative",
           overflow: "hidden",
-          backgroundImage:
-            "linear-gradient(135deg, rgba(10, 10, 16, 0.92) 0%, rgba(20, 20, 32, 0.88) 100%), url('/images/hero_action.jpg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
+          background: "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)",
+          color: "#ffffff",
+          borderColor: "#334155",
+          borderRadius: 20,
+          padding: 28,
+          boxShadow: "0 12px 32px rgba(15, 23, 42, 0.16)",
           minHeight: 320,
         }}
         whileHover={
           isReduced
             ? undefined
             : {
-                y: -4,
-                scale: 1.005,
+                y: -3,
                 transition: SPRING_PRESET,
               }
         }
       >
+        {/* Subtle Gold Magazine Accent */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 3,
+            background: "linear-gradient(90deg, #d97706 0%, #f59e0b 50%, #3b82f6 100%)",
+          }}
+        />
+
         <div
           style={{
             display: "flex",
@@ -114,48 +130,46 @@ export default function StoryCard({
             marginBottom: "var(--space-md)",
           }}
         >
-          <div style={{ display: "flex", gap: "var(--space-xs)", alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <span
               style={{
-                background: "rgba(255, 255, 255, 0.15)",
-                color: "#ffffff",
-                backdropFilter: "blur(10px)",
-                padding: "4px 14px",
-                borderRadius: 999,
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.12em",
+                fontFamily: "var(--font-sans)",
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: "0.08em",
                 textTransform: "uppercase",
+                background: "rgba(217, 119, 6, 0.2)",
+                color: "#fbbf24",
+                border: "1px solid rgba(251, 191, 36, 0.3)",
+                padding: "3px 10px",
+                borderRadius: 999,
               }}
             >
               FEATURED STORY
             </span>
             <span
+              className="ds-source-pill"
               style={{
-                background: sourceInfo.bg,
-                color: sourceInfo.color,
-                border: `1px solid ${sourceInfo.border}`,
-                padding: "4px 12px",
-                borderRadius: 999,
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: "0.05em",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
+                background: "rgba(255, 255, 255, 0.08)",
+                color: "#e2e8f0",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
               }}
             >
-              {sourceInfo.icon} {sourceInfo.label}
+              <span
+                className="ds-source-dot"
+                style={{ backgroundColor: sourceInfo.accent }}
+              />
+              Source · {sourceInfo.label}
             </span>
           </div>
 
           {story.year && (
             <span
+              className="text-ledger-mono"
               style={{
                 fontSize: 12,
                 fontWeight: 600,
-                color: "rgba(255, 255, 255, 0.7)",
-                letterSpacing: "0.1em",
+                color: "#94a3b8",
               }}
             >
               {story.year}
@@ -164,30 +178,29 @@ export default function StoryCard({
         </div>
 
         <h3
+          className="text-editorial-serif"
           style={{
-            fontSize: "var(--text-xl)",
+            fontSize: "clamp(22px, 2.5vw, 28px)",
             fontWeight: 700,
             color: "#ffffff",
             margin: "0 0 var(--space-sm) 0",
-            lineHeight: 1.2,
-            letterSpacing: "-0.02em",
-            maxWidth: "90%",
+            lineHeight: 1.22,
+            letterSpacing: "-0.01em",
           }}
         >
-          {story.title}
+          {displayTitle}
         </h3>
 
         <p
           style={{
-            fontSize: "var(--text-base)",
-            lineHeight: 1.55,
-            color: "rgba(255, 255, 255, 0.8)",
+            fontSize: 15,
+            lineHeight: 1.6,
+            color: "#cbd5e1",
             margin: "0 0 var(--space-lg) 0",
             display: "-webkit-box",
             WebkitLineClamp: 3,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
-            maxWidth: "85%",
           }}
         >
           {story.summary}
@@ -199,19 +212,28 @@ export default function StoryCard({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            paddingTop: "var(--space-sm)",
+            borderTop: "1px solid rgba(255, 255, 255, 0.1)",
           }}
         >
           <span
-            className="ds-btn-pill ds-btn-pill-accent"
-            style={{ fontSize: 13, padding: "8px 18px" }}
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#fbbf24",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
           >
-            Read Story ↗
+            Read Story →
           </span>
           {story.teams && story.teams.length > 0 && (
             <span
               style={{
                 fontSize: 12,
-                color: "rgba(255, 255, 255, 0.5)",
+                color: "#94a3b8",
                 fontWeight: 500,
               }}
             >
@@ -225,11 +247,13 @@ export default function StoryCard({
 
   return (
     <motion.div
-      className="ds-card"
+      className="ds-bento-card"
       style={{
         height: "100%",
         display: "flex",
         flexDirection: "column",
+        background: "#ffffff",
+        padding: "22px 24px",
       }}
       whileHover={
         isReduced
@@ -245,52 +269,74 @@ export default function StoryCard({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "var(--space-sm)",
+          marginBottom: 12,
         }}
       >
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <span
+            className="ds-source-pill"
             style={{
               background: sourceInfo.bg,
               color: sourceInfo.color,
-              border: `1px solid ${sourceInfo.border}`,
-              padding: "2px 10px",
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.02em",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
+              borderColor: sourceInfo.border,
             }}
           >
-            {sourceInfo.icon} {sourceInfo.label}
+            <span
+              className="ds-source-dot"
+              style={{ backgroundColor: sourceInfo.accent }}
+            />
+            Source · {sourceInfo.label}
           </span>
-          <span className="ds-chip ds-chip-category">
+          <span
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 10.5,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              padding: "3px 9px",
+              borderRadius: 999,
+              background: "#f1f5f9",
+              color: "#475569",
+            }}
+          >
             {CATEGORY_LABEL[story.category] ?? story.category}
           </span>
         </div>
         {story.year && (
-          <span className="text-micro" style={{ margin: 0, fontWeight: 600 }}>
+          <span
+            className="text-ledger-mono"
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#94a3b8",
+            }}
+          >
             {story.year}
           </span>
         )}
       </div>
 
-      <p
-        className="text-title"
-        style={{ margin: "0 0 var(--space-sm) 0", color: "#1d1d1f" }}
+      <h3
+        className="text-editorial-serif"
+        style={{
+          margin: "0 0 8px 0",
+          color: "#0f172a",
+          fontSize: 19,
+          fontWeight: 700,
+          lineHeight: 1.28,
+          letterSpacing: "-0.01em",
+        }}
       >
-        {story.title}
-      </p>
+        {displayTitle}
+      </h3>
 
       <p
-        className="text-caption"
         style={{
-          margin: 0,
-          fontSize: "var(--text-sm)",
-          lineHeight: 1.5,
-          color: "var(--fg-muted)",
+          margin: "0 0 16px 0",
+          fontSize: 14,
+          lineHeight: 1.55,
+          color: "#475569",
           display: "-webkit-box",
           WebkitLineClamp: 2,
           WebkitBoxOrient: "vertical",
@@ -300,10 +346,32 @@ export default function StoryCard({
         {story.summary}
       </p>
 
+      {story.tags && story.tags.length > 0 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+          {story.tags.slice(0, 3).map((t) => (
+            <span
+              key={t}
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: "#64748b",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                padding: "2px 8px",
+                borderRadius: 6,
+              }}
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div
         style={{
           marginTop: "auto",
-          paddingTop: "var(--space-md)",
+          paddingTop: 12,
+          borderTop: "1px solid #f1f5f9",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -311,18 +379,25 @@ export default function StoryCard({
       >
         <span
           style={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: "#000000",
+            fontFamily: "var(--font-sans)",
+            fontSize: 12.5,
+            fontWeight: 700,
+            color: "#0f172a",
             display: "inline-flex",
             alignItems: "center",
             gap: 4,
           }}
         >
-          Read story ↗
+          Read Story →
         </span>
         {story.teams && story.teams.length > 0 && (
-          <span className="text-micro" style={{ opacity: 0.6 }}>
+          <span
+            style={{
+              fontSize: 12,
+              color: "#94a3b8",
+              fontWeight: 600,
+            }}
+          >
             {story.teams.slice(0, 2).join(" vs ")}
           </span>
         )}

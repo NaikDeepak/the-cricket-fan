@@ -55,6 +55,28 @@ def _row_to_story(r) -> StoryOut:
     )
 
 
+FEATURED_CURATION_ORDER: dict[str, int] = {
+    "story:wc-2011-final-dhoni-six": 100,
+    "story:world-cup-1983-final": 95,
+    "story:t20-wc-2007-final-joginder": 90,
+    "story:kohli-mcg-82-2022": 85,
+    "story:kolkata-2001-vvs-laxman": 80,
+    "story:gabba-2021-pant": 75,
+    "story:t20-wc-2007-yuvraj-6-sixes": 70,
+    "story:sharjah-1998-desert-storm": 65,
+    "story:natwest-2002-final-ganguly": 60,
+    "story:rohit-sharma-264-eden": 55,
+    "story:kumble-10-for-74-kotla": 50,
+    "story:nidahas-trophy-2018": 45,
+    "story:maxwell-201-afg-2023": 40,
+    "story:ipl-2023-rinku-singh-5-sixes": 35,
+    "lore:lord-shardul-gabba-2021": 30,
+    "lore:dhoni-sprint-bangladesh-2016": 25,
+    "story:the-438-game-2006": 20,
+    "story:headingley-2019-ben-stokes": 15,
+}
+
+
 @router.get("/stories", response_model=list[StoryOut])
 def list_stories(
     search: str | None = None,
@@ -119,6 +141,12 @@ def list_stories(
             if s_lower not in haystack:
                 continue
         results.append(story)
+
+    # Prioritize World Cup triumphs and iconic matches at the top of the feed
+    results.sort(
+        key=lambda s: FEATURED_CURATION_ORDER.get(s.content_key, 0),
+        reverse=True,
+    )
 
     return results[offset : offset + limit]
 
@@ -215,11 +243,43 @@ def get_on_this_day_story(
     )
 
 
+KNOWN_KEY_ALIASES: dict[str, str] = {
+    "story:sharjah-1986-miandad-six": "anecdote:miandad-sharjah-1986",
+    "sharjah-1986-miandad-six": "anecdote:miandad-sharjah-1986",
+    "miandad-sharjah-1986": "anecdote:miandad-sharjah-1986",
+    "story:miandad-sharjah-1986": "anecdote:miandad-sharjah-1986",
+    "story:eden-gardens-2001-laxman-dravid": "story:kolkata-2001-vvs-laxman",
+    "eden-gardens-2001-laxman-dravid": "story:kolkata-2001-vvs-laxman",
+    "story:wt20-2007-final-joginder-misbah": "story:t20-wc-2007-final-joginder",
+    "wt20-2007-final-joginder-misbah": "story:t20-wc-2007-final-joginder",
+    "story:world-cup-2019-final-super-over": "story:wc-2011-final-dhoni-six",
+    "story:wc-2011-final-dhoni": "story:wc-2011-final-dhoni-six",
+    "story:world-cup-1983": "story:world-cup-1983-final",
+}
+
+
 @router.get("/stories/{content_key}", response_model=StoryOut)
 def get_story_by_key(content_key: str, conn=Depends(get_conn)) -> StoryOut:
+    # 1. Exact match
     r = conn.execute(
         sa.select(content_bank).where(content_bank.c.content_key == content_key)
     ).first()
+
+    # 2. Known alias resolution
+    if not r and content_key in KNOWN_KEY_ALIASES:
+        canonical_key = KNOWN_KEY_ALIASES[content_key]
+        r = conn.execute(
+            sa.select(content_bank).where(content_bank.c.content_key == canonical_key)
+        ).first()
+
+    # 3. Suffix / Substring match (e.g. without category prefix)
+    if not r:
+        slug = content_key.split(":")[-1]
+        r = conn.execute(
+            sa.select(content_bank).where(content_bank.c.content_key.ilike(f"%{slug}%"))
+        ).first()
+
+    # 4. Special on-this-day handling
     if not r:
         if "on-this-day" in content_key or "today" in content_key:
             m = re.search(r"(\d{2}-\d{2})", content_key)

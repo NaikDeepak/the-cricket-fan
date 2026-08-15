@@ -8,8 +8,8 @@ import { Story, WireItem, storiesApi, todayMonthDay } from "@/lib/storiesApi";
 import StoryCard from "@/components/stories/StoryCard";
 import OnThisDayRail from "@/components/stories/OnThisDayRail";
 import WireStrip from "@/components/stories/WireStrip";
+import StadiumTacticalCanvas from "@/components/stories/StadiumTacticalCanvas";
 import {
-  HERO_REVEAL_VARIANTS,
   STAGGER_CONTAINER_VARIANTS,
   prefersReducedMotion,
 } from "@/lib/motion";
@@ -116,7 +116,6 @@ function Vault() {
     });
   }, [stories, activeSource, activeTag]);
 
-  const showRails = !filters.q && !activeTag && !activeSource;
   const activeOnThisDay = useMemo(() => {
     const fromList = stories.filter((s) => s.event_month_day === todayMonthDay());
     return fromList.length > 0 ? fromList : onThisDay;
@@ -148,6 +147,7 @@ function Vault() {
     }
   }
 
+  const showRails = !filters.q && !activeTag && !activeSource;
   const hasActiveFilter = Boolean(filters.q || activeTag || activeSource);
 
   return (
@@ -155,194 +155,132 @@ function Vault() {
       initial={isReduced ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      style={{ maxWidth: 1200, margin: "0 auto", padding: "0 var(--space-lg) var(--space-xl)" }}
+      style={{ maxWidth: 1280, margin: "0 auto", padding: "0 var(--space-lg) var(--space-xl)" }}
     >
-      {/* Apple Vision Pro Header Navigation Bar */}
       <header
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "var(--space-md) 0 var(--space-xl)",
+          padding: "var(--space-md) 0 var(--space-lg)",
           borderBottom: "1px solid var(--border)",
-          marginBottom: "var(--space-xl)",
+          marginBottom: "var(--space-lg)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
           <Link href="/stories" style={{ textDecoration: "none" }}>
-            <span style={{ fontSize: 22, fontWeight: 800, color: "#000000", letterSpacing: "-0.03em" }}>
-              TCF.
+            <span
+              style={{
+                fontFamily: "var(--font-serif)",
+                fontSize: 26,
+                fontWeight: 800,
+                color: "#0f172a",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              The Cricket Fan
             </span>
           </Link>
-          <span className="text-micro" style={{ background: "#e8e8ed", padding: "4px 12px", borderRadius: 999 }}>
-            The Cricket Fan
+          <span
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              background: "#fef3c7",
+              color: "#92400e",
+              border: "1px solid #fde68a",
+              padding: "3px 10px",
+              borderRadius: 999,
+            }}
+          >
+            The Vault
           </span>
         </div>
 
         <nav style={{ display: "flex", alignItems: "center", gap: "var(--space-lg)" }}>
-          <Link href="/stories" className="ds-nav-link" style={{ color: "#000000", fontWeight: 700 }}>
+          <Link
+            href="/stories"
+            className="ds-nav-link"
+            style={{
+              color: "#0f172a",
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
             The Vault
           </Link>
-          <Link href="/composer" className="ds-nav-link">
+          <Link
+            href="/composer"
+            className="ds-nav-link"
+            style={{
+              fontSize: 14,
+            }}
+          >
             Composer
           </Link>
-          <Link href="/composer" className="ds-btn-pill ds-btn-pill-dark" style={{ textDecoration: "none" }}>
-            Contact Us ↗
+          <Link
+            href="/composer"
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 13,
+              fontWeight: 600,
+              padding: "8px 18px",
+              borderRadius: 999,
+              background: "#0f172a",
+              color: "#ffffff",
+              textDecoration: "none",
+              boxShadow: "0 2px 8px rgba(15, 23, 42, 0.15)",
+              transition: "all 0.15s ease",
+            }}
+          >
+            Write Story →
           </Link>
         </nav>
       </header>
 
-      {/* Apple Vision Pro Hero Section */}
-      <motion.section
-        variants={HERO_REVEAL_VARIANTS}
-        initial={isReduced ? false : "hidden"}
-        animate="visible"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "var(--space-xl)",
-          alignItems: "center",
-          marginBottom: "var(--space-xl)",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: "var(--space-md)",
-            }}
-          >
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                background: "#000000",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#ffffff",
-                fontSize: 14,
-                fontWeight: 700,
-              }}
-            >
-              🏏
-            </div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#000000" }}>The Cricket Fan</div>
-              <div style={{ fontSize: 11, color: "var(--fg-muted)" }}>Revolution in match storytelling</div>
-            </div>
-          </div>
-
-          <h1
-            className="text-hero-headline"
-            style={{
-              marginBottom: "var(--space-md)",
-            }}
-          >
-            Seamlessly Blends Digital Cricket Folklore With Your Physical Space.
-          </h1>
-
-          <p
-            style={{
-              fontSize: "var(--text-base)",
-              lineHeight: 1.6,
-              color: "var(--fg-muted)",
-              marginBottom: "var(--space-xl)",
-              maxWidth: 480,
-            }}
-          >
-            Explore verified match comeback stories, iconic player rivalry statistics, and turning-point beats in ultra-high fidelity visual cards.
-          </p>
-
-          <div style={{ display: "flex", gap: "var(--space-md)", alignItems: "center" }}>
-            <a href="#vault-grid" className="ds-btn-pill ds-btn-pill-dark" style={{ textDecoration: "none" }}>
-              Explore Vault ↗
-            </a>
-            <button
-              type="button"
-              onClick={() => selectTag("rivalry")}
-              className="ds-btn-pill ds-btn-pill-light"
-            >
-              Rivalries ↗
-            </button>
-          </div>
-        </div>
-
-        {/* Hero Stadium Visual Graphic Panel */}
-        <div style={{ position: "relative" }}>
-          <div
-            style={{
-              borderRadius: 24,
-              overflow: "hidden",
-              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.12)",
-              border: "1px solid rgba(0, 0, 0, 0.08)",
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/images/hero_stadium.jpg"
-              alt="Cricket Stadium Masterpiece"
-              style={{
-                width: "100%",
-                height: 380,
-                objectFit: "cover",
-                display: "block",
-              }}
-            />
-          </div>
-
-          {/* Floating Dark Spatial Card anchored over hero image */}
-          <div
-            className="ds-spatial-card-dark"
-            style={{
-              position: "absolute",
-              bottom: -24,
-              left: 24,
-              right: 24,
-              padding: "var(--space-md) var(--space-lg)",
-              borderRadius: 16,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              backdropFilter: "blur(20px)",
-              background: "rgba(10, 10, 14, 0.88)",
-            }}
-          >
-            <div>
-              <span className="text-micro" style={{ color: "rgba(255, 255, 255, 0.6)" }}>
-                MATCH OF THE MOMENT • NEW
-              </span>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#ffffff", marginTop: 2 }}>
-                Sharjah 1986 — Miandad&apos;s Last-Ball Six
-              </div>
-            </div>
-            <Link href="/stories/story%3Asharjah-1986-miandad-six" className="ds-btn-pill ds-btn-pill-accent" style={{ fontSize: 12, padding: "6px 16px" }}>
-              Explore ↗
-            </Link>
-          </div>
-        </div>
-      </motion.section>
+      <StadiumTacticalCanvas stories={stories} />
 
       {showRails && (
-        <div style={{ marginTop: "var(--space-xl)" }}>
+        <div style={{ marginTop: "var(--space-lg)" }}>
           <OnThisDayRail stories={activeOnThisDay} />
           <WireStrip items={wire} />
         </div>
       )}
 
-      {/* Vault Section & Filter Controls */}
       <div id="vault-grid" style={{ paddingTop: "var(--space-xl)", marginBottom: "var(--space-lg)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "var(--space-md)" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            marginBottom: "var(--space-md)",
+          }}
+        >
           <div>
-            <span className="text-micro">EXPLORE ARCHIVE</span>
-            <h2 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, margin: "4px 0 0 0", letterSpacing: "-0.02em" }}>
+            <span className="text-micro" style={{ color: "#d97706" }}>THE ARCHIVE</span>
+            <h2
+              className="text-editorial-serif"
+              style={{
+                fontSize: "var(--text-2xl)",
+                fontWeight: 700,
+                margin: "4px 0 0 0",
+                letterSpacing: "-0.01em",
+                color: "#0f172a",
+              }}
+            >
               Stories &amp; Turning Points
             </h2>
           </div>
-          <span className="text-caption" style={{ margin: 0 }}>
+          <span
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#64748b",
+            }}
+          >
             {filteredStories.length} stories available
           </span>
         </div>
@@ -358,11 +296,11 @@ function Vault() {
           {/* Source Filter Tabs */}
           <div style={{ display: "flex", gap: "var(--space-xs)", flexWrap: "wrap" }}>
             {[
-              { id: null, label: "All Sources", icon: "🏏" },
-              { id: "wikipedia", label: "Wikipedia Archive", icon: "🏛️" },
-              { id: "reddit", label: "r/Cricket Lore", icon: "👾" },
-              { id: "memoir", label: "Dressing Room & Memoirs", icon: "📖" },
-              { id: "cricsheet", label: "Match Thrillers", icon: "⚡" },
+              { id: null, label: "All Sources", accent: "#0f172a" },
+              { id: "wikipedia", label: "Wikipedia Archive", accent: "#2563eb" },
+              { id: "reddit", label: "r/Cricket Lore", accent: "#ea580c" },
+              { id: "memoir", label: "Dressing Room & Memoirs", accent: "#d97706" },
+              { id: "cricsheet", label: "Match Thrillers", accent: "#16a34a" },
             ].map((tab) => {
               const isActive = activeSource === tab.id;
               return (
@@ -370,22 +308,17 @@ function Vault() {
                   key={tab.label}
                   type="button"
                   onClick={() => selectSource(tab.id)}
-                  className="ds-btn-pill"
-                  style={{
-                    fontSize: 13,
-                    padding: "6px 16px",
-                    cursor: "pointer",
-                    background: isActive ? "#000000" : "rgba(0, 0, 0, 0.05)",
-                    color: isActive ? "#ffffff" : "#1d1d1f",
-                    border: `1px solid ${isActive ? "#000000" : "transparent"}`,
-                    fontWeight: isActive ? 700 : 500,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    transition: "all 0.15s ease",
-                  }}
+                  className={`ds-filter-tab ${isActive ? "ds-filter-tab--active" : ""}`}
                 >
-                  <span>{tab.icon}</span>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      backgroundColor: isActive ? "#ffffff" : tab.accent,
+                    }}
+                  />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -398,7 +331,13 @@ function Vault() {
             placeholder="Search by player, team, rivalry, or keyword…"
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
-            style={{ width: "100%" }}
+            style={{
+              width: "100%",
+              borderRadius: 12,
+              borderColor: "#e2e8f0",
+              padding: "12px 18px",
+              fontSize: 14,
+            }}
           />
 
           {allTags.length > 0 && (
@@ -408,10 +347,14 @@ function Vault() {
                 onClick={() => selectTag(null)}
                 className="ds-chip"
                 style={{
-                  border: `1px solid ${activeTag === null ? "#000000" : "var(--border)"}`,
+                  border: `1px solid ${activeTag === null ? "#0f172a" : "#e2e8f0"}`,
                   cursor: "pointer",
-                  background: activeTag === null ? "#000000" : "var(--surface)",
-                  color: activeTag === null ? "#ffffff" : "var(--fg)",
+                  background: activeTag === null ? "#0f172a" : "#ffffff",
+                  color: activeTag === null ? "#ffffff" : "#475569",
+                  padding: "5px 14px",
+                  borderRadius: 999,
+                  fontWeight: 600,
+                  fontSize: 12,
                 }}
               >
                 All Stories
@@ -423,10 +366,14 @@ function Vault() {
                   onClick={() => selectTag(tag)}
                   className="ds-chip"
                   style={{
-                    border: `1px solid ${activeTag === tag ? "#000000" : "var(--border)"}`,
+                    border: `1px solid ${activeTag === tag ? "#0f172a" : "#e2e8f0"}`,
                     cursor: "pointer",
-                    background: activeTag === tag ? "#000000" : "var(--surface)",
-                    color: activeTag === tag ? "#ffffff" : "var(--fg)",
+                    background: activeTag === tag ? "#0f172a" : "#ffffff",
+                    color: activeTag === tag ? "#ffffff" : "#475569",
+                    padding: "5px 14px",
+                    borderRadius: 999,
+                    fontWeight: 600,
+                    fontSize: 12,
                   }}
                 >
                   #{tag}
