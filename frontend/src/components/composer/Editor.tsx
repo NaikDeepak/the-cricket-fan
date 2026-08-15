@@ -1,9 +1,22 @@
 "use client";
 import { useCallback, useMemo, useState } from "react";
-import { composerApi, type Draft } from "@/lib/composerApi";
+import { composerApi, type CardMeta, type Draft } from "@/lib/composerApi";
+import {
+  generateThemeFromHex,
+  listAllTeams,
+  listLeagues,
+} from "@/lib/teamColors";
 import { useDebouncedSave } from "./useDebouncedSave";
 
-const CARD_TYPES = ["prediction", "trivia", "record"] as const;
+const CARD_TYPES = [
+  "record",
+  "battle",
+  "milestone",
+  "quote",
+  "wire",
+  "prediction",
+  "trivia",
+] as const;
 
 export default function Editor({
   draft,
@@ -14,18 +27,38 @@ export default function Editor({
 }) {
   const [text, setText] = useState(draft.text);
   const [category, setCategory] = useState(draft.category ?? "");
-  const [cardType, setCardType] = useState(draft.card_type ?? "record");
+  const [cardType, setCardType] = useState<Draft["card_type"]>(
+    draft.card_type ?? "record"
+  );
+  const [cardMeta, setCardMeta] = useState<CardMeta>(draft.card_meta ?? {});
+
+  const [selectedLeague, setSelectedLeague] = useState<string>("All");
+
+  const leagues = useMemo(() => ["All", ...listLeagues(), "Custom"], []);
+  const allTeams = useMemo(() => listAllTeams(), []);
+
+  const filteredTeams = useMemo(() => {
+    if (selectedLeague === "All" || selectedLeague === "Custom") return allTeams;
+    return allTeams.filter((t) => t.league === selectedLeague);
+  }, [selectedLeague, allTeams]);
 
   const value = useMemo(
-    () => ({ text, category, cardType }),
-    [text, category, cardType]
+    () => ({ text, category, cardType, cardMeta }),
+    [text, category, cardType, cardMeta]
   );
+
   const save = useCallback(
-    async (v: { text: string; category: string; cardType: string }) => {
+    async (v: {
+      text: string;
+      category: string;
+      cardType: Draft["card_type"];
+      cardMeta: CardMeta;
+    }) => {
       const updated = await composerApi.patchDraft(draft.id, {
         text: v.text,
         category: v.category || null,
-        card_type: v.cardType as Draft["card_type"],
+        card_type: v.cardType,
+        card_meta: v.cardMeta,
       });
       onChange(updated);
     },
@@ -35,6 +68,39 @@ export default function Editor({
   useDebouncedSave(value, save);
 
   const over = text.length > 280;
+
+  function updateMeta(key: string, val: unknown) {
+    setCardMeta((prev) => ({ ...prev, [key]: val }));
+  }
+
+  function handleTeamSelect(teamName: string) {
+    if (cardType === "battle") {
+      if (!cardMeta.team_1) {
+        updateMeta("team_1", teamName);
+      } else {
+        updateMeta("team_2", teamName);
+      }
+    } else if (cardType === "prediction") {
+      if (!cardMeta.team_a) {
+        updateMeta("team_a", teamName);
+      } else {
+        updateMeta("team_b", teamName);
+      }
+    } else {
+      updateMeta("team", teamName);
+    }
+  }
+
+  function handleCustomColorChange(hex: string) {
+    const theme = generateThemeFromHex(hex);
+    if (cardType === "battle") {
+      updateMeta("team_1_theme", theme);
+    } else if (cardType === "prediction") {
+      updateMeta("team_a_theme", theme);
+    } else {
+      updateMeta("team_theme", theme);
+    }
+  }
 
   return (
     <div
@@ -72,8 +138,9 @@ export default function Editor({
         aria-label="post text"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        rows={5}
+        rows={4}
         className="ds-input"
+        placeholder="Draft post text or card commentary..."
         style={{
           width: "100%",
           fontFamily: "inherit",
@@ -87,7 +154,7 @@ export default function Editor({
       <div
         style={{
           display: "flex",
-          gap: "var(--space-lg)",
+          gap: "var(--space-md)",
           flexWrap: "wrap",
           minWidth: 0,
         }}
@@ -96,51 +163,357 @@ export default function Editor({
           className="text-micro"
           style={{
             display: "flex",
-            gap: "var(--space-sm)",
-            alignItems: "center",
+            gap: "var(--space-xs)",
+            flexDirection: "column",
             margin: 0,
-            flex: "1 1 140px",
+            flex: "1 1 120px",
             minWidth: 0,
           }}
         >
-          Category
-          <input
-            aria-label="category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="ds-input"
-            style={{ padding: "6px 10px", fontSize: "var(--text-sm)", width: "100%", minWidth: 0 }}
-          />
-        </label>
-
-        <label
-          className="text-micro"
-          style={{
-            display: "flex",
-            gap: "var(--space-sm)",
-            alignItems: "center",
-            margin: 0,
-            flex: "1 1 140px",
-            minWidth: 0,
-          }}
-        >
-          Card theme
+          Template Style
           <select
             aria-label="card type"
-            value={cardType}
+            value={cardType ?? "record"}
             onChange={(e) =>
-              setCardType(e.target.value as Draft["card_type"] & string)
+              setCardType(e.target.value as Draft["card_type"])
             }
             className="ds-select"
             style={{ width: "100%", minWidth: 0 }}
           >
             {CARD_TYPES.map((t) => (
               <option key={t} value={t}>
-                {t}
+                {t.toUpperCase()}
               </option>
             ))}
           </select>
         </label>
+
+        <label
+          className="text-micro"
+          style={{
+            display: "flex",
+            gap: "var(--space-xs)",
+            flexDirection: "column",
+            margin: 0,
+            flex: "1 1 120px",
+            minWidth: 0,
+          }}
+        >
+          Category Tag
+          <input
+            aria-label="category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="e.g. TNPL, IPL, STAT"
+            className="ds-input"
+            style={{
+              padding: "6px 10px",
+              fontSize: "var(--text-sm)",
+              width: "100%",
+              minWidth: 0,
+            }}
+          />
+        </label>
+      </div>
+
+      {/* Template-Specific Metadata Controls */}
+      <div
+        style={{
+          background: "rgba(255, 255, 255, 0.02)",
+          border: "1px solid var(--border)",
+          borderRadius: 8,
+          padding: "var(--space-sm)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-xs)",
+        }}
+      >
+        <span className="text-micro" style={{ color: "var(--fg-muted)" }}>
+          {cardType?.toUpperCase()} CARD DETAILS
+        </span>
+
+        {/* Battle Fields */}
+        {cardType === "battle" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Player 1 (e.g. Virat Kohli)"
+              value={(cardMeta.player_1 as string) || ""}
+              onChange={(e) => updateMeta("player_1", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Player 2 (e.g. Jasprit Bumrah)"
+              value={(cardMeta.player_2 as string) || ""}
+              onChange={(e) => updateMeta("player_2", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Team 1 Name / Color"
+              value={(cardMeta.team_1 as string) || ""}
+              onChange={(e) => updateMeta("team_1", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Team 2 Name / Color"
+              value={(cardMeta.team_2 as string) || ""}
+              onChange={(e) => updateMeta("team_2", e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* Milestone Fields */}
+        {cardType === "milestone" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Player Name (e.g. Sai Sudharsan)"
+              value={(cardMeta.player as string) || ""}
+              onChange={(e) => updateMeta("player", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Hero Stat (e.g. 103* (47) or 5/18)"
+              value={(cardMeta.stat as string) || ""}
+              onChange={(e) => updateMeta("stat", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Team Name"
+              value={(cardMeta.team as string) || ""}
+              onChange={(e) => updateMeta("team", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Milestone Tag (e.g. MATCH HERO)"
+              value={(cardMeta.tag as string) || ""}
+              onChange={(e) => updateMeta("tag", e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* Quote Fields */}
+        {cardType === "quote" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Speaker (e.g. Rohit Sharma)"
+              value={(cardMeta.speaker as string) || ""}
+              onChange={(e) => updateMeta("speaker", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Role / Title (e.g. Captain)"
+              value={(cardMeta.role as string) || ""}
+              onChange={(e) => updateMeta("role", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Team Affiliation"
+              value={(cardMeta.team as string) || ""}
+              onChange={(e) => updateMeta("team", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Context (e.g. Post-Match Presser)"
+              value={(cardMeta.context as string) || ""}
+              onChange={(e) => updateMeta("context", e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* Wire Fields */}
+        {cardType === "wire" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Breaking Headline"
+              value={(cardMeta.headline as string) || ""}
+              onChange={(e) => updateMeta("headline", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Source Tag (e.g. PRESS BOX DESK)"
+              value={(cardMeta.source as string) || ""}
+              onChange={(e) => updateMeta("source", e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* Prediction Fields */}
+        {cardType === "prediction" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Team A"
+              value={(cardMeta.team_a as string) || ""}
+              onChange={(e) => updateMeta("team_a", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Team B"
+              value={(cardMeta.team_b as string) || ""}
+              onChange={(e) => updateMeta("team_b", e.target.value)}
+            />
+            <label className="text-micro" style={{ margin: 0 }}>
+              Prob A (0.0 to 1.0)
+              <input
+                type="number"
+                step="0.05"
+                min="0"
+                max="1"
+                className="ds-input"
+                style={{ fontSize: 13, padding: "6px 10px", width: "100%" }}
+                value={
+                  typeof cardMeta.prob_a === "number" ? cardMeta.prob_a : 0.5
+                }
+                onChange={(e) =>
+                  updateMeta("prob_a", parseFloat(e.target.value) || 0.5)
+                }
+              />
+            </label>
+          </div>
+        )}
+
+        {/* Record Fields */}
+        {cardType === "record" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Big Stat / Headline (e.g. 264 RUNS)"
+              value={(cardMeta.headline as string) || ""}
+              onChange={(e) => updateMeta("headline", e.target.value)}
+            />
+            <input
+              className="ds-input"
+              style={{ fontSize: 13, padding: "6px 10px" }}
+              placeholder="Team Theme (e.g. India, CSK, TKR)"
+              value={(cardMeta.team as string) || ""}
+              onChange={(e) => updateMeta("team", e.target.value)}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Team Color Palettes & Custom Swatches Picker */}
+      <div
+        style={{
+          borderTop: "1px solid var(--border)",
+          paddingTop: "var(--space-xs)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-xs)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span className="text-micro" style={{ color: "var(--fg-muted)" }}>
+            APPLY TEAM PALETTE
+          </span>
+          {/* League Filter */}
+          <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
+            {leagues.map((lg) => (
+              <button
+                key={lg}
+                type="button"
+                onClick={() => setSelectedLeague(lg)}
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  padding: "2px 6px",
+                  borderRadius: 4,
+                  border: "1px solid var(--border)",
+                  background:
+                    selectedLeague === lg ? "var(--fg)" : "transparent",
+                  color: selectedLeague === lg ? "var(--bg)" : "var(--muted)",
+                  cursor: "pointer",
+                }}
+              >
+                {lg}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {selectedLeague === "Custom" ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <label className="text-micro" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              Primary Color
+              <input
+                type="color"
+                defaultValue="#e8432e"
+                onChange={(e) => handleCustomColorChange(e.target.value)}
+                style={{ cursor: "pointer", border: "none", background: "none" }}
+              />
+            </label>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              overflowX: "auto",
+              paddingBottom: 4,
+            }}
+          >
+            {filteredTeams.map((t) => (
+              <button
+                key={t.name}
+                type="button"
+                onClick={() => handleTeamSelect(t.name)}
+                title={`${t.name} (${t.league})`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "4px 8px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  background: "var(--surface)",
+                  color: "#ffffff",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: t.theme.accent,
+                    boxShadow: `0 0 6px ${t.theme.glow}`,
+                  }}
+                />
+                {t.short}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

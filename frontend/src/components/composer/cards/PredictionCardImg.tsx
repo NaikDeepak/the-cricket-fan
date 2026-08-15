@@ -18,8 +18,10 @@ export default function PredictionCardImg({
   const logoA = teamLogoPath(teamA);
   const logoB = teamLogoPath(teamB);
 
-  const themeA = getTeamTheme(teamA);
-  const themeB = getTeamTheme(teamB);
+  const customThemeA = meta.team_a_theme as any;
+  const customThemeB = meta.team_b_theme as any;
+  const themeA = customThemeA || getTeamTheme(teamA);
+  const themeB = customThemeB || getTeamTheme(teamB);
 
   const dims =
     aspect === "16:9"

@@ -3,7 +3,7 @@ import sqlalchemy as sa
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 
-from bot.db import metadata
+from bot.db import ensure_schema, metadata
 from composer.app import create_app
 from composer.deps import get_conn
 
@@ -15,7 +15,8 @@ def engine():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    metadata.create_all(eng)
+    with eng.begin() as c:
+        ensure_schema(c)
     yield eng
     eng.dispose()
 

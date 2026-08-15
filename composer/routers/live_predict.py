@@ -44,6 +44,7 @@ def parse_match(body: MatchParseIn, conn=Depends(get_conn)) -> MatchInputSchema:
         innings2_wickets=match_input.innings2_wickets,
         innings2_overs=match_input.innings2_overs,
         phase=match_input.phase,
+        top_performers=match_input.top_performers or [],
     )
 
 
@@ -149,6 +150,7 @@ def run_live_prediction(
         "venue": inp.venue,
         "score_summary": score_summary,
         "score_projection": score_proj,
+        "top_performers": body.top_performers or [],
     }
 
     return LivePredictionOut(

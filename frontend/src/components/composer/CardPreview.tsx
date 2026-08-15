@@ -2,9 +2,13 @@
 import { useEffect, useRef, useState } from "react";
 import { composerApi, type Draft } from "@/lib/composerApi";
 import { captureCard, copyImageToClipboard, downloadCard } from "@/lib/share";
+import BattleCardImg from "./cards/BattleCardImg";
+import MilestoneCardImg from "./cards/MilestoneCardImg";
 import PredictionCardImg from "./cards/PredictionCardImg";
+import QuoteCardImg from "./cards/QuoteCardImg";
 import RecordCardImg from "./cards/RecordCardImg";
 import TriviaCardImg from "./cards/TriviaCardImg";
+import WireCardImg from "./cards/WireCardImg";
 
 type AspectRatio = "1:1" | "16:9" | "4:5";
 
@@ -40,6 +44,18 @@ export default function CardPreview({
     }
     if (cardType === "trivia") {
       return <TriviaCardImg draft={draft} aspect={targetAspect} />;
+    }
+    if (cardType === "battle") {
+      return <BattleCardImg draft={draft} aspect={targetAspect} />;
+    }
+    if (cardType === "milestone") {
+      return <MilestoneCardImg draft={draft} aspect={targetAspect} />;
+    }
+    if (cardType === "quote") {
+      return <QuoteCardImg draft={draft} aspect={targetAspect} />;
+    }
+    if (cardType === "wire") {
+      return <WireCardImg draft={draft} aspect={targetAspect} />;
     }
     return <RecordCardImg draft={draft} aspect={targetAspect} />;
   }

@@ -34,39 +34,3 @@ def test_generate_recap_survives_rss_outage(client, engine):
     assert res.status_code == 201
     assert "RCB" in res.json()["text"]
 
-
-def test_teams_lists_distinct_sorted_names(client, engine):
-    now = datetime(2026, 8, 1, tzinfo=timezone.utc)
-    with engine.begin() as conn:
-        ensure_schema(conn)
-        conn.execute(
-            team_matches.insert(),
-            [
-                {
-                    "team": t,
-                    "opponent": o,
-                    "date": now.date(),
-                    "season": "2026",
-                    "league": "IPL",
-                    "venue": "V",
-                    "won": True,
-                    "dls": False,
-                }
-                for t, o in [("MI", "CSK"), ("CSK", "MI")]
-            ],
-        )
-        conn.execute(
-            fixtures.insert().values(
-                provider_match_id="test-match-1",
-                team_a="RCB",
-                team_b="MI",
-                venue="V",
-                league="IPL",
-                start_time=now,
-                status="upcoming",
-            )
-        )
-
-    res = client.get("/teams")
-    assert res.status_code == 200
-    assert res.json() == ["CSK", "MI", "RCB"]

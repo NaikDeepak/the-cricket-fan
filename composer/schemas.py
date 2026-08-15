@@ -156,6 +156,7 @@ class MatchInputSchema(BaseModel):
     innings2_wickets: int | None = None
     innings2_overs: float | None = None
     phase: str = "pre_match"  # 'pre_match' | 'innings_break' | 'chase_in_progress' | 'completed'
+    top_performers: list[dict] = []
 
 
 class LivePredictionOut(BaseModel):
@@ -168,6 +169,61 @@ class LivePredictionOut(BaseModel):
     tweet_text: str
     card_meta: dict
 
+
+class TeamColorThemeSchema(BaseModel):
+    primary: str
+    secondary: str
+    accent: str | None = None
+    gradient: str | None = None
+    glow: str | None = None
+    text_dark: bool = False
+
+
+class TeamIn(BaseModel):
+    name: str
+    short_name: str
+    league: str
+    primary_color: str
+    secondary_color: str
+    accent_color: str | None = None
+    gradient: str | None = None
+    glow: str | None = None
+    text_dark: bool = False
+    logo_url: str | None = None
+    aliases: list[str] = []
+    is_active: bool = True
+
+
+class TeamPatch(BaseModel):
+    name: str | None = None
+    short_name: str | None = None
+    league: str | None = None
+    primary_color: str | None = None
+    secondary_color: str | None = None
+    accent_color: str | None = None
+    gradient: str | None = None
+    glow: str | None = None
+    text_dark: bool | None = None
+    logo_url: str | None = None
+    aliases: list[str] | None = None
+    is_active: bool | None = None
+
+
+class TeamOut(BaseModel):
+    id: int
+    name: str
+    short_name: str
+    league: str
+    primary_color: str
+    secondary_color: str
+    accent_color: str | None = None
+    gradient: str | None = None
+    glow: str | None = None
+    text_dark: bool = False
+    logo_url: str | None = None
+    aliases: list[str] = []
+    is_active: bool = True
+    theme: TeamColorThemeSchema
 
 
 def row_to_out(row) -> DraftOut:
@@ -183,3 +239,38 @@ def row_to_out(row) -> DraftOut:
         posted_at=row.posted_at,
         content_key=row.content_key,
     )
+
+
+def team_row_to_out(row) -> TeamOut:
+    accent = row.accent_color or row.primary_color
+    gradient = (
+        row.gradient
+        or f"linear-gradient(135deg, {row.primary_color} 0%, {row.secondary_color} 100%)"
+    )
+    glow = row.glow or f"rgba(255, 255, 255, 0.4)"
+    theme = TeamColorThemeSchema(
+        primary=row.primary_color,
+        secondary=row.secondary_color,
+        accent=accent,
+        gradient=gradient,
+        glow=glow,
+        text_dark=bool(row.text_dark),
+    )
+    aliases = json.loads(row.aliases_json) if row.aliases_json else []
+    return TeamOut(
+        id=row.id,
+        name=row.name,
+        short_name=row.short_name,
+        league=row.league,
+        primary_color=row.primary_color,
+        secondary_color=row.secondary_color,
+        accent_color=accent,
+        gradient=gradient,
+        glow=glow,
+        text_dark=bool(row.text_dark),
+        logo_url=row.logo_url,
+        aliases=aliases,
+        is_active=bool(row.is_active),
+        theme=theme,
+    )
+

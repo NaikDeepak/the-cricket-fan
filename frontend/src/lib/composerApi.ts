@@ -7,7 +7,15 @@ export type Draft = {
   source: "bank" | "bot" | "llm" | "freeform";
   category: string | null;
   text: string;
-  card_type: "prediction" | "trivia" | "record" | null;
+  card_type:
+    | "prediction"
+    | "trivia"
+    | "record"
+    | "battle"
+    | "milestone"
+    | "quote"
+    | "wire"
+    | null;
   card_meta: CardMeta | null;
   status: "draft" | "posted";
   created_at: string;
@@ -127,6 +135,49 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export type TeamColorThemeApi = {
+  primary: string;
+  secondary: string;
+  accent?: string | null;
+  gradient?: string | null;
+  glow?: string | null;
+  text_dark?: boolean;
+};
+
+export type TeamRecord = {
+  id: number;
+  name: string;
+  short_name: string;
+  league: string;
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string | null;
+  gradient: string | null;
+  glow: string | null;
+  text_dark: boolean;
+  logo_url: string | null;
+  aliases: string[];
+  is_active: boolean;
+  theme: TeamColorThemeApi;
+};
+
+export type TeamIn = {
+  name: string;
+  short_name: string;
+  league: string;
+  primary_color: string;
+  secondary_color: string;
+  accent_color?: string;
+  gradient?: string;
+  glow?: string;
+  text_dark?: boolean;
+  logo_url?: string;
+  aliases?: string[];
+  is_active?: boolean;
+};
+
+export type TeamPatch = Partial<TeamIn>;
+
 export const composerApi = {
   listDrafts: (q: { status?: string; source?: string } = {}) => {
     const p = new URLSearchParams(q as Record<string, string>).toString();
@@ -169,7 +220,21 @@ export const composerApi = {
       method: "POST",
       body: JSON.stringify({ team_a, team_b }),
     }),
-  teams: () => req<string[]>("/teams"),
+  teams: (q: { league?: string; search?: string } = {}) => {
+    const p = new URLSearchParams(q as Record<string, string>).toString();
+    return req<TeamRecord[]>(`/teams${p ? `?${p}` : ""}`);
+  },
+  createTeam: (body: TeamIn) =>
+    req<TeamRecord>("/teams", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  patchTeam: (id: number, body: TeamPatch) =>
+    req<TeamRecord>(`/teams/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteTeam: (id: number) => req<void>(`/teams/${id}`, { method: "DELETE" }),
   analytics: () => req<Analytics>("/analytics"),
   predictions: (q: { outcome?: string } = {}) => {
     const p = new URLSearchParams(q as Record<string, string>).toString();

@@ -27,6 +27,41 @@ COMMON_ABBREVIATIONS: dict[str, str] = {
     "rr": "Rajasthan Royals",
     "gt": "Gujarat Titans",
     "lsg": "Lucknow Super Giants",
+    # WPL
+    "rcbw": "Royal Challengers Bengaluru Women",
+    "miw": "Mumbai Indians Women",
+    "dcw": "Delhi Capitals Women",
+    "upw": "UP Warriorz",
+    "ggw": "Gujarat Giants Women",
+    # TNPL
+    "csg": "Chepauk Super Gillies",
+    "chepauk super gillies": "Chepauk Super Gillies",
+    "dd": "Dindigul Dragons",
+    "dindigul dragons": "Dindigul Dragons",
+    "lkk": "Lyca Kovai Kings",
+    "lyca kovai kings": "Lyca Kovai Kings",
+    "nrk": "Nellai Royal Kings",
+    "nellai royal kings": "Nellai Royal Kings",
+    "sls": "Salem Spartans",
+    "salem spartans": "Salem Spartans",
+    "smp": "Siechem Madurai Panthers",
+    "siechem madurai panthers": "Siechem Madurai Panthers",
+    "idt": "IDream Tiruppur Tamizhans",
+    "idream tiruppur tamizhans": "IDream Tiruppur Tamizhans",
+    "bt": "Ba11sy Trichy",
+    "ba11sy trichy": "Ba11sy Trichy",
+    # MPL (Maharashtra Premier League)
+    "pb": "Puneri Bappa",
+    "puneri bappa": "Puneri Bappa",
+    "kt": "Kolhapur Tuskers",
+    "kolhapur tuskers": "Kolhapur Tuskers",
+    "ent": "Eagle Nashik Titans",
+    "eagle nashik titans": "Eagle Nashik Titans",
+    "rj": "Ratnagiri Jets",
+    "ratnagiri jets": "Ratnagiri Jets",
+    "cskm": "Chhatrapati Sambhaji Kings",
+    "chhatrapati sambhaji kings": "Chhatrapati Sambhaji Kings",
+    "raigad royals": "Raigad Royals",
     # CPL
     "abf": "Antigua & Barbuda Falcons",
     "antigua and barbuda falcons": "Antigua & Barbuda Falcons",
@@ -44,6 +79,58 @@ COMMON_ABBREVIATIONS: dict[str, str] = {
     "guyana amazon warriors": "Guyana Amazon Warriors",
     "slk": "Saint Lucia Kings",
     "saint lucia kings": "Saint Lucia Kings",
+    # BBL
+    "per": "Perth Scorchers",
+    "perth scorchers": "Perth Scorchers",
+    "syd": "Sydney Sixers",
+    "sydney sixers": "Sydney Sixers",
+    "stars": "Melbourne Stars",
+    "melbourne stars": "Melbourne Stars",
+    "renegades": "Melbourne Renegades",
+    "melbourne renegades": "Melbourne Renegades",
+    "heat": "Brisbane Heat",
+    "brisbane heat": "Brisbane Heat",
+    "strikers": "Adelaide Strikers",
+    "adelaide strikers": "Adelaide Strikers",
+    "hurricanes": "Hobart Hurricanes",
+    "hobart hurricanes": "Hobart Hurricanes",
+    "thunder": "Sydney Thunder",
+    "sydney thunder": "Sydney Thunder",
+    # SA20
+    "sec": "Sunrisers Eastern Cape",
+    "sunrisers eastern cape": "Sunrisers Eastern Cape",
+    "mict": "MI Cape Town",
+    "mi cape town": "MI Cape Town",
+    "pr": "Paarl Royals",
+    "paarl royals": "Paarl Royals",
+    "jsk": "Joburg Super Kings",
+    "joburg super kings": "Joburg Super Kings",
+    "dsg": "Durban's Super Giants",
+    "durban's super giants": "Durban's Super Giants",
+    "pc": "Pretoria Capitals",
+    "pretoria capitals": "Pretoria Capitals",
+    # PSL
+    "lq": "Lahore Qalandars",
+    "lahore qalandars": "Lahore Qalandars",
+    "kk": "Karachi Kings",
+    "karachi kings": "Karachi Kings",
+    "iu": "Islamabad United",
+    "islamabad united": "Islamabad United",
+    "ms": "Multan Sultans",
+    "multan sultans": "Multan Sultans",
+    "pz": "Peshawar Zalmi",
+    "peshawar zalmi": "Peshawar Zalmi",
+    "qg": "Quetta Gladiators",
+    "quetta gladiators": "Quetta Gladiators",
+    # MLC
+    "miny": "MI New York",
+    "mi new york": "MI New York",
+    "tsk": "Texas Super Kings",
+    "texas super kings": "Texas Super Kings",
+    "waf": "Washington Freedom",
+    "washington freedom": "Washington Freedom",
+    "sfu": "San Francisco Unicorns",
+    "san francisco unicorns": "San Francisco Unicorns",
     # Internationals
     "ind": "India",
     "aus": "Australia",
@@ -81,6 +168,11 @@ class MatchInput:
     innings2_wickets: int | None = None
     innings2_overs: float | None = None
     phase: str = "pre_match"  # 'pre_match' | 'innings_break' | 'chase_in_progress' | 'completed'
+    top_performers: list[dict] = None  # [{'name': '...', 'stat': '...', 'role': 'bat'|'bowl'}]
+
+    def __post_init__(self):
+        if self.top_performers is None:
+            self.top_performers = []
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -169,7 +261,7 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
 
     # 4. Look for League
     league_match = re.search(
-        r"(IPL|Indian Premier League|CPL|Caribbean Premier League|BBL|Big Bash League|PSL|Pakistan Super League|SA20|MLC|Major League Cricket|The Hundred|T20I|World Cup|T20)",
+        r"(IPL|Indian Premier League|WPL|Women's Premier League|TNPL|Tamil Nadu Premier League|MPL|Maharashtra Premier League|CPL|Caribbean Premier League|BBL|Big Bash League|PSL|Pakistan Super League|SA20|MLC|Major League Cricket|The Hundred|Vitality Blast|ILT20|T20I|World Cup|T20)",
         text,
         re.IGNORECASE,
     )
@@ -177,6 +269,12 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
         league_str = league_match.group(1).upper()
         if "IPL" in league_str or "INDIAN PREMIER LEAGUE" in league_str:
             result.league = "IPL"
+        elif "WPL" in league_str or "WOMEN" in league_str:
+            result.league = "WPL"
+        elif "TNPL" in league_str or "TAMIL NADU" in league_str:
+            result.league = "TNPL"
+        elif "MPL" in league_str or "MAHARASHTRA" in league_str:
+            result.league = "MPL"
         elif "CPL" in league_str or "CARIBBEAN" in league_str:
             result.league = "CPL"
         elif "BBL" in league_str or "BIG BASH" in league_str:
@@ -187,8 +285,45 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
             result.league = "SA20"
         elif "MLC" in league_str:
             result.league = "MLC"
+        elif "ILT20" in league_str:
+            result.league = "ILT20"
         else:
             result.league = league_str
+
+    # 5. Extract Player Performers (Batters & Bowlers from scorecard/commentary)
+    # Examples: "Sai Sudharsan 82 (45)", "V Kohli 113* (72)", "V Chakaravarthy 3/18 (4.0)"
+    performers = []
+    bat_pattern = re.compile(
+        r"([A-Z][a-zA-Z\s.]+?)\s+(\d{1,3}\*?)\s*\(([\d]{1,3})\s*(?:b|balls)?\)",
+        re.IGNORECASE,
+    )
+    for m in bat_pattern.finditer(text):
+        p_name = m.group(1).strip()
+        runs_str = m.group(2)
+        balls_str = m.group(3)
+        if len(p_name) > 2 and not any(k in p_name.lower() for k in ["overs", "runs", "target", "extras"]):
+            performers.append({
+                "name": p_name,
+                "stat": f"{runs_str} ({balls_str})",
+                "role": "bat",
+            })
+
+    bowl_pattern = re.compile(
+        r"([A-Z][a-zA-Z\s.]+?)\s+(\d{1,2}/\d{1,3})\s*(?:\(([\d.]+)\s*(?:ov|overs)?\))?",
+        re.IGNORECASE,
+    )
+    for m in bowl_pattern.finditer(text):
+        p_name = m.group(1).strip()
+        fig_str = m.group(2)
+        ov_str = m.group(3) or ""
+        if len(p_name) > 2 and not any(k in p_name.lower() for k in ["overs", "runs", "target", "extras"]):
+            stat_text = f"{fig_str} ({ov_str} ov)" if ov_str else fig_str
+            performers.append({
+                "name": p_name,
+                "stat": stat_text,
+                "role": "bowl",
+            })
+    result.top_performers = performers[:6]
 
     # 5. Look for Innings / Scores
     # Patterns:

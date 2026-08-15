@@ -166,11 +166,3 @@ def generate_recap(body: GenerateRecapIn, conn=Depends(get_conn)) -> DraftOut:
         log_generated=True,
     )
 
-
-@router.get("/teams", response_model=list[str])
-def list_teams(conn=Depends(get_conn)) -> list[str]:
-    names: set[str] = set()
-    names.update(r[0] for r in conn.execute(sa.select(team_matches.c.team).distinct()))
-    names.update(r[0] for r in conn.execute(sa.select(fixtures.c.team_a).distinct()))
-    names.update(r[0] for r in conn.execute(sa.select(fixtures.c.team_b).distinct()))
-    return sorted(n for n in names if n)

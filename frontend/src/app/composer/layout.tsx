@@ -9,6 +9,7 @@ import { prefersReducedMotion } from "@/lib/motion";
 
 const TABS = [
   { href: "/composer", label: "Compose" },
+  { href: "/composer/templates", label: "Templates & Themes" },
   { href: "/composer/live-predict", label: "Live Predict" },
   { href: "/composer/predictions", label: "Predictions" },
   { href: "/composer/posts", label: "Posts" },

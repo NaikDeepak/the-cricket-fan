@@ -162,6 +162,25 @@ content_events = sa.Table(
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
 )
 
+teams = sa.Table(
+    "teams",
+    metadata,
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("name", sa.String(128), nullable=False, unique=True, index=True),
+    sa.Column("short_name", sa.String(16), nullable=False, index=True),
+    sa.Column("league", sa.String(32), nullable=False, index=True),
+    sa.Column("primary_color", sa.String(16), nullable=False),
+    sa.Column("secondary_color", sa.String(16), nullable=False),
+    sa.Column("accent_color", sa.String(16), nullable=True),
+    sa.Column("gradient", sa.String(128), nullable=True),
+    sa.Column("glow", sa.String(64), nullable=True),
+    sa.Column("text_dark", sa.Boolean, nullable=False, default=False),
+    sa.Column("logo_url", sa.String(256), nullable=True),
+    sa.Column("aliases_json", sa.Text, nullable=True),
+    sa.Column("is_active", sa.Boolean, nullable=False, default=True),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+)
+
 
 def get_engine(url: str) -> sa.Engine:
     return sa.create_engine(url, pool_pre_ping=True)
@@ -227,4 +246,38 @@ def ensure_schema(conn: sa.Connection) -> None:
             conn.execute(
                 sa.text(f"ALTER TABLE content_bank ADD COLUMN {col_name} {col_type}")
             )
+
+    seed_teams_if_empty(conn)
+
+
+def seed_teams_if_empty(conn: sa.Connection) -> None:
+    from datetime import datetime, timezone
+    import json
+    from .team_seed import INITIAL_TEAMS
+
+    try:
+        count = conn.execute(sa.select(sa.func.count(teams.c.id))).scalar()
+        if count == 0:
+            now = datetime.now(timezone.utc)
+            for t in INITIAL_TEAMS:
+                conn.execute(
+                    teams.insert().values(
+                        name=t["name"],
+                        short_name=t["short_name"],
+                        league=t["league"],
+                        primary_color=t["primary_color"],
+                        secondary_color=t["secondary_color"],
+                        accent_color=t.get("accent_color", t["primary_color"]),
+                        gradient=t.get("gradient"),
+                        glow=t.get("glow"),
+                        text_dark=t.get("text_dark", False),
+                        logo_url=t.get("logo_url"),
+                        aliases_json=json.dumps(t.get("aliases", [])),
+                        is_active=True,
+                        created_at=now,
+                    )
+                )
+    except Exception:
+        pass
+
 

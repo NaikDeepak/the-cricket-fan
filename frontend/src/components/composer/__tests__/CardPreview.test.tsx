@@ -138,4 +138,51 @@ describe("CardPreview", () => {
     expect(onDelete).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
   });
+  it("renders battle, milestone, quote, and wire templates properly", () => {
+    const { rerender } = render(
+      <CardPreview
+        draft={{
+          ...draft,
+          card_type: "battle",
+          card_meta: { player_1: "Virat Kohli", player_2: "Jasprit Bumrah" },
+        }}
+      />
+    );
+    expect(screen.getAllByText(/Virat Kohli/i)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/Jasprit Bumrah/i)[0]).toBeInTheDocument();
+
+    rerender(
+      <CardPreview
+        draft={{
+          ...draft,
+          card_type: "milestone",
+          card_meta: { player: "Sai Sudharsan", stat: "103* (47)" },
+        }}
+      />
+    );
+    expect(screen.getAllByText(/Sai Sudharsan/i)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/103\* \(47\)/i)[0]).toBeInTheDocument();
+
+    rerender(
+      <CardPreview
+        draft={{
+          ...draft,
+          card_type: "quote",
+          card_meta: { speaker: "Rohit Sharma", quote: "Team first always." },
+        }}
+      />
+    );
+    expect(screen.getAllByText(/Rohit Sharma/i)[0]).toBeInTheDocument();
+
+    rerender(
+      <CardPreview
+        draft={{
+          ...draft,
+          card_type: "wire",
+          card_meta: { headline: "BREAKING NEWS" },
+        }}
+      />
+    );
+    expect(screen.getAllByText(/BREAKING NEWS/i)[0]).toBeInTheDocument();
+  });
 });

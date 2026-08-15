@@ -1,4 +1,5 @@
 import type { Draft } from "@/lib/composerApi";
+import { getTeamTheme, type TeamColorTheme } from "@/lib/teamColors";
 
 export default function TriviaCardImg({
   draft,
@@ -10,6 +11,12 @@ export default function TriviaCardImg({
   const meta = draft.card_meta ?? {};
   const question = (meta.question as string) || draft.text;
   const options = (meta.options as string[]) || [];
+  const team = meta.team as string | undefined;
+  const customTheme = meta.team_theme as TeamColorTheme | undefined;
+  const theme = team || customTheme ? (customTheme || getTeamTheme(team)) : null;
+
+  const accentColor = theme?.accent || "#818cf8";
+  const glowColor = theme?.glow || "rgba(129, 140, 248, 0.4)";
 
   const dims =
     aspect === "16:9"
@@ -23,56 +30,99 @@ export default function TriviaCardImg({
       style={{
         width: dims.width,
         height: dims.height,
-        background: "linear-gradient(135deg, #09090b 0%, #1e1b4b 100%)",
+        background: "linear-gradient(145deg, #09090b 0%, #131226 60%, #09090f 100%)",
         color: "#ffffff",
-        padding: 48,
+        padding: aspect === "16:9" ? "36px 48px" : "48px 52px",
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
         boxSizing: "border-box",
         fontFamily: "var(--font-oswald), sans-serif",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      {/* Ambient glowing orb */}
+      <div
+        style={{
+          position: "absolute",
+          top: -80,
+          right: -80,
+          width: 500,
+          height: 500,
+          borderRadius: "50%",
+          background: accentColor,
+          filter: "blur(150px)",
+          opacity: 0.18,
+          pointerEvents: "none",
+        }}
+      />
+
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          borderBottom: "2px solid #312e81",
-          paddingBottom: 24,
+          borderBottom: "1px solid rgba(255, 255, 255, 0.12)",
+          paddingBottom: aspect === "16:9" ? 16 : 22,
+          position: "relative",
+          zIndex: 1,
         }}
       >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              background: accentColor,
+              boxShadow: `0 0 12px ${glowColor}`,
+            }}
+          />
+          <span
+            style={{
+              fontSize: 22,
+              letterSpacing: 3,
+              color: "rgba(255, 255, 255, 0.8)",
+              fontWeight: 700,
+              textTransform: "uppercase",
+            }}
+          >
+            ❓ CRICKET TRIVIA
+          </span>
+        </div>
+
         <span
           style={{
-            fontSize: 24,
-            letterSpacing: 2,
-            color: "#a5b4fc",
-            fontWeight: 600,
-          }}
-        >
-          ❓ CRICKET TRIVIA
-        </span>
-        <span
-          style={{
-            fontSize: 20,
-            background: "#312e81",
-            padding: "6px 16px",
-            borderRadius: 20,
-            color: "#c7d2fe",
+            fontSize: 16,
+            fontWeight: 700,
+            letterSpacing: 1.5,
+            background: "rgba(255, 255, 255, 0.08)",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            padding: "6px 18px",
+            borderRadius: 999,
+            color: accentColor,
           }}
         >
           DAILY QUIZ
         </span>
       </div>
 
-      <div style={{ margin: "24px 0" }}>
+      <div
+        style={{
+          margin: aspect === "16:9" ? "12px 0" : "24px 0",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
         <p
           style={{
-            fontSize: 32,
+            fontSize: aspect === "16:9" ? 24 : 32,
             fontWeight: 600,
             lineHeight: 1.4,
             color: "#f8fafc",
-            marginBottom: 32,
+            marginBottom: aspect === "16:9" ? 16 : 28,
+            fontFamily: "var(--font-space-grotesk), sans-serif",
           }}
         >
           {question}
@@ -83,22 +133,23 @@ export default function TriviaCardImg({
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: 16,
+              gap: aspect === "16:9" ? 12 : 16,
             }}
           >
             {options.map((opt, i) => (
               <div
                 key={i}
                 style={{
-                  background: "rgba(49, 46, 129, 0.4)",
-                  border: "1px solid #4338ca",
-                  padding: "16px 20px",
+                  background: "rgba(255, 255, 255, 0.04)",
+                  border: `1px solid ${accentColor}44`,
+                  padding: aspect === "16:9" ? "12px 16px" : "18px 22px",
                   borderRadius: 12,
-                  fontSize: 24,
-                  color: "#e0e7ff",
+                  fontSize: aspect === "16:9" ? 18 : 22,
+                  color: "#ffffff",
+                  fontFamily: "var(--font-space-grotesk), sans-serif",
                 }}
               >
-                <span style={{ color: "#818cf8", marginRight: 12 }}>
+                <span style={{ color: accentColor, marginRight: 10, fontWeight: 700 }}>
                   {String.fromCharCode(65 + i)}.
                 </span>
                 {opt}
@@ -113,16 +164,19 @@ export default function TriviaCardImg({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          borderTop: "2px solid #312e81",
-          paddingTop: 24,
-          fontSize: 20,
-          color: "#818cf8",
+          borderTop: "1px solid rgba(255, 255, 255, 0.12)",
+          paddingTop: aspect === "16:9" ? 14 : 22,
+          fontSize: 18,
+          color: "rgba(255, 255, 255, 0.5)",
+          fontWeight: 600,
+          letterSpacing: 1.5,
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <span>THE CRICKET FAN</span>
-        <span>#TheCricketFan</span>
+        <span style={{ color: accentColor }}>#TheCricketFan</span>
       </div>
     </div>
   );
 }
-
