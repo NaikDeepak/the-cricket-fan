@@ -69,6 +69,14 @@ def list_drafts(
     return [row_to_out(r) for r in conn.execute(q).all()]
 
 
+@router.get("/drafts/{draft_id}", response_model=DraftOut)
+def get_draft(draft_id: int, conn=Depends(get_conn)) -> DraftOut:
+    row = conn.execute(sa.select(drafts).where(drafts.c.id == draft_id)).first()
+    if row is None:
+        raise HTTPException(404, "draft not found")
+    return row_to_out(row)
+
+
 @router.patch("/drafts/{draft_id}", response_model=DraftOut)
 def patch_draft(draft_id: int, body: DraftPatch, conn=Depends(get_conn)) -> DraftOut:
     row = conn.execute(sa.select(drafts).where(drafts.c.id == draft_id)).first()

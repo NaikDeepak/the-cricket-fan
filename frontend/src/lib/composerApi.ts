@@ -316,6 +316,7 @@ export const composerApi = {
     const p = new URLSearchParams(q as Record<string, string>).toString();
     return req<Draft[]>(`/drafts${p ? `?${p}` : ""}`);
   },
+  getDraft: (id: number) => req<Draft>(`/drafts/${id}`),
   createDraft: (body: DraftIn) =>
     req<Draft>("/drafts", { method: "POST", body: JSON.stringify(body) }),
   patchDraft: (id: number, body: DraftPatch) =>

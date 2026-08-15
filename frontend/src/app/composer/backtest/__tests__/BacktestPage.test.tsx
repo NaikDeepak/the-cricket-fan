@@ -3,7 +3,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import BacktestPage from "@/app/composer/backtest/page";
 import { composerApi, type BacktestOptions, type BacktestResult } from "@/lib/composerApi";
 
-afterEach(() => vi.restoreAllMocks());
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  mockPush.mockClear();
+});
 
 const mockOptions: BacktestOptions = {
   leagues: ["IPL", "T20I"],
@@ -54,6 +63,19 @@ const mockResult: BacktestResult = {
       correct: false,
     },
   ],
+  upcoming_games: [
+    {
+      date: "2024-05-27",
+      team_a: "Trent Rockets",
+      team_b: "Manchester Originals",
+      venue: "Lord's, London",
+      prob_team_a: 0.74,
+      predicted_winner: "Trent Rockets",
+      actual_winner: null,
+      correct: null,
+      status: "upcoming",
+    },
+  ],
 };
 
 describe("BacktestPage", () => {
@@ -95,6 +117,71 @@ describe("BacktestPage", () => {
       expect(screen.getByText("1 of 2 Matches Correct")).toBeInTheDocument();
       expect(screen.getAllByText("Chennai Super Kings").length).toBeGreaterThan(0);
       expect(screen.getAllByText("Royal Challengers Bengaluru").length).toBeGreaterThan(0);
+      expect(screen.getByText(/UPCOMING FIXTURES & MODEL PREDICTIONS/)).toBeInTheDocument();
+    });
+  });
+
+  it("opens QuickShareModal when clicking Share Card button", async () => {
+    vi.spyOn(composerApi, "backtestOptions").mockResolvedValue(mockOptions);
+    vi.spyOn(composerApi, "runBacktest").mockResolvedValue(mockResult);
+
+    render(<BacktestPage />);
+
+    await waitFor(() => {
+      expect((screen.getByLabelText("LEAGUE") as HTMLSelectElement).value).toBe("IPL");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /run backtest/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Share Card \(X \/ Insta\)/).length).toBeGreaterThan(0);
+    });
+
+    // Click the first Share Card button
+    fireEvent.click(screen.getAllByText(/Share Card \(X \/ Insta\)/)[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText("SHAREABLE MATCH CARD")).toBeInTheDocument();
+      expect(screen.getByText(/Copy PNG to Clipboard/)).toBeInTheDocument();
+      expect(screen.getByText(/Download PNG File/)).toBeInTheDocument();
+      expect(screen.getByText(/Share to X \/ Twitter/)).toBeInTheDocument();
+    });
+  });
+
+  it("creates a draft and navigates to Composer when clicking Open in Studio Composer", async () => {
+    vi.spyOn(composerApi, "backtestOptions").mockResolvedValue(mockOptions);
+    vi.spyOn(composerApi, "runBacktest").mockResolvedValue(mockResult);
+    const createDraftSpy = vi.spyOn(composerApi, "createDraft").mockResolvedValue({
+      id: 42,
+      source: "bot",
+      category: "prediction",
+      text: "Draft text",
+      card_type: "prediction",
+      card_meta: {},
+      status: "draft",
+      created_at: new Date().toISOString(),
+      posted_at: null,
+      content_key: null,
+    });
+
+    render(<BacktestPage />);
+
+    await waitFor(() => {
+      expect((screen.getByLabelText("LEAGUE") as HTMLSelectElement).value).toBe("IPL");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /run backtest/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Open in Studio Composer/).length).toBeGreaterThan(0);
+    });
+
+    // Click Open in Studio Composer on upcoming game
+    fireEvent.click(screen.getAllByText(/Open in Studio Composer/)[0]);
+
+    await waitFor(() => {
+      expect(createDraftSpy).toHaveBeenCalled();
+      expect(mockPush).toHaveBeenCalledWith("/composer?draft_id=42");
     });
   });
 

@@ -1,14 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   composerApi,
   type BacktestGame,
   type BacktestOptions,
   type BacktestResult,
+  type Draft,
 } from "@/lib/composerApi";
 import { getTeamTheme } from "@/lib/teamColors";
 import { teamInitials, teamLogoPath } from "@/lib/teamLogo";
+import { captureCard, copyImageToClipboard, downloadCard } from "@/lib/share";
+import PredictionCardImg from "@/components/composer/cards/PredictionCardImg";
 
 // ─── SVG Progress Ring Constants ─────────────────────────────────────────────
 
@@ -157,6 +161,7 @@ function AccuracyRing({
 // ─── Main Backtest Page Component ────────────────────────────────────────────
 
 export default function BacktestPage() {
+  const router = useRouter();
   const [options, setOptions] = useState<BacktestOptions | null>(null);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [optionsError, setOptionsError] = useState<string | null>(null);
@@ -170,6 +175,43 @@ export default function BacktestPage() {
 
   const [filterOutcome, setFilterOutcome] = useState<"all" | "correct" | "incorrect">("all");
   const [searchTerm, setSearchTerm] = useState("");
+
+  const [sharingGame, setSharingGame] = useState<BacktestGame | null>(null);
+
+  // Open in Composer studio with match draft pre-created
+  const handleOpenComposer = useCallback(
+    async (game: BacktestGame) => {
+      try {
+        const probA = Math.round(game.prob_team_a * 100);
+        const probB = 100 - probA;
+        const higherProb = Math.max(probA, probB);
+        const isUpcoming = game.status === "upcoming" || game.actual_winner === null || game.actual_winner === undefined;
+
+        const draft = await composerApi.createDraft({
+          source: "bot",
+          category: "prediction",
+          card_type: "prediction",
+          text: `${selectedLeague || "Cricket"}: ${game.team_a} (${probA}%) vs ${game.team_b} (${probB}%)\nVenue: ${game.venue}\nModel Pick: ${game.predicted_winner} with ${higherProb}% win probability.\n\n#Cricket #TheCricketFan #${game.team_a.replace(/[^a-zA-Z0-9]/g, "")} #${game.team_b.replace(/[^a-zA-Z0-9]/g, "")}`,
+          card_meta: {
+            team_a: game.team_a,
+            team_b: game.team_b,
+            prob_a: game.prob_team_a,
+            venue: game.venue,
+            league: selectedLeague,
+            phase: isUpcoming ? "pre_match" : "completed",
+            score_summary: isUpcoming ? "Match Scheduled" : `Winner: ${game.actual_winner}`,
+            reasons: ["Form Advantage", "Venue Conditions", "Matchup Metrics"],
+            predicted_winner: game.predicted_winner,
+            date: game.date,
+          },
+        });
+        router.push(`/composer?draft_id=${draft.id}`);
+      } catch (err) {
+        console.error("Failed to create draft from backtest match:", err);
+      }
+    },
+    [selectedLeague, router]
+  );
 
   // Load available options and ingestion telemetry on mount
   useEffect(() => {
@@ -701,7 +743,13 @@ export default function BacktestPage() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
                 {result.upcoming_games.map((game, i) => (
-                  <MatchBacktestCard key={`upcoming-${game.date}-${game.team_a}-${game.team_b}-${i}`} game={game} />
+                  <MatchBacktestCard
+                    key={`upcoming-${game.date}-${game.team_a}-${game.team_b}-${i}`}
+                    game={game}
+                    league={result.league || selectedLeague}
+                    onShare={(g) => setSharingGame(g)}
+                    onCompose={handleOpenComposer}
+                  />
                 ))}
               </div>
             </div>
@@ -726,7 +774,13 @@ export default function BacktestPage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
               {filteredGames.map((game, i) => (
-                <MatchBacktestCard key={`${game.date}-${game.team_a}-${game.team_b}-${i}`} game={game} />
+                <MatchBacktestCard
+                  key={`${game.date}-${game.team_a}-${game.team_b}-${i}`}
+                  game={game}
+                  league={result.league || selectedLeague}
+                  onShare={(g) => setSharingGame(g)}
+                  onCompose={handleOpenComposer}
+                />
               ))}
             </div>
           )}
@@ -771,13 +825,33 @@ export default function BacktestPage() {
           </p>
         </div>
       )}
+
+      {/* Quick Share Modal */}
+      {sharingGame && (
+        <QuickShareModal
+          game={sharingGame}
+          league={result?.league || selectedLeague}
+          onClose={() => setSharingGame(null)}
+          onOpenComposer={handleOpenComposer}
+        />
+      )}
     </div>
   );
 }
 
 // ─── Individual Match Backtest Row Card ───────────────────────────────────────
 
-function MatchBacktestCard({ game }: { game: BacktestGame }) {
+function MatchBacktestCard({
+  game,
+  league,
+  onShare,
+  onCompose,
+}: {
+  game: BacktestGame;
+  league: string;
+  onShare: (game: BacktestGame) => void;
+  onCompose: (game: BacktestGame) => void;
+}) {
   const probA = Math.round(game.prob_team_a * 100);
   const probB = 100 - probA;
   const isUpcoming = game.status === "upcoming" || game.actual_winner === null || game.actual_winner === undefined;
@@ -792,7 +866,8 @@ function MatchBacktestCard({ game }: { game: BacktestGame }) {
         display: "flex",
         flexDirection: "column",
         gap: "var(--space-sm)",
-        border: isUpcoming ? "1px solid rgba(99, 102, 241, 0.3)" : undefined,
+        border: isUpcoming ? "1.5px solid rgba(99, 102, 241, 0.4)" : undefined,
+        boxShadow: isUpcoming ? "0 4px 20px rgba(99, 102, 241, 0.08)" : undefined,
       }}
     >
       {/* Header: Date + Venue + Status Pill */}
@@ -815,28 +890,30 @@ function MatchBacktestCard({ game }: { game: BacktestGame }) {
           </span>
         </div>
 
-        {isUpcoming ? (
-          <span
-            style={{
-              fontSize: 11,
-              padding: "3px 10px",
-              fontWeight: 700,
-              borderRadius: 999,
-              background: "rgba(99, 102, 241, 0.12)",
-              color: "#6366f1",
-              border: "1px solid rgba(99, 102, 241, 0.25)",
-            }}
-          >
-            UPCOMING / PREDICTED
-          </span>
-        ) : (
-          <span
-            className={`status-pill ${game.correct ? "status-pill--correct" : "status-pill--incorrect"}`}
-            style={{ fontSize: 12, padding: "2px 10px", fontWeight: 700 }}
-          >
-            {game.correct ? "Hit" : "Miss"}
-          </span>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {isUpcoming ? (
+            <span
+              style={{
+                fontSize: 11,
+                padding: "3px 10px",
+                fontWeight: 700,
+                borderRadius: 999,
+                background: "rgba(99, 102, 241, 0.12)",
+                color: "#6366f1",
+                border: "1px solid rgba(99, 102, 241, 0.25)",
+              }}
+            >
+              UPCOMING / PREDICTED
+            </span>
+          ) : (
+            <span
+              className={`status-pill ${game.correct ? "status-pill--correct" : "status-pill--incorrect"}`}
+              style={{ fontSize: 12, padding: "2px 10px", fontWeight: 700 }}
+            >
+              {game.correct ? "Hit" : "Miss"}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Matchup Teams & Probability Bar */}
@@ -964,6 +1041,413 @@ function MatchBacktestCard({ game }: { game: BacktestGame }) {
           }}
         />
       </div>
+
+      {/* ── Social Card & Composer Shortcut Actions ──────────────────── */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          gap: 8,
+          marginTop: 4,
+          paddingTop: 8,
+          borderTop: "1px solid rgba(0,0,0,0.04)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => onShare(game)}
+          className="ds-btn-pill ds-btn-pill-light"
+          style={{
+            fontSize: 11,
+            padding: "4px 12px",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            fontWeight: 600,
+            background: isUpcoming ? "rgba(99, 102, 241, 0.08)" : undefined,
+            color: isUpcoming ? "#4f46e5" : undefined,
+            borderColor: isUpcoming ? "rgba(99, 102, 241, 0.2)" : undefined,
+          }}
+          title="Preview & Share Social Media Graphic (X, Instagram, WhatsApp)"
+        >
+          <span>🎨</span> Share Card (X / Insta)
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onCompose(game)}
+          className="ds-btn-pill ds-btn-pill-dark"
+          style={{
+            fontSize: 11,
+            padding: "4px 12px",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            fontWeight: 600,
+          }}
+          title="Open and edit this match card in Press Box Studio Composer"
+        >
+          <span>🚀</span> Open in Studio Composer
+        </button>
+      </div>
     </div>
   );
 }
+
+// ─── Quick Share & Social Export Modal ────────────────────────────────────────
+
+function QuickShareModal({
+  game,
+  league,
+  onClose,
+  onOpenComposer,
+}: {
+  game: BacktestGame;
+  league: string;
+  onClose: () => void;
+  onOpenComposer: (game: BacktestGame) => void;
+}) {
+  const [aspect, setAspect] = useState<"1:1" | "16:9" | "4:5">("1:1");
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const captureRef = useRef<HTMLDivElement>(null);
+
+  const probA = Math.round(game.prob_team_a * 100);
+  const probB = 100 - probA;
+  const isUpcoming = game.status === "upcoming" || game.actual_winner === null || game.actual_winner === undefined;
+
+  const mockDraft: Draft = {
+    id: 999999,
+    source: "bot",
+    category: "prediction",
+    card_type: "prediction",
+    status: "draft",
+    created_at: new Date().toISOString(),
+    posted_at: null,
+    content_key: null,
+    text: `${league || "Cricket"}: ${game.team_a} (${probA}%) vs ${game.team_b} (${probB}%)\nVenue: ${game.venue}\nModel Pick: ${game.predicted_winner} (${Math.max(probA, probB)}% win prob)\n\n#Cricket #TheCricketFan #${game.team_a.replace(/[^a-zA-Z0-9]/g, "")} #${game.team_b.replace(/[^a-zA-Z0-9]/g, "")}`,
+    card_meta: {
+      team_a: game.team_a,
+      team_b: game.team_b,
+      prob_a: game.prob_team_a,
+      venue: game.venue,
+      league: league,
+      phase: isUpcoming ? "pre_match" : "completed",
+      score_summary: isUpcoming ? "Match Scheduled" : `Winner: ${game.actual_winner}`,
+      reasons: ["Form Advantage", "Venue Conditions", "Matchup Metrics"],
+      predicted_winner: game.predicted_winner,
+      date: game.date,
+    },
+  };
+
+  async function handleCopyImage() {
+    if (!captureRef.current) return;
+    setBusy(true);
+    try {
+      const blob = await captureCard(captureRef.current);
+      await copyImageToClipboard(blob);
+      setFeedback("Image copied to clipboard! 📋");
+    } catch {
+      setFeedback("Copy failed. Try Download PNG instead.");
+    } finally {
+      setBusy(false);
+      setTimeout(() => setFeedback(null), 2500);
+    }
+  }
+
+  async function handleDownloadImage() {
+    if (!captureRef.current) return;
+    setBusy(true);
+    try {
+      const blob = await captureCard(captureRef.current);
+      const filename = `${game.team_a.toLowerCase().replace(/\s+/g, "_")}_vs_${game.team_b.toLowerCase().replace(/\s+/g, "_")}_prediction.png`;
+      await downloadCard(blob, filename);
+      setFeedback("Card downloaded! ⬇️");
+    } catch {
+      setFeedback("Failed to download image.");
+    } finally {
+      setBusy(false);
+      setTimeout(() => setFeedback(null), 2500);
+    }
+  }
+
+  function handleShareX() {
+    const text = encodeURIComponent(mockDraft.text);
+    window.open(`https://x.com/intent/tweet?text=${text}`, "_blank", "noopener,noreferrer");
+  }
+
+  function handleShareWhatsApp() {
+    const text = encodeURIComponent(mockDraft.text);
+    window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank", "noopener,noreferrer");
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(0, 0, 0, 0.75)",
+        backdropFilter: "blur(10px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "var(--space-md)",
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="card-container"
+        style={{
+          background: "#111116",
+          borderRadius: 24,
+          border: "1px solid rgba(255, 255, 255, 0.12)",
+          boxShadow: "0 24px 64px rgba(0, 0, 0, 0.8)",
+          width: "100%",
+          maxWidth: 680,
+          maxHeight: "92vh",
+          overflowY: "auto",
+          color: "#ffffff",
+          padding: "var(--space-lg)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-md)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="text-micro" style={{ color: "var(--wire-red)" }}>
+                SHAREABLE MATCH CARD
+              </span>
+              {isUpcoming && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    background: "rgba(99, 102, 241, 0.2)",
+                    color: "#a5b4fc",
+                    fontWeight: 700,
+                  }}
+                >
+                  UPCOMING
+                </span>
+              )}
+            </div>
+            <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 700, margin: "4px 0 0 0", color: "#ffffff" }}>
+              {game.team_a} vs {game.team_b}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "none",
+              color: "#ffffff",
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Aspect Ratio Selector */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => setAspect("1:1")}
+            className={`ds-btn-pill ${aspect === "1:1" ? "ds-btn-pill-dark" : "ds-btn-pill-light"}`}
+            style={{
+              fontSize: 12,
+              padding: "6px 14px",
+              background: aspect === "1:1" ? "#ffffff" : "rgba(255,255,255,0.08)",
+              color: aspect === "1:1" ? "#000000" : "#ffffff",
+              borderColor: "transparent",
+            }}
+          >
+            1:1 Square (Instagram / X)
+          </button>
+          <button
+            type="button"
+            onClick={() => setAspect("16:9")}
+            className={`ds-btn-pill ${aspect === "16:9" ? "ds-btn-pill-dark" : "ds-btn-pill-light"}`}
+            style={{
+              fontSize: 12,
+              padding: "6px 14px",
+              background: aspect === "16:9" ? "#ffffff" : "rgba(255,255,255,0.08)",
+              color: aspect === "16:9" ? "#000000" : "#ffffff",
+              borderColor: "transparent",
+            }}
+          >
+            16:9 Landscape (Feed / Banner)
+          </button>
+          <button
+            type="button"
+            onClick={() => setAspect("4:5")}
+            className={`ds-btn-pill ${aspect === "4:5" ? "ds-btn-pill-dark" : "ds-btn-pill-light"}`}
+            style={{
+              fontSize: 12,
+              padding: "6px 14px",
+              background: aspect === "4:5" ? "#ffffff" : "rgba(255,255,255,0.08)",
+              color: aspect === "4:5" ? "#000000" : "#ffffff",
+              borderColor: "transparent",
+            }}
+          >
+            4:5 Portrait (Stories / Reels)
+          </button>
+        </div>
+
+        {/* Live Card Preview Box */}
+        <div
+          style={{
+            background: "#09090c",
+            borderRadius: 16,
+            padding: "var(--space-md)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            overflow: "hidden",
+            minHeight: 340,
+          }}
+        >
+          <div
+            style={{
+              transform: aspect === "16:9" ? "scale(0.42)" : aspect === "4:5" ? "scale(0.32)" : "scale(0.38)",
+              transformOrigin: "center center",
+              margin: aspect === "16:9" ? "-180px 0" : aspect === "4:5" ? "-440px 0" : "-320px 0",
+            }}
+          >
+            <div ref={captureRef}>
+              <PredictionCardImg draft={mockDraft} aspect={aspect} />
+            </div>
+          </div>
+        </div>
+
+        {feedback && (
+          <div
+            style={{
+              padding: "8px 14px",
+              borderRadius: 8,
+              background: "rgba(16, 185, 129, 0.15)",
+              border: "1px solid var(--success)",
+              color: "var(--success)",
+              fontSize: "var(--text-sm)",
+              textAlign: "center",
+              fontWeight: 600,
+            }}
+          >
+            {feedback}
+          </div>
+        )}
+
+        {/* Action Toolbar */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={handleCopyImage}
+            className="ds-btn-pill ds-btn-pill-light"
+            style={{
+              padding: "10px",
+              fontSize: 13,
+              fontWeight: 600,
+              background: "rgba(255, 255, 255, 0.1)",
+              color: "#ffffff",
+              borderColor: "transparent",
+              justifyContent: "center",
+            }}
+          >
+            📋 Copy PNG to Clipboard
+          </button>
+
+          <button
+            type="button"
+            disabled={busy}
+            onClick={handleDownloadImage}
+            className="ds-btn-pill ds-btn-pill-light"
+            style={{
+              padding: "10px",
+              fontSize: 13,
+              fontWeight: 600,
+              background: "rgba(255, 255, 255, 0.1)",
+              color: "#ffffff",
+              borderColor: "transparent",
+              justifyContent: "center",
+            }}
+          >
+            ⬇️ Download PNG File
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShareX}
+            className="ds-btn-pill ds-btn-pill-dark"
+            style={{
+              padding: "10px",
+              fontSize: 13,
+              fontWeight: 600,
+              background: "#000000",
+              color: "#ffffff",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              justifyContent: "center",
+            }}
+          >
+            🐦 Share to X / Twitter
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShareWhatsApp}
+            className="ds-btn-pill"
+            style={{
+              padding: "10px",
+              fontSize: 13,
+              fontWeight: 600,
+              background: "#25D366",
+              color: "#ffffff",
+              border: "none",
+              justifyContent: "center",
+            }}
+          >
+            💬 Share to WhatsApp
+          </button>
+        </div>
+
+        {/* Open in Composer button */}
+        <button
+          type="button"
+          onClick={() => onOpenComposer(game)}
+          className="ds-btn-pill ds-btn-pill-dark"
+          style={{
+            padding: "12px",
+            fontSize: 14,
+            fontWeight: 700,
+            background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+            color: "#ffffff",
+            border: "none",
+            boxShadow: "0 4px 16px rgba(99, 102, 241, 0.4)",
+            justifyContent: "center",
+            marginTop: 4,
+          }}
+        >
+          🚀 Open in Press Box Studio Composer to Edit Copy & Themes
+        </button>
+      </div>
+    </div>
+  );
+}
+
