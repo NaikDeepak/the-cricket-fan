@@ -138,11 +138,11 @@ function Vault() {
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
           <Link href="/stories" style={{ textDecoration: "none" }}>
             <span style={{ fontSize: 22, fontWeight: 800, color: "#000000", letterSpacing: "-0.03em" }}>
-              TCH.
+              TCF.
             </span>
           </Link>
           <span className="text-micro" style={{ background: "#e8e8ed", padding: "4px 12px", borderRadius: 999 }}>
-            Press Box Vault
+            The Cricket Fan
           </span>
         </div>
 

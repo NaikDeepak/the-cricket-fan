@@ -60,15 +60,21 @@ predictions = sa.Table(
         "fixture_id",
         sa.Integer,
         sa.ForeignKey("fixtures.id"),
-        nullable=False,
-        unique=True,
+        nullable=True,
     ),
+    sa.Column("team_a", sa.String(64), nullable=True),
+    sa.Column("team_b", sa.String(64), nullable=True),
+    sa.Column("league", sa.String(32), nullable=True),
+    sa.Column("venue", sa.String(128), nullable=True),
     sa.Column("prob_team_a", sa.Float, nullable=False),
     sa.Column("reasons_json", sa.Text, nullable=False),  # json list[str]
-    sa.Column("features_json", sa.Text, nullable=False),  # json dict snapshot
-    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("features_json", sa.Text, nullable=True),  # json dict snapshot
+    sa.Column("actual_winner", sa.String(64), nullable=True),
+    sa.Column("result_summary", sa.String(256), nullable=True),
     sa.Column("outcome", sa.String(16), nullable=False, default="pending"),
     # 'pending' | 'correct' | 'incorrect' | 'void'
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("evaluated_at", sa.DateTime(timezone=True), nullable=True),
 )
 
 posts = sa.Table(
@@ -215,6 +221,18 @@ def ensure_schema(conn: sa.Connection) -> None:
                 "tweet_count INTEGER NOT NULL DEFAULT 1"
             )
         )
+        # predictions.fixture_id: relaxed from NOT NULL UNIQUE so freeform
+        # (non-fixture) predictions and multiple predictions per fixture
+        # can be stored. Pre-existing Neon table still has both constraints;
+        # create_all() doesn't alter existing tables, so drop them explicitly.
+        conn.execute(
+            sa.text("ALTER TABLE predictions ALTER COLUMN fixture_id DROP NOT NULL")
+        )
+        conn.execute(
+            sa.text(
+                "ALTER TABLE predictions DROP CONSTRAINT IF EXISTS predictions_fixture_id_key"
+            )
+        )
     # Plain ADD COLUMN (no "IF NOT EXISTS" -- SQLite's ALTER TABLE grammar
     # doesn't support that clause, unlike Postgres) is valid on both
     # dialects, so these aren't dialect-guarded. They must also patch
@@ -246,6 +264,19 @@ def ensure_schema(conn: sa.Connection) -> None:
             conn.execute(
                 sa.text(f"ALTER TABLE content_bank ADD COLUMN {col_name} {col_type}")
             )
+
+    pred_cols = {c["name"] for c in inspector.get_columns("predictions")}
+    for col, col_type in [
+        ("team_a", "VARCHAR(64)"),
+        ("team_b", "VARCHAR(64)"),
+        ("league", "VARCHAR(32)"),
+        ("venue", "VARCHAR(128)"),
+        ("actual_winner", "VARCHAR(64)"),
+        ("result_summary", "VARCHAR(256)"),
+        ("evaluated_at", "TIMESTAMP"),
+    ]:
+        if col not in pred_cols:
+            conn.execute(sa.text(f"ALTER TABLE predictions ADD COLUMN {col} {col_type}"))
 
     seed_teams_if_empty(conn)
 

@@ -31,7 +31,7 @@ export default function SourceBar({
   const [teamNames, setTeamNames] = useState<string[]>([]);
 
   useEffect(() => {
-    composerApi.teams().then(setTeamNames).catch(() => setTeamNames([]));
+    composerApi.teams().then((ts) => setTeamNames(ts.map((t) => t.name))).catch(() => setTeamNames([]));
   }, []);
 
   async function run(fn: () => Promise<Draft>) {

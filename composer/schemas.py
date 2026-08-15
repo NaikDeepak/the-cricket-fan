@@ -109,18 +109,105 @@ class AnalyticsOut(BaseModel):
     prediction_record: dict[str, int]
 
 
+class LeagueAccuracyStats(BaseModel):
+    league: str
+    total: int
+    evaluated: int
+    correct: int
+    incorrect: int
+    accuracy_pct: int
+
+
+class PredictionAccuracyStats(BaseModel):
+    total: int
+    evaluated: int
+    pending: int
+    correct: int
+    incorrect: int
+    void: int
+    accuracy_pct: int
+    streak: int
+    streak_type: str  # 'win' | 'loss' | 'none'
+    recent_outcomes: list[str]
+    by_league: list[LeagueAccuracyStats]
+
+
+class PredictionIn(BaseModel):
+    team_a: str
+    team_b: str
+    league: str = "IPL"
+    venue: str = "TBD"
+    prob_team_a: float
+    reasons: list[str] = []
+    fixture_id: int | None = None
+    actual_winner: str | None = None
+    result_summary: str | None = None
+    outcome: str = "pending"
+
+
+class PredictionPatch(BaseModel):
+    prob_team_a: float | None = None
+    reasons: list[str] | None = None
+    actual_winner: str | None = None
+    result_summary: str | None = None
+    outcome: str | None = None
+
+
+class PredictionResultIn(BaseModel):
+    actual_winner: str  # Winning team name, or "no_result" / "abandoned"
+    result_summary: str | None = None
+    outcome: str | None = None  # Explicit override: 'correct' | 'incorrect' | 'void'
+
+
+class PredictionSettleFromTextIn(BaseModel):
+    raw_text: str | None = None
+    url: str | None = None
+
+
 class PredictionOut(BaseModel):
     id: int
-    fixture_id: int
+    fixture_id: int | None = None
     team_a: str
     team_b: str
     venue: str
     league: str
-    start_time: object
+    start_time: object | None = None
     prob_team_a: float
-    reasons: list[str]
-    outcome: str
+    reasons: list[str] = []
+    predicted_winner: str
+    actual_winner: str | None = None
+    result_summary: str | None = None
+    outcome: str  # 'pending' | 'correct' | 'incorrect' | 'void'
     created_at: object
+    evaluated_at: object | None = None
+
+
+class TodayMatchOut(BaseModel):
+    fixture_id: int
+    team_a: str
+    team_b: str
+    league: str
+    venue: str
+    start_time: object | None = None
+    fixture_status: str  # 'upcoming' | 'completed' | 'void'
+    winner: str | None = None
+    prediction: "PredictionOut | None" = None
+
+
+class RunModelOut(BaseModel):
+    status: str
+    predictions_created: int
+    predictions_skipped: int
+    fixtures_found: int
+    errors: list[str] = []
+
+
+class SettleFromApiOut(BaseModel):
+    status: str
+    settled_count: int
+    void_count: int
+    errors: list[str] = []
+
 
 
 class PostOut(BaseModel):
@@ -247,7 +334,7 @@ def team_row_to_out(row) -> TeamOut:
         row.gradient
         or f"linear-gradient(135deg, {row.primary_color} 0%, {row.secondary_color} 100%)"
     )
-    glow = row.glow or f"rgba(255, 255, 255, 0.4)"
+    glow = row.glow or "rgba(255, 255, 255, 0.4)"
     theme = TeamColorThemeSchema(
         primary=row.primary_color,
         secondary=row.secondary_color,

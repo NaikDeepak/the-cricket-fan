@@ -1,6 +1,6 @@
 import type { Draft } from "@/lib/composerApi";
 import { teamLogoPath } from "@/lib/teamLogo";
-import { getTeamTheme } from "@/lib/teamColors";
+import { getTeamTheme, type TeamColorTheme } from "@/lib/teamColors";
 
 export default function PredictionCardImg({
   draft,
@@ -18,8 +18,8 @@ export default function PredictionCardImg({
   const logoA = teamLogoPath(teamA);
   const logoB = teamLogoPath(teamB);
 
-  const customThemeA = meta.team_a_theme as any;
-  const customThemeB = meta.team_b_theme as any;
+  const customThemeA = meta.team_a_theme as TeamColorTheme | null | undefined;
+  const customThemeB = meta.team_b_theme as TeamColorTheme | null | undefined;
   const themeA = customThemeA || getTeamTheme(teamA);
   const themeB = customThemeB || getTeamTheme(teamB);
 
