@@ -214,4 +214,6 @@ See `.env.example` (root) and `.worktrees/mvp/.env.example` (more complete). Req
 | 2026-04-24 | Project init | FastAPI + Next.js 16 monorepo; Vercel for both; Codex API for story generation; no ML for predictions | Implement Cricsheet parser + `/match-story/today` endpoint |
 | 2026-07-19 | Viability pivot | Fantasy affiliate dead (PROGA + SC ruling). Product = automated X prediction bot: LightGBM (ML rule overridden), GitHub Actions cron, Neon Postgres, CricAPI, X free tier. Web UI parked. Spec + 13-task plan committed in docs/superpowers/ | Execute plan subagent-driven, Task 1 (scaffold+schema) onward |
 | 2026-07-23 | Manual Content Composer | Built FastAPI composer backend (`composer/`) + Next.js 16 composer UI (`frontend/src/app/composer/`). Client-side PNG card rendering, 4 content sources, analytics funnel. PR merged into feature/mvp. | Production launch & Vercel deployment pass |
+| 2026-08-16 | Backtest Social Sharing & Logo Pipeline | Built Backtest Social Sharing Hub with 1:1, 16:9, 4:5 aspect ratio modal, 1-click Studio Composer handoff, Wikipedia REST team logo ingestion pipeline (`bot/scripts/fetch_team_logos.py`), and multi-league support (The Hundred Men & Women, WPL, WBBL, IPL, etc.). See [docs/ARCHITECTURE_AND_DATA_FLOW.md](docs/ARCHITECTURE_AND_DATA_FLOW.md). | Final polish & live launch monitoring |
+
 
