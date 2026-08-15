@@ -56,6 +56,8 @@ export const storiesApi = {
   listStories: (params: {
     search?: string;
     category?: string;
+    source_type?: string;
+    tag?: string;
     team?: string;
     player?: string;
     venue?: string;
@@ -64,6 +66,8 @@ export const storiesApi = {
     const p = new URLSearchParams();
     if (params.search) p.set("search", params.search);
     if (params.category) p.set("category", params.category);
+    if (params.source_type) p.set("source_type", params.source_type);
+    if (params.tag) p.set("tag", params.tag);
     if (params.team) p.set("team", params.team);
     if (params.player) p.set("player", params.player);
     if (params.venue) p.set("venue", params.venue);
@@ -90,5 +94,11 @@ export const storiesApi = {
     return req<Story>(`/stories/${encodeURIComponent(content_key)}`);
   },
 
+  getOnThisDay: (date?: string) => {
+    const q = date ? `?date=${encodeURIComponent(date)}` : "";
+    return req<Story>(`/stories/on-this-day${q}`);
+  },
+
   getWire: (limit = 12) => req<WireItem[]>(`/stories/wire?limit=${limit}`),
 };
+

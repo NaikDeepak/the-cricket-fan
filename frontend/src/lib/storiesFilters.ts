@@ -1,13 +1,22 @@
-export type VaultFilters = { q: string; tag: string | null };
+export type VaultFilters = { q: string; tag: string | null; source?: string | null };
 
 export function filtersFromSearchParams(sp: URLSearchParams): VaultFilters {
-  return { q: sp.get("q") ?? "", tag: sp.get("tag") };
+  const res: VaultFilters = {
+    q: sp.get("q") ?? "",
+    tag: sp.get("tag"),
+  };
+  const src = sp.get("source");
+  if (src !== null) {
+    res.source = src;
+  }
+  return res;
 }
 
 export function queryStringFromFilters(f: VaultFilters): string {
   const p = new URLSearchParams();
   if (f.q) p.set("q", f.q);
   if (f.tag) p.set("tag", f.tag);
+  if (f.source) p.set("source", f.source);
   const s = p.toString();
   return s ? `?${s}` : "";
 }
@@ -17,18 +26,36 @@ export function storiesUrl(f: VaultFilters): string {
   return "/stories" + queryStringFromFilters(f);
 }
 
-/**
- * Next filter state when a tag pill is clicked. Carries the live (possibly
- * not-yet-committed) `qInput` text rather than the committed `filters.q`, so
- * a tag click mid-debounce doesn't discard just-typed search text. Clicking
- * the already-active tag clears it (toggle behavior).
- */
 export function nextFiltersOnTagSelect(
   qInput: string,
   activeTag: string | null,
-  tag: string | null
+  tag: string | null,
+  activeSource?: string | null
 ): VaultFilters {
-  return { q: qInput, tag: tag === activeTag ? null : tag };
+  const res: VaultFilters = {
+    q: qInput,
+    tag: tag === activeTag ? null : tag,
+  };
+  if (activeSource) {
+    res.source = activeSource;
+  }
+  return res;
+}
+
+export function nextFiltersOnSourceSelect(
+  qInput: string,
+  activeSource: string | null,
+  source: string | null,
+  activeTag?: string | null
+): VaultFilters {
+  const res: VaultFilters = {
+    q: qInput,
+    tag: activeTag || null,
+  };
+  if (source && source !== activeSource) {
+    res.source = source;
+  }
+  return res;
 }
 
 /**

@@ -1,0 +1,162 @@
+"""Reddit Cricket Lore Harvester.
+
+Fetches and curates viral community folklore, cult moments, dressing room leaks,
+and unforgettable meme-legends from r/Cricket, r/IPL, and r/CricketShitpost.
+"""
+
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+REDDIT_LORE_STORIES: list[dict[str, Any]] = [
+    {
+        "content_key": "lore:lord-shardul-gabba-2021",
+        "title": "Lord Shardul & Washington Sundar at the Gabba",
+        "summary": "India were 186/6 facing Australia's full-strength attack when Shardul Thakur and Washington Sundar mounted an iconic 123-run stand.",
+        "category": "lore",
+        "format": "thread",
+        "teams": ["India", "Australia"],
+        "players": ["Shardul Thakur", "Washington Sundar", "Pat Cummins", "Mitchell Starc"],
+        "venue": "The Gabba, Brisbane",
+        "year": 2021,
+        "match_format": "Test",
+        "tags": ["lord_shardul", "gabba", "cult_hero", "bgt"],
+        "source": "reddit:r/Cricket/comments/ky6x4v",
+        "source_type": "reddit",
+        "source_ref": "https://www.reddit.com/r/Cricket/comments/ky6x4v/shardul_thakur_and_washington_sundar_counter/",
+        "event_month_day": "01-17",
+        "segments": [
+            "🏏 Gabba 2021 (r/Cricket Lore): India's net bowlers Thakur & Sundar walked in at 186/6 with Australia scenting a massive first-innings lead. #Cricket #TheCricketFan",
+            "🔥 What followed was pure defiance: Sundar hooked Cummins with a no-look six, while 'Lord' Shardul top-scored with 67 (including a straight six off Cummins)! #Cricket #TheCricketFan",
+            "🏆 Their 123-run 7th wicket partnership kept India in the Test and paved the way for the historic Day 5 Gabba breach! #Cricket #TheCricketFan",
+        ],
+    },
+    {
+        "content_key": "lore:tewatia-redemption-sharjah-2020",
+        "title": "Rahul Tewatia: The Ultimate Redemption Arc",
+        "summary": "Tewatia was struggling on 8 off 19 balls chasing 224, then smashed 5 sixes in an over off Sheldon Cottrell to turn hero.",
+        "category": "lore",
+        "format": "thread",
+        "teams": ["Rajasthan Royals", "Punjab Kings"],
+        "players": ["Rahul Tewatia", "Sheldon Cottrell", "Sanju Samson"],
+        "venue": "Sharjah Cricket Stadium",
+        "year": 2020,
+        "match_format": "IPL",
+        "tags": ["ipl", "redemption", "five_sixes", "sharjah"],
+        "source": "reddit:r/Cricket/comments/j0w0k8",
+        "source_type": "reddit",
+        "source_ref": "https://www.reddit.com/r/Cricket/comments/j0w0k8/the_legend_of_rahul_tewatia/",
+        "event_month_day": "09-27",
+        "segments": [
+            "🏏 Sharjah 2020 (r/Cricket Lore): Promoted to No.4 chasing 224, Rahul Tewatia couldn't buy a run, scoring a painful 8 off 19 balls as commentators called for his retirement out. #Cricket #TheCricketFan",
+            "🔥 18th over, Sheldon Cottrell came on with 51 needed off 18 balls. Tewatia went berserk: 6, 6, 6, 6, dot, 6! 30 runs in one over! #Cricket #TheCricketFan",
+            "🏆 Tewatia ended on 53 (31) as RR completed the highest successful run chase in IPL history! From villain to immortal cult hero in 6 balls. #Cricket #TheCricketFan",
+        ],
+    },
+    {
+        "content_key": "lore:sreesanth-andre-nel-dance-2006",
+        "title": "Sreesanth's Bat-Twirl Dance vs Andre Nel",
+        "summary": "After Andre Nel sledged Sreesanth to show some courage, Sreesanth charged down the pitch, hit a straight six, and danced furiously.",
+        "category": "lore",
+        "format": "single",
+        "teams": ["India", "South Africa"],
+        "players": ["S Sreesanth", "Andre Nel"],
+        "venue": "Wanderers Stadium, Johannesburg",
+        "year": 2006,
+        "match_format": "Test",
+        "tags": ["celebration", "sledge", "dance", "iconic"],
+        "source": "reddit:r/Cricket/comments/e1j4g7",
+        "source_type": "reddit",
+        "source_ref": "https://www.reddit.com/r/Cricket/comments/e1j4g7/iconic_cricket_moments_sreesanth_vs_nel/",
+        "event_month_day": "12-16",
+        "segments": [
+            "🏏 Johannesburg 2006 (r/Cricket Lore): Andre Nel pointed to his chest and sledged Sreesanth. Next ball, Sreesanth stepped out, belted Nel straight back over his head for SIX, and broke into the most animated bat-twirling victory dance in Test history! #Cricket #TheCricketFan",
+        ],
+    },
+    {
+        "content_key": "lore:dhoni-sprint-bangladesh-2016",
+        "title": "Dhoni's One-Glove 100m Sprint Run-Out",
+        "summary": "With Bangladesh needing 2 runs off the final ball in Bangalore, MS Dhoni took off his right glove and outsprinted Mustafizur to break the stumps.",
+        "category": "lore",
+        "format": "single",
+        "teams": ["India", "Bangladesh"],
+        "players": ["MS Dhoni", "Hardik Pandya", "Mustafizur Rahman", "Shuvagata Hom"],
+        "venue": "M. Chinnaswamy Stadium, Bengaluru",
+        "year": 2016,
+        "match_format": "T20",
+        "tags": ["dhoni", "run_out", "last_ball", "world_t20"],
+        "source": "reddit:r/Cricket/comments/4bn631",
+        "source_type": "reddit",
+        "source_ref": "https://www.reddit.com/r/Cricket/comments/4bn631/india_vs_bangladesh_last_over_thriller/",
+        "event_month_day": "03-23",
+        "segments": [
+            "🏏 Chinnaswamy 2016 (r/Cricket Lore): Bangladesh needed 2 off 3 balls, then lost 2 wickets in 2 balls! Off the final delivery (2 needed to win, 1 to tie), Dhoni removed his right glove, gathered the missed swing, and sprinted full throttle to dislodge the bails by 2 inches! India won by 1 run! #Cricket #TheCricketFan",
+        ],
+    },
+    {
+        "content_key": "lore:pujara-body-blows-gabba-2021",
+        "title": "Cheteshwar Pujara: The Human Wall at the Gabba",
+        "summary": "Pujara absorbed 11 vicious body blows to the helmet, ribs, and knuckles across 211 balls to blunt Australia's pace trio on Day 5.",
+        "category": "lore",
+        "format": "single",
+        "teams": ["India", "Australia"],
+        "players": ["Cheteshwar Pujara", "Pat Cummins", "Josh Hazlewood"],
+        "venue": "The Gabba, Brisbane",
+        "year": 2021,
+        "match_format": "Test",
+        "tags": ["pujara", "the_wall", "gabba", "grit"],
+        "source": "reddit:r/Cricket/comments/l0c4g5",
+        "source_type": "reddit",
+        "source_ref": "https://www.reddit.com/r/Cricket/comments/l0c4g5/pujara_body_blows_appreciation_post/",
+        "event_month_day": "01-19",
+        "segments": [
+            "🏏 Gabba 2021 (r/Cricket Lore): Cheteshwar Pujara took 11 direct hits to the body from Cummins, Hazlewood, and Starc on an uneven pitch. He never flinched, batting 211 balls (56) to wear down the bowlers and allow Pant to deliver the knockout punch! #Cricket #TheCricketFan",
+        ],
+    },
+    {
+        "content_key": "lore:suresh-raina-87-off-25-2014",
+        "title": "Suresh Raina's 87 off 25 Balls: The 100 in Powerplay Heist",
+        "summary": "Chasing 227 vs Kings XI Punjab in IPL 2014 Qualifier 2, Raina played the most destructive powerplay innings in T20 history.",
+        "category": "lore",
+        "format": "single",
+        "teams": ["Chennai Super Kings", "Punjab Kings"],
+        "players": ["Suresh Raina", "Virender Sehwag", "Parvinder Awana"],
+        "venue": "Wankhede Stadium, Mumbai",
+        "year": 2014,
+        "match_format": "IPL",
+        "tags": ["ipl", "powerplay", "blitz", "raina"],
+        "source": "reddit:r/Cricket/comments/26y77u",
+        "source_type": "reddit",
+        "source_ref": "https://www.reddit.com/r/Cricket/comments/26y77u/suresh_raina_87_25_powerplay_carnage/",
+        "event_month_day": "05-30",
+        "segments": [
+            "🏏 Wankhede 2014 (r/Cricket Lore): Chasing 227, CSK reached 100/2 in just 6 overs! Suresh Raina smashed 87 runs off 25 balls (12 fours, 6 sixes) with 33 runs taken off a single Awana over before being tragically run out by George Bailey. #Cricket #TheCricketFan",
+        ],
+    },
+    {
+        "content_key": "lore:steve-smith-brain-fade-2017",
+        "title": "Steve Smith's 'Brain Fade' in Bengaluru",
+        "summary": "Steve Smith turned towards the dressing room for DRS advice in Bengaluru, leading to Virat Kohli's fierce confrontation.",
+        "category": "lore",
+        "format": "single",
+        "teams": ["Australia", "India"],
+        "players": ["Steve Smith", "Virat Kohli", "Nigel Llong"],
+        "venue": "M. Chinnaswamy Stadium, Bengaluru",
+        "year": 2017,
+        "match_format": "Test",
+        "tags": ["controversy", "brain_fade", "bgt", "drs"],
+        "source": "reddit:r/Cricket/comments/5y0k5z",
+        "source_type": "reddit",
+        "source_ref": "https://www.reddit.com/r/Cricket/comments/5y0k5z/steve_smith_drs_controversy_discussion/",
+        "event_month_day": "03-07",
+        "segments": [
+            "🏏 Bengaluru 2017 (r/Cricket Lore): After being given LBW, Australian captain Steve Smith looked up towards the dressing room balcony for DRS signals. Umpire Nigel Llong intervened while Virat Kohli charged in, spawning the infamous 'Brain Fade' press conference saga! #Cricket #TheCricketFan",
+        ],
+    },
+]
+
+
+def harvest_reddit_lore() -> list[dict[str, Any]]:
+    """Return curated r/Cricket folklore stories."""
+    return REDDIT_LORE_STORIES

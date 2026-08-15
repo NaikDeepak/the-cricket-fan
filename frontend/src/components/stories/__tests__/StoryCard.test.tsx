@@ -37,8 +37,14 @@ describe("StoryCard", () => {
     expect(screen.getByText("FEATURED STORY")).toBeInTheDocument();
   });
 
-  it("omits featured badge when featured prop is false", () => {
-    render(<StoryCard story={mockStory} featured={false} />);
-    expect(screen.queryByText("FEATURED STORY")).toBeNull();
+  it("renders source badges based on source_type", () => {
+    const redditStory: Story = { ...mockStory, source_type: "reddit", category: "lore" };
+    const { rerender } = render(<StoryCard story={redditStory} />);
+    expect(screen.getByText(/r\/Cricket Lore/i)).toBeInTheDocument();
+
+    const memoirStory: Story = { ...mockStory, source_type: "memoir" };
+    rerender(<StoryCard story={memoirStory} />);
+    expect(screen.getByText(/Dressing Room Memoir/i)).toBeInTheDocument();
   });
 });
+

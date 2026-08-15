@@ -401,3 +401,27 @@ def team_row_to_out(row) -> TeamOut:
         is_active=bool(row.is_active),
         theme=theme,
     )
+
+
+class HarvestIn(BaseModel):
+    sources: list[str] = ["wikipedia", "reddit", "quora", "cricsheet"]
+    commit: bool = True
+    threshold: float = 0.68
+
+
+class DuplicateReportOut(BaseModel):
+    candidate_key: str
+    candidate_title: str
+    matched_key: str | None = None
+    score: float
+    reason: str
+
+
+class HarvestOut(BaseModel):
+    harvested_total: int
+    inserted: int
+    skipped_duplicates: int
+    enriched: int
+    novel_candidates: list[dict] = []
+    duplicate_reports: list[DuplicateReportOut] = []
+

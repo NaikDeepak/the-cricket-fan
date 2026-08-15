@@ -15,6 +15,7 @@ import {
 } from "@/lib/motion";
 import {
   filtersFromSearchParams,
+  nextFiltersOnSourceSelect,
   nextFiltersOnTagSelect,
   resolveQSync,
   storiesUrl,
@@ -25,10 +26,12 @@ function Vault() {
   const searchParams = useSearchParams();
   const filters = filtersFromSearchParams(searchParams);
   const activeTag = filters.tag;
+  const activeSource = filters.source || null;
 
   const [qInput, setQInput] = useState(filters.q);
   const [stories, setStories] = useState<Story[]>([]);
   const [wire, setWire] = useState<WireItem[]>([]);
+  const [onThisDay, setOnThisDay] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
 
   const lastPushedQ = useRef(filters.q);
@@ -44,15 +47,15 @@ function Vault() {
 
   useEffect(() => {
     const id = setTimeout(() => {
-      const nextUrl = storiesUrl({ q: qInput, tag: filters.tag });
-      const currentUrl = storiesUrl({ q: filters.q, tag: filters.tag });
+      const nextUrl = storiesUrl({ q: qInput, tag: filters.tag, source: filters.source });
+      const currentUrl = storiesUrl({ q: filters.q, tag: filters.tag, source: filters.source });
       if (nextUrl !== currentUrl) {
         lastPushedQ.current = qInput;
         router.replace(nextUrl, { scroll: false });
       }
     }, 300);
     return () => clearTimeout(id);
-  }, [qInput, filters.q, filters.tag, router]);
+  }, [qInput, filters.q, filters.tag, filters.source, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,6 +84,14 @@ function Vault() {
       .then((data) => {
         if (!cancelled) setWire(data);
       });
+    storiesApi
+      .getOnThisDay()
+      .catch(() => null)
+      .then((otd) => {
+        if (!cancelled && otd) {
+          setOnThisDay((prev) => (prev.length === 0 ? [otd] : prev));
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -88,18 +99,40 @@ function Vault() {
 
   const allTags = Array.from(new Set(stories.flatMap((s) => s.tags || [])));
 
-  const filteredStories = activeTag
-    ? stories.filter((s) => s.tags?.includes(activeTag))
-    : stories;
+  const filteredStories = useMemo(() => {
+    return stories.filter((s) => {
+      if (activeSource) {
+        const srcType = (s.source_type || "").toLowerCase();
+        if (activeSource === "memoir") {
+          if (!["memoir", "quora", "interview"].includes(srcType)) return false;
+        } else if (!srcType.includes(activeSource)) {
+          return false;
+        }
+      }
+      if (activeTag && !s.tags?.includes(activeTag)) {
+        return false;
+      }
+      return true;
+    });
+  }, [stories, activeSource, activeTag]);
 
-  const showRails = !filters.q && !activeTag;
-  const onThisDay = useMemo(
-    () => stories.filter((s) => s.event_month_day === todayMonthDay()),
-    [stories],
-  );
+  const showRails = !filters.q && !activeTag && !activeSource;
+  const activeOnThisDay = useMemo(() => {
+    const fromList = stories.filter((s) => s.event_month_day === todayMonthDay());
+    return fromList.length > 0 ? fromList : onThisDay;
+  }, [stories, onThisDay]);
 
   function selectTag(tag: string | null) {
-    const next = nextFiltersOnTagSelect(qInput, activeTag, tag);
+    const next = nextFiltersOnTagSelect(qInput, activeTag, tag, activeSource);
+    const nextUrl = storiesUrl(next);
+    lastPushedQ.current = next.q;
+    if (nextUrl !== storiesUrl(filters)) {
+      router.replace(nextUrl, { scroll: false });
+    }
+  }
+
+  function selectSource(source: string | null) {
+    const next = nextFiltersOnSourceSelect(qInput, activeSource, source, activeTag);
     const nextUrl = storiesUrl(next);
     lastPushedQ.current = next.q;
     if (nextUrl !== storiesUrl(filters)) {
@@ -115,7 +148,7 @@ function Vault() {
     }
   }
 
-  const hasActiveFilter = Boolean(filters.q || activeTag);
+  const hasActiveFilter = Boolean(filters.q || activeTag || activeSource);
 
   return (
     <motion.div
@@ -295,7 +328,7 @@ function Vault() {
 
       {showRails && (
         <div style={{ marginTop: "var(--space-xl)" }}>
-          <OnThisDayRail stories={onThisDay} />
+          <OnThisDayRail stories={activeOnThisDay} />
           <WireStrip items={wire} />
         </div>
       )}
@@ -322,6 +355,43 @@ function Vault() {
             marginBottom: "var(--space-xl)",
           }}
         >
+          {/* Source Filter Tabs */}
+          <div style={{ display: "flex", gap: "var(--space-xs)", flexWrap: "wrap" }}>
+            {[
+              { id: null, label: "All Sources", icon: "🏏" },
+              { id: "wikipedia", label: "Wikipedia Archive", icon: "🏛️" },
+              { id: "reddit", label: "r/Cricket Lore", icon: "👾" },
+              { id: "memoir", label: "Dressing Room & Memoirs", icon: "📖" },
+              { id: "cricsheet", label: "Match Thrillers", icon: "⚡" },
+            ].map((tab) => {
+              const isActive = activeSource === tab.id;
+              return (
+                <button
+                  key={tab.label}
+                  type="button"
+                  onClick={() => selectSource(tab.id)}
+                  className="ds-btn-pill"
+                  style={{
+                    fontSize: 13,
+                    padding: "6px 16px",
+                    cursor: "pointer",
+                    background: isActive ? "#000000" : "rgba(0, 0, 0, 0.05)",
+                    color: isActive ? "#ffffff" : "#1d1d1f",
+                    border: `1px solid ${isActive ? "#000000" : "transparent"}`,
+                    fontWeight: isActive ? 700 : 500,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <input
             type="text"
             className="ds-input"
