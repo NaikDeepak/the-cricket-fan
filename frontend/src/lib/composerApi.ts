@@ -1,4 +1,18 @@
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export function getApiBase(): string {
+  if (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.trim().length > 0) {
+    return process.env.NEXT_PUBLIC_API_URL.trim().replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined" && window.location.hostname) {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0") {
+      return "http://localhost:8000";
+    }
+    return "https://the-cricket-fan-api.vercel.app";
+  }
+  return "http://localhost:8000";
+}
+
+const API = getApiBase();
 
 export type CardMeta = Record<string, unknown>;
 
@@ -232,7 +246,8 @@ export type EventIn = {
 };
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
+  const baseUrl = getApiBase();
+  const res = await fetch(`${baseUrl}${path}`, {
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
     ...init,

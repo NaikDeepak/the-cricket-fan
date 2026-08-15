@@ -1,4 +1,6 @@
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { getApiBase } from "./composerApi";
+
+const API = getApiBase();
 
 export type Story = {
   content_key: string;
@@ -54,7 +56,8 @@ export function todayMonthDay(now: Date = new Date()): string {
 }
 
 async function req<T>(path: string): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
+  const baseUrl = getApiBase();
+  const res = await fetch(`${baseUrl}${path}`, {
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
   });
