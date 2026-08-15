@@ -122,7 +122,7 @@ SEED: list[tuple[str, str, str]] = [
     # The Hundred Women
     ("team", "trew", "Trent Rockets Women"),
     ("team", "trent rockets women", "Trent Rockets Women"),
-    ("team", "sulw", "Sunrisers Leeds Women"),
+    ("team", "sulw", "Northern Superchargers Women"),
     ("team", "sunrisers leeds women", "Northern Superchargers Women"),
     ("team", "nscw", "Northern Superchargers Women"),
     ("team", "northern superchargers women", "Northern Superchargers Women"),

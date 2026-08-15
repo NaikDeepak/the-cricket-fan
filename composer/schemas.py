@@ -1,6 +1,6 @@
 import json
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DraftIn(BaseModel):
@@ -407,8 +407,8 @@ def team_row_to_out(row) -> TeamOut:
 
 class HarvestIn(BaseModel):
     sources: list[str] = ["wikipedia", "reddit", "quora", "cricsheet"]
-    commit: bool = True
-    threshold: float = 0.68
+    commit: bool = False
+    threshold: float = Field(default=0.68, ge=0.0, le=1.0)
 
 
 class DuplicateReportOut(BaseModel):

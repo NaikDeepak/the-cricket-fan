@@ -234,16 +234,17 @@ class MatchInput:
         return asdict(self)
 
 
-def normalize_team_name(name: str, conn=None) -> str:
+def normalize_team_name(name: str, conn=None, kind: str = "team") -> str:
     cleaned = name.strip()
     if not cleaned:
         return cleaned
-    lower = cleaned.lower()
-    if lower in COMMON_ABBREVIATIONS:
-        return COMMON_ABBREVIATIONS[lower]
+    if kind == "team":
+        lower = cleaned.lower()
+        if lower in COMMON_ABBREVIATIONS:
+            return COMMON_ABBREVIATIONS[lower]
     if conn:
         try:
-            return resolve(conn, "team", cleaned)
+            return resolve(conn, kind, cleaned)
         except UnresolvedEntityError:
             pass
     return cleaned
@@ -278,7 +279,7 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
     )
     if venue_match:
         raw_v = venue_match.group(1).strip()
-        result.venue = normalize_team_name(raw_v, conn) if conn else raw_v
+        result.venue = normalize_team_name(raw_v, conn, kind="venue") if conn else raw_v
     else:
         # Check known venue names
         known_venues = [

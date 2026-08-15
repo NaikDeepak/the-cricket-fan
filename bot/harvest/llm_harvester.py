@@ -6,6 +6,7 @@ bizarre dismissals, and legendary county/Ranji/Shield moments.
 
 import json
 import logging
+import os
 import re
 from typing import Any
 
@@ -47,7 +48,15 @@ For each story, output a strictly valid JSON array of objects with the following
 Return ONLY valid JSON array. No markdown code fences.
 """
     try:
-        raw_text = generate_content(full_prompt)
+        # generate_content's signature is (prompt, category, api_key) -> dict,
+        # not (prompt) -> str. Its own response schema is {"text", "card_meta"};
+        # since our prompt asks for a raw JSON array (no "text" key), the
+        # array fails that shape check and falls through to the fallback
+        # branch, which returns the raw model text unchanged under "text" —
+        # exactly the JSON-array string this function expects to parse below.
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        result = generate_content(full_prompt, "lore", api_key)
+        raw_text = result["text"]
         # Clean potential markdown backticks
         clean = re.sub(r"^```json\s*", "", raw_text.strip())
         clean = re.sub(r"^```\s*", "", clean)

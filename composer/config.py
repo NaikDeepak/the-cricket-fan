@@ -16,6 +16,7 @@ class Settings:
     cors_origin: str
     cricket_api_key: str
     cricket_api_base: str
+    harvest_token: str
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -26,7 +27,11 @@ class Settings:
             or "sqlite:///composer.db"
         )
         if db_url.startswith("postgresql+asyncpg://"):
-            db_url = db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+            # bare "postgresql://" defaults SQLAlchemy's sync engine to the
+            # psycopg2 dialect, which isn't installed (root requirements.txt
+            # ships psycopg[binary], i.e. psycopg3) — use the psycopg3 dialect
+            # explicitly so composer's sync engine can actually connect.
+            db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
 
         return cls(
             database_url=db_url,
@@ -36,6 +41,7 @@ class Settings:
             cricket_api_base=os.environ.get(
                 "CRICKET_API_BASE", "https://api.cricapi.com/v1"
             ),
+            harvest_token=os.environ.get("COMPOSER_HARVEST_TOKEN", ""),
         )
 
 

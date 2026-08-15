@@ -32,14 +32,18 @@ def generate_content(prompt: str, category: str | None, api_key: str) -> dict:
         if resp.status_code != 200:
             logger.error("Gemini API error: %s - %s", resp.status_code, resp.text)
             raise GeminiUnavailable(f"Gemini API returned HTTP {resp.status_code}")
-        
+
         data_json = resp.json()
         raw_text = data_json["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
         if isinstance(e, GeminiUnavailable):
             raise
+        # Do not interpolate `e` into the message: requests/urllib3 exceptions
+        # (Timeout, ConnectionError, etc.) stringify to the full request URL,
+        # which contains `?key=<GEMINI_API_KEY>`, and this message reaches
+        # HTTP callers via a 503 response body. Full detail stays server-side.
         logger.error("Gemini request failed: %s", e)
-        raise GeminiUnavailable(f"Failed to generate content: {e}") from e
+        raise GeminiUnavailable("Failed to generate content: request error") from e
 
     try:
         data = json.loads(raw_text)

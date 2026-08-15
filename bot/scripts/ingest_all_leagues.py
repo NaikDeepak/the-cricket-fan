@@ -95,11 +95,16 @@ def ingest_all(database_url: str) -> None:
         f"\nWriting {len(df)} total team-match rows across {len(df['league'].unique())} leagues to DB..."
     )
 
+    fetched_leagues = [name for _, name in LEAGUES]
     with engine.begin() as conn:
-        team_matches.drop(conn, checkfirst=True)
         ensure_schema(conn)
         seed_aliases(conn)
-        conn.execute(sa.delete(team_matches))
+        # Only replace rows for the leagues this run actually fetched — a
+        # full drop() here would also wipe other leagues already in the
+        # table (e.g. WPL/WBBL/Hundred-Women seeded by other scripts).
+        conn.execute(
+            sa.delete(team_matches).where(team_matches.c.league.in_(fetched_leagues))
+        )
         conn.execute(team_matches.insert(), df.to_dict(orient="records"))
 
     print(f"✓ Ingestion complete! {len(df)} rows loaded successfully into database.")
@@ -113,7 +118,9 @@ def main() -> None:
         or "sqlite:///composer.db"
     )
     if db_url.startswith("postgresql+asyncpg://"):
-        db_url = db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+        # sync engine needs the psycopg3 dialect explicitly — bare
+        # "postgresql://" defaults to psycopg2, which isn't installed here.
+        db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
 
     ingest_all(db_url)
 

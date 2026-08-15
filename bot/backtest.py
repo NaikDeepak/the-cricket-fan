@@ -261,30 +261,10 @@ def run_backtest(
         except Exception:
             pass
 
-    # If it's The Hundred 2026 and upcoming_games is empty, provide the upcoming Final
-    if league == "The Hundred" and str(season) == "2026" and not upcoming_games:
-        f_team_a = "Trent Rockets"
-        f_team_b = "Manchester Originals"
-        f_venue = "Lord's, London"
-        f_dt = date.today()
-        feats = build_features(df, f_team_a, f_team_b, f_venue, f_dt)
-        X = pd.DataFrame([[feats[n] for n in feature_names]], columns=feature_names)
-        raw_prob = model.predict_proba(X)[:, 1]
-        prob_a = float(np.clip(calibrator.predict(raw_prob), 0.02, 0.98)[0])
-        predicted_winner = f_team_a if prob_a >= 0.5 else f_team_b
-        upcoming_games.append(
-            {
-                "date": f_dt.strftime("%Y-%m-%d"),
-                "team_a": f_team_a,
-                "team_b": f_team_b,
-                "venue": f_venue,
-                "prob_team_a": round(prob_a, 4),
-                "predicted_winner": predicted_winner,
-                "actual_winner": None,
-                "correct": None,
-                "status": "upcoming",
-            }
-        )
+    # NOTE: previously fabricated a hardcoded "Trent Rockets vs Manchester
+    # Originals @ Lord's" fixture here whenever no real upcoming fixtures
+    # existed, and returned it unflagged as genuine data. Removed — an empty
+    # upcoming_games list is the honest result when there's no real fixture.
 
     total = len(games)
     accuracy_pct = round((correct_model / total) * 100) if total > 0 else 0

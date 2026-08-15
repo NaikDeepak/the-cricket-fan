@@ -1,16 +1,36 @@
 """Harvesting and story ingestion routes for Composer."""
 
-from fastapi import APIRouter, Depends
+import secrets
+
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from bot.harvest.pipeline import run_pipeline
 
+from ..config import get_settings
 from ..deps import get_conn
 from ..schemas import HarvestIn, HarvestOut
 
 router = APIRouter()
 
 
-@router.post("/harvest/run", response_model=HarvestOut)
+def _require_harvest_token(x_harvest_token: str | None = Header(default=None)) -> None:
+    """Shared-secret gate: this endpoint fetches external sources and writes
+    to content_bank. There's no auth layer anywhere else in composer, and it's
+    mounted on the public Vercel backend, so refuse by default rather than
+    leave a write endpoint open when COMPOSER_HARVEST_TOKEN isn't set."""
+    expected = get_settings().harvest_token
+    if not expected:
+        raise HTTPException(
+            status_code=503,
+            detail="Harvest endpoint disabled: COMPOSER_HARVEST_TOKEN not configured",
+        )
+    if not x_harvest_token or not secrets.compare_digest(x_harvest_token, expected):
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Harvest-Token")
+
+
+@router.post(
+    "/harvest/run", response_model=HarvestOut, dependencies=[Depends(_require_harvest_token)]
+)
 def run_harvest_pipeline(
     body: HarvestIn,
     conn=Depends(get_conn),

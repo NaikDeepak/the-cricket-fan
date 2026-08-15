@@ -260,6 +260,11 @@ KNOWN_KEY_ALIASES: dict[str, str] = {
 
 @router.get("/stories/{content_key}", response_model=StoryOut)
 def get_story_by_key(content_key: str, conn=Depends(get_conn)) -> StoryOut:
+    # Direct fetch by key intentionally ignores is_published (share/preview
+    # links must resolve before a story is flipped live) — see
+    # test_unpublished_hidden_from_listings_but_direct_fetch_works. Only
+    # list_stories/get_contextual_stories filter on is_published.
+
     # 1. Exact match
     r = conn.execute(
         sa.select(content_bank).where(content_bank.c.content_key == content_key)
@@ -272,11 +277,16 @@ def get_story_by_key(content_key: str, conn=Depends(get_conn)) -> StoryOut:
             sa.select(content_bank).where(content_bank.c.content_key == canonical_key)
         ).first()
 
-    # 3. Suffix / Substring match (e.g. without category prefix)
+    # 3. Suffix / Substring match (e.g. without category prefix). Ordered by
+    # content_key length so the closest/shortest match to the requested slug
+    # wins deterministically, instead of whatever row the DB happens to
+    # return first.
     if not r:
         slug = content_key.split(":")[-1]
         r = conn.execute(
-            sa.select(content_bank).where(content_bank.c.content_key.ilike(f"%{slug}%"))
+            sa.select(content_bank)
+            .where(content_bank.c.content_key.ilike(f"%{slug}%"))
+            .order_by(sa.func.length(content_bank.c.content_key).asc())
         ).first()
 
     # 4. Special on-this-day handling

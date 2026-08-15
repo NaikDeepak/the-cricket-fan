@@ -260,18 +260,29 @@ def get_today_matches(conn=Depends(get_conn)) -> list[TodayMatchOut]:
     """Return today's fixtures joined with any existing model predictions."""
     today_dt = datetime.now(timezone.utc)
     start_of_today = today_dt.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_of_tomorrow = start_of_today + timedelta(days=2)
+    start_of_tomorrow = start_of_today + timedelta(days=1)
+    end_of_tomorrow = start_of_tomorrow + timedelta(days=1)
 
-    fixture_rows = conn.execute(
-        sa.select(fixtures)
-        .where(
-            sa.and_(
-                fixtures.c.start_time >= start_of_today,
-                fixtures.c.start_time < end_of_tomorrow,
+    def _fixtures_between(start, end):
+        return conn.execute(
+            sa.select(fixtures)
+            .where(
+                sa.and_(
+                    fixtures.c.start_time >= start,
+                    fixtures.c.start_time < end,
+                )
             )
-        )
-        .order_by(fixtures.c.start_time)
-    ).all()
+            .order_by(fixtures.c.start_time)
+        ).all()
+
+    # Today only by default — this endpoint feeds a "Today's Matches" UI with
+    # no date shown, just kickoff time, so silently blending in tomorrow's
+    # fixtures whenever both days have them (common during playoffs) would be
+    # invisible to composer staff. Only fall back to tomorrow when today is
+    # genuinely empty.
+    fixture_rows = _fixtures_between(start_of_today, start_of_tomorrow)
+    if not fixture_rows:
+        fixture_rows = _fixtures_between(start_of_tomorrow, end_of_tomorrow)
 
     result: list[TodayMatchOut] = []
     for f in fixture_rows:
