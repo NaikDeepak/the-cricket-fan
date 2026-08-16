@@ -10,7 +10,7 @@ const OUTCOME_DISPLAY: Record<
   Prediction["outcome"],
   { label: string; color: string; bg: string }
 > = {
-  pending: { label: "Pending", color: "var(--fg-muted)", bg: "var(--surface)" },
+  pending: { label: "Upcoming", color: "var(--fg-muted)", bg: "var(--surface)" },
   correct: { label: "Correct", color: "var(--success)", bg: "var(--success-tint)" },
   incorrect: { label: "Incorrect", color: "var(--warning)", bg: "var(--warning-tint)" },
   void: { label: "No Result", color: "var(--fg-muted)", bg: "var(--surface)" },

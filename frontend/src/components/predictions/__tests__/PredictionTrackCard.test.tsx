@@ -27,9 +27,9 @@ describe("PredictionTrackCard", () => {
     expect(screen.getByText(/51%|52%/)).toBeInTheDocument();
   });
 
-  it("labels a pending prediction distinctly, not as a skeleton", () => {
+  it("labels an upcoming/unresolved prediction distinctly, not as a skeleton", () => {
     render(<PredictionTrackCard prediction={base} />);
-    expect(screen.getByText(/Pending/i)).toBeInTheDocument();
+    expect(screen.getByText(/Upcoming/i)).toBeInTheDocument();
     expect(document.querySelector(".ds-skeleton")).toBeNull();
   });
 
