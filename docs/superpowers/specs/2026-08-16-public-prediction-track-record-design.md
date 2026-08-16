@@ -130,14 +130,15 @@ def list_prediction_leagues(conn=Depends(get_conn)) -> list[str]:
     """Distinct leagues that have at least one recorded prediction —
     NOT the same set as /predictions/backtest/options' `leagues` (that one
     is derived from team_matches history, for the Backtest replay; this
-    one reflects what the bot has actually predicted)."""
-    rows = conn.execute(
-        sa.select(sa.func.coalesce(predictions.c.league, fixtures.c.league))
-        .select_from(
-            predictions.outerjoin(fixtures, predictions.c.fixture_id == fixtures.c.id)
-        )
-        .distinct()
-    ).all()
+    one reflects what the bot has actually predicted). Built on
+    _build_prediction_select() (not a fresh join) so the league value
+    matches exactly what list_predictions/get_prediction_accuracy already
+    show for the same rows -- including its existing coalesce-to-"IPL"
+    fallback for rows with no league recorded on either predictions or
+    fixtures. A separate hand-rolled join here could disagree with the
+    rest of the API on what a given row's league even is."""
+    sub = _build_prediction_select().subquery()
+    rows = conn.execute(sa.select(sub.c.league).distinct()).all()
     return sorted({r[0] for r in rows if r[0]})
 ```
 
@@ -176,12 +177,14 @@ the new backend param).
 5. **Settled history below**, `created_at` descending — fetched
    separately from pending via `GET /predictions?outcome=correct,
    incorrect,void&league=...&limit=20&offset=0`. One card per prediction,
-   paginated (initial page + "load more" appending the next `offset`
-   batch — matches WireStrip's existing incremental-load pattern rather
-   than introducing full page-number pagination). Keeping this fetch
-   scoped to non-pending outcomes means every page has a predictable
-   size and "load more" never re-fetches a pending row that later
-   resolves mid-scroll.
+   paginated with a "load more" button appending the next `offset` batch.
+   No existing pagination pattern exists elsewhere in this frontend to
+   follow (verified: WireStrip renders a fixed-limit prop with no
+   pagination of its own) — this is new, plain `useState`-tracked
+   offset/append, specified in full in the implementation plan. Keeping
+   this fetch scoped to non-pending outcomes means every page has a
+   predictable size and "load more" never re-fetches a pending row that
+   later resolves mid-scroll.
 
 **Card content** (new component,
 `frontend/src/components/predictions/PredictionTrackCard.tsx`):
