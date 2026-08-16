@@ -187,12 +187,14 @@ def list_predictions(
     league: str | None = None,
     search: str | None = None,
     limit: int = 100,
+    offset: int = 0,
     conn=Depends(get_conn),
 ) -> list[PredictionOut]:
     q = (
         _build_prediction_select()
         .order_by(predictions.c.created_at.desc())
         .limit(limit)
+        .offset(offset)
     )
 
     if outcome and outcome.strip() and outcome != "all":

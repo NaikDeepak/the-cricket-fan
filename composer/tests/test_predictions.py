@@ -175,3 +175,32 @@ def test_delete_prediction(client, conn):
 
     get_res = client.get(f"/predictions/{pid}")
     assert get_res.status_code == 404
+
+
+def test_offset_pages_through_results(client, conn):
+    for i in range(1, 4):
+        _mk_fixture(conn, fid=i, team_a=f"Team {i}", team_b="Opponent")
+        conn.execute(
+            predictions.insert().values(
+                fixture_id=i,
+                team_a=f"Team {i}",
+                team_b="Opponent",
+                league="IPL",
+                venue="Wankhede Stadium",
+                prob_team_a=0.6,
+                reasons_json="[]",
+                features_json="{}",
+                created_at=datetime(2026, 7, 20 + i, tzinfo=timezone.utc),
+                outcome="pending",
+            )
+        )
+    conn.commit()
+    # created_at desc: Team 3 (7/23), Team 2 (7/22), Team 1 (7/21)
+    page1 = client.get("/predictions", params={"limit": 2, "offset": 0}).json()
+    assert [r["team_a"] for r in page1] == ["Team 3", "Team 2"]
+
+    page2 = client.get("/predictions", params={"limit": 2, "offset": 2}).json()
+    assert [r["team_a"] for r in page2] == ["Team 1"]
+
+    page3 = client.get("/predictions", params={"limit": 2, "offset": 10}).json()
+    assert page3 == []
