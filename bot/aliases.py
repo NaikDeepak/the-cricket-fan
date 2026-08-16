@@ -97,16 +97,26 @@ SEED: list[tuple[str, str, str]] = [
     ("team", "usa", "United States of America"),
     ("team", "united states", "United States of America"),
     # The Hundred (Men & Women) & Rebranded Names
+    #
+    # Manchester Super Giants, Sunrisers Leeds, and MI London are NOT
+    # renames of Manchester Originals / Northern Superchargers / London
+    # Spirit — team_matches has independent historical rows (own team AND
+    # opponent columns) for all six names. Aliasing the new names to the
+    # old ones (as this table used to) silently merged two different
+    # clubs' ELO/form/run-rate history into one canonical identity,
+    # corrupting predictions for every match involving any of them. Each
+    # now resolves to its own canonical name; old-name rows are kept
+    # unchanged so historical seasons under those names still resolve.
     ("team", "tre", "Trent Rockets"),
     ("team", "trent rockets", "Trent Rockets"),
-    ("team", "msg", "Manchester Originals"),
-    ("team", "manchester super giants", "Manchester Originals"),
-    ("team", "manchester originals", "Manchester Originals"),
+    ("team", "msg", "Manchester Super Giants"),
+    ("team", "manchester super giants", "Manchester Super Giants"),
     ("team", "mo", "Manchester Originals"),
+    ("team", "manchester originals", "Manchester Originals"),
     ("team", "ls", "London Spirit"),
-    ("team", "mil", "London Spirit"),
-    ("team", "mi london", "London Spirit"),
     ("team", "london spirit", "London Spirit"),
+    ("team", "mil", "MI London"),
+    ("team", "mi london", "MI London"),
     ("team", "oi", "Oval Invincibles"),
     ("team", "oval invincibles", "Oval Invincibles"),
     ("team", "sb", "Southern Brave"),
@@ -114,18 +124,27 @@ SEED: list[tuple[str, str, str]] = [
     ("team", "wf", "Welsh Fire"),
     ("team", "welsh fire", "Welsh Fire"),
     ("team", "nsc", "Northern Superchargers"),
-    ("team", "srl", "Northern Superchargers"),
-    ("team", "sunrisers leeds", "Northern Superchargers"),
     ("team", "northern superchargers", "Northern Superchargers"),
+    ("team", "srl", "Sunrisers Leeds"),
+    ("team", "sunrisers leeds", "Sunrisers Leeds"),
     ("team", "bp", "Birmingham Phoenix"),
     ("team", "birmingham phoenix", "Birmingham Phoenix"),
     # The Hundred Women
     ("team", "trew", "Trent Rockets Women"),
     ("team", "trent rockets women", "Trent Rockets Women"),
-    ("team", "sulw", "Northern Superchargers Women"),
-    ("team", "sunrisers leeds women", "Northern Superchargers Women"),
     ("team", "nscw", "Northern Superchargers Women"),
     ("team", "northern superchargers women", "Northern Superchargers Women"),
+    # "Sunrisers Leeds Women" has no team_matches history yet (brand-new
+    # 2026 side, unlike the men's team which already has independent
+    # rows) — no direct DB proof, but the men's-side merge above was
+    # definitively wrong for the identical rename pattern, so this stays
+    # its own canonical rather than repeating that mistake preemptively.
+    # Retracts 70ea32b's "sulw" fix, which repointed it at Northern
+    # Superchargers Women instead.
+    ("team", "sulw", "Sunrisers Leeds Women"),
+    ("team", "sunrisers leeds women", "Sunrisers Leeds Women"),
+    ("team", "milw", "MI London Women"),
+    ("team", "mi london women", "MI London Women"),
     ("team", "bpw", "Birmingham Phoenix Women"),
     ("team", "birmingham phoenix women", "Birmingham Phoenix Women"),
     ("team", "lsw", "London Spirit Women"),
@@ -186,13 +205,25 @@ SEED: list[tuple[str, str, str]] = [
 
 
 def seed_aliases(conn) -> None:
+    """Insert new SEED rows, and correct the canonical of any row already in
+    the DB whose value has drifted from SEED (e.g. a since-fixed bad merge
+    like msg -> Manchester Originals) — previously insert-only, so a SEED
+    correction silently no-op'd against a DB that already had the wrong
+    row, leaving it wrong forever.
+    """
     for kind, alias, canonical in SEED:
-        exists = conn.execute(
-            sa.select(aliases.c.id).where(
+        existing = conn.execute(
+            sa.select(aliases.c.id, aliases.c.canonical).where(
                 aliases.c.kind == kind, aliases.c.alias == alias
             )
         ).first()
-        if not exists:
+        if existing is None:
             conn.execute(
                 aliases.insert().values(kind=kind, alias=alias, canonical=canonical)
+            )
+        elif existing.canonical != canonical:
+            conn.execute(
+                aliases.update()
+                .where(aliases.c.id == existing.id)
+                .values(canonical=canonical)
             )

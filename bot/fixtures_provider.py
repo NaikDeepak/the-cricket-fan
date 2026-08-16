@@ -16,6 +16,25 @@ logger = logging.getLogger(__name__)
 ABANDONED_MARKERS = ("abandoned", "no result")
 
 
+def _resolve_league(m: dict) -> str:
+    """CricAPI omits `series` entirely for The Hundred (both competitions) —
+    the only place the competition name shows up is `name`
+    ("Trent Rockets vs Manchester Originals, Final, The Hundred Mens
+    Competition 2026"). Falling straight through to the "T20" default in
+    that case produces a league string that can never match the canonical
+    "The Hundred" / "The Hundred Women" values team_seed.py seeds and the
+    UI's league dropdown is built from — backtest's upcoming-fixture query
+    (bot/backtest.py) filters on exact league match, so the fixture would
+    ingest but never surface. Every other league keeps using `series`
+    verbatim, unchanged from before.
+    """
+    raw = m.get("series") or m.get("name") or ""
+    low = raw.lower()
+    if "hundred" in low:
+        return "The Hundred Women" if "women" in low else "The Hundred"
+    return raw or "T20"
+
+
 @dataclass(frozen=True)
 class Fixture:
     provider_match_id: str
@@ -51,8 +70,8 @@ class CricApiProvider:
         fixtures: list[Fixture] = []
         results: list[Result] = []
         for m in payload.get("data", []):
-            match_type = m.get("matchType", "").lower()
-            series_name = m.get("series", "").lower()
+            match_type = (m.get("matchType") or "").lower()
+            series_name = (m.get("series") or "").lower()
             is_supported_format = (
                 "t20" in match_type
                 or "ipl" in match_type
@@ -78,7 +97,7 @@ class CricApiProvider:
                         team_a=teams[0],
                         team_b=teams[1],
                         venue=venue,
-                        league=m.get("series", "T20"),
+                        league=_resolve_league(m),
                         start_time=datetime.fromisoformat(m["dateTimeGMT"]).replace(
                             tzinfo=timezone.utc
                         ),
