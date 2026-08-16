@@ -11,14 +11,14 @@ if _libgomp.exists():
     except Exception:
         pass
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
-from bot.db import ensure_schema
-from bot.predict import load_artifact
+from bot.db import ensure_schema  # noqa: E402
+from bot.predict import load_artifact  # noqa: E402
 
-from .config import get_settings
-from .deps import init_engine
+from .config import get_settings  # noqa: E402
+from .deps import init_engine  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

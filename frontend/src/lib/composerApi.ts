@@ -12,8 +12,6 @@ export function getApiBase(): string {
   return "http://localhost:8000";
 }
 
-const API = getApiBase();
-
 export type CardMeta = Record<string, unknown>;
 
 export type Draft = {

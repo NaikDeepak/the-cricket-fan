@@ -764,7 +764,8 @@ def resolve_on_this_day_story(
             )
         )
         try:
-            conn.commit()
+            if not getattr(conn, "_trans_context_manager", None):
+                conn.commit()
         except Exception:
             pass
 

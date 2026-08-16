@@ -4,7 +4,6 @@ Scans local Cricsheet match datasets to extract nail-biting finishes,
 dramatic final overs, and statistical turnarounds.
 """
 
-import json
 import logging
 from pathlib import Path
 from typing import Any

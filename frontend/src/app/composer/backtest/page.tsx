@@ -746,7 +746,6 @@ export default function BacktestPage() {
                   <MatchBacktestCard
                     key={`upcoming-${game.date}-${game.team_a}-${game.team_b}-${i}`}
                     game={game}
-                    league={result.league || selectedLeague}
                     onShare={(g) => setSharingGame(g)}
                     onCompose={handleOpenComposer}
                   />
@@ -777,7 +776,6 @@ export default function BacktestPage() {
                 <MatchBacktestCard
                   key={`${game.date}-${game.team_a}-${game.team_b}-${i}`}
                   game={game}
-                  league={result.league || selectedLeague}
                   onShare={(g) => setSharingGame(g)}
                   onCompose={handleOpenComposer}
                 />
@@ -843,12 +841,10 @@ export default function BacktestPage() {
 
 function MatchBacktestCard({
   game,
-  league,
   onShare,
   onCompose,
 }: {
   game: BacktestGame;
-  league: string;
   onShare: (game: BacktestGame) => void;
   onCompose: (game: BacktestGame) => void;
 }) {

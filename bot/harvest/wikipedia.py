@@ -5,7 +5,6 @@ milestone records, and unusual cricket folklore from Wikipedia.
 """
 
 import logging
-import re
 from typing import Any
 
 logger = logging.getLogger(__name__)

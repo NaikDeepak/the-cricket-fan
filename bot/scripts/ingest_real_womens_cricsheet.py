@@ -1,6 +1,5 @@
 """Ingest 100% official Cricsheet match datasets for WPL, WBBL, and Women's T20I into PostgreSQL."""
 
-import os
 from pathlib import Path
 import sqlalchemy as sa
 import pandas as pd
@@ -27,7 +26,7 @@ def ingest():
             try:
                 for r in parse_result(f, league=league):
                     all_rows.append(r.__dict__)
-            except Exception as e:
+            except Exception:
                 # Some files might be non-match metadata (e.g. README.txt, manifest)
                 pass
 

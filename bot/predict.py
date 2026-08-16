@@ -41,9 +41,6 @@ def predict(artifact: dict, features: dict) -> tuple[float, list[str]]:
             reasons = ["form5_a", "bat_rr_a", "bowl_econ_a"]
     else:
         # Fallback to strongest non-zero feature differences
-        diffs = [abs(features.get(f"form5_a", 0) - features.get(f"form5_b", 0)),
-                 abs(features.get(f"bat_rr_a", 0) - features.get(f"bat_rr_b", 0)),
-                 abs(features.get(f"bowl_econ_a", 0) - features.get(f"bowl_econ_b", 0))]
         reasons = ["form5_a", "bat_rr_a", "bowl_econ_a"]
         
     return prob, reasons

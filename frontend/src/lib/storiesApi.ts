@@ -1,7 +1,5 @@
 import { getApiBase } from "./composerApi";
 
-const API = getApiBase();
-
 export type Story = {
   content_key: string;
   category: string;
