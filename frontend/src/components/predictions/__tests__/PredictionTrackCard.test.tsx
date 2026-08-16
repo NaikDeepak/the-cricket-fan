@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import PredictionTrackCard from "../PredictionTrackCard";
 import type { Prediction } from "@/lib/composerApi";
@@ -67,5 +67,13 @@ describe("PredictionTrackCard", () => {
   it("renders the predicted-on date", () => {
     render(<PredictionTrackCard prediction={base} />);
     expect(screen.getByText("16 AUG 2026")).toBeInTheDocument();
+  });
+
+  it("opens the share modal when clicking Share Card", () => {
+    render(<PredictionTrackCard prediction={base} />);
+    const shareBtn = screen.getByRole("button", { name: /Share Card/i });
+    expect(shareBtn).toBeInTheDocument();
+    fireEvent.click(shareBtn);
+    expect(screen.getByText(/SHAREABLE MATCH CARD/i)).toBeInTheDocument();
   });
 });
