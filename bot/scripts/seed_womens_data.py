@@ -1,9 +1,9 @@
 """Seed WPL, The Hundred Women, and WBBL teams, content stories, and historical match data."""
 
 import json
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 import sqlalchemy as sa
-from bot.db import content_bank, ensure_schema, get_engine, team_matches, teams
+from bot.db import content_bank, ensure_schema, get_engine, teams
 
 WOMENS_STORIES = [
     # ── WPL Stories & Anecdotes ──────────────────────────────────────────────
@@ -567,58 +567,16 @@ def seed():
                 )
                 print(f"  + Added story: {s['title']}")
 
-        # 3. Seed historical matches for WPL, The Hundred Women, and WBBL into team_matches
-        print("Checking team_matches for women's leagues...")
-        wpl_count = conn.execute(sa.select(sa.func.count(team_matches.c.id)).where(team_matches.c.league == "WPL")).scalar()
-        if wpl_count == 0:
-            print("  Seeding representative matches for WPL, WBBL, The Hundred Women...")
-            sample_matches = [
-                # WPL 2024 Final
-                ("Royal Challengers Bengaluru Women", "Delhi Capitals Women", date(2024, 3, 17), "2024", "WPL", "Arun Jaitley Stadium, Delhi", True, False, 115.0, 19.3, 113.0, 18.3, False, False, 25.0, 6.0, 15.0, 3.0),
-                ("Delhi Capitals Women", "Royal Challengers Bengaluru Women", date(2024, 3, 17), "2024", "WPL", "Arun Jaitley Stadium, Delhi", False, False, 113.0, 18.3, 115.0, 19.3, True, True, 64.0, 6.0, 20.0, 3.0),
-                # WPL 2024 Match 19
-                ("Royal Challengers Bengaluru Women", "Mumbai Indians Women", date(2024, 3, 12), "2024", "WPL", "Arun Jaitley Stadium, Delhi", True, False, 115.0, 15.0, 113.0, 19.0, False, False, 39.0, 6.0, 18.0, 3.0),
-                ("Mumbai Indians Women", "Royal Challengers Bengaluru Women", date(2024, 3, 12), "2024", "WPL", "Arun Jaitley Stadium, Delhi", False, False, 113.0, 19.0, 115.0, 15.0, True, True, 43.0, 6.0, 25.0, 3.0),
-                # WPL 2023 Final
-                ("Mumbai Indians Women", "Delhi Capitals Women", date(2023, 3, 26), "2023", "WPL", "Brabourne Stadium, Mumbai", True, False, 134.0, 19.3, 131.0, 20.0, False, False, 27.0, 6.0, 16.0, 4.0),
-                ("Delhi Capitals Women", "Mumbai Indians Women", date(2023, 3, 26), "2023", "WPL", "Brabourne Stadium, Mumbai", False, False, 131.0, 20.0, 134.0, 19.3, True, True, 38.0, 6.0, 28.0, 4.0),
-                # The Hundred Women 2023 Final
-                ("Southern Brave Women", "Northern Superchargers Women", date(2023, 8, 27), "2023", "The Hundred Women", "Lord's, London", True, False, 139.0, 20.0, 105.0, 20.0, False, True, 34.0, 5.0, 22.0, 4.0),
-                ("Northern Superchargers Women", "Southern Brave Women", date(2023, 8, 27), "2023", "The Hundred Women", "Lord's, London", False, False, 105.0, 20.0, 139.0, 20.0, True, False, 28.0, 5.0, 30.0, 4.0),
-                # The Hundred Women 2022 Final
-                ("Oval Invincibles Women", "Southern Brave Women", date(2022, 9, 3), "2022", "The Hundred Women", "Lord's, London", True, False, 101.0, 18.0, 100.0, 20.0, False, False, 30.0, 5.0, 15.0, 4.0),
-                ("Southern Brave Women", "Oval Invincibles Women", date(2022, 9, 3), "2022", "The Hundred Women", "Lord's, London", False, False, 100.0, 20.0, 101.0, 18.0, True, True, 25.0, 5.0, 22.0, 4.0),
-                # WBBL|09 Final
-                ("Adelaide Strikers Women", "Brisbane Heat Women", date(2023, 12, 2), "2023/24", "WBBL", "Adelaide Oval, Adelaide", True, False, 125.0, 20.0, 122.0, 20.0, True, True, 36.0, 6.0, 18.0, 4.0),
-                ("Brisbane Heat Women", "Adelaide Strikers Women", date(2023, 12, 2), "2023/24", "WBBL", "Adelaide Oval, Adelaide", False, False, 122.0, 20.0, 125.0, 20.0, False, False, 32.0, 6.0, 24.0, 4.0),
-                # WBBL|08 Final
-                ("Adelaide Strikers Women", "Sydney Sixers Women", date(2022, 11, 26), "2022/23", "WBBL", "North Sydney Oval, Sydney", True, False, 147.0, 20.0, 137.0, 20.0, False, True, 44.0, 6.0, 22.0, 4.0),
-                ("Sydney Sixers Women", "Adelaide Strikers Women", date(2022, 11, 26), "2022/23", "WBBL", "North Sydney Oval, Sydney", False, False, 137.0, 20.0, 147.0, 20.0, True, False, 38.0, 6.0, 26.0, 4.0),
-            ]
-            for m in sample_matches:
-                conn.execute(
-                    team_matches.insert().values(
-                        team=m[0],
-                        opponent=m[1],
-                        date=m[2],
-                        season=m[3],
-                        league=m[4],
-                        venue=m[5],
-                        won=m[6],
-                        dls=m[7],
-                        runs_scored=m[8],
-                        overs_faced=m[9],
-                        runs_conceded=m[10],
-                        overs_bowled=m[11],
-                        home=m[12],
-                        batted_first=m[13],
-                        pp_runs_scored=m[14],
-                        pp_overs_faced=m[15],
-                        death_runs_conceded=m[16],
-                        death_overs_bowled=m[17],
-                    )
-                )
-            print("  + Seeded representative women's matches!")
+        # NOTE: this used to also seed ~14 hand-fabricated "representative"
+        # match rows (invented runs/overs/pp/death stats, not real Cricsheet
+        # data) directly into team_matches — the table the prediction model
+        # trains on — guarded only by `if wpl_count == 0`. Removed: real
+        # Cricsheet-derived WPL/WBBL/The Hundred Women/WT20I data is now
+        # ingested by bot/scripts/ingest_real_womens_cricsheet.py (whose own
+        # docstring notes it had to clean up these exact dummy rows once
+        # already). This script still seeds `teams` and `content_bank`
+        # stories above — those are legitimate hand-authored content, not
+        # training data, and are unaffected.
 
 
 if __name__ == "__main__":

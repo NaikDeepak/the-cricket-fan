@@ -125,7 +125,12 @@ def ingest_all(database_url: str) -> None:
         f"\nWriting {len(df)} total team-match rows across {len(df['league'].unique())} leagues to DB..."
     )
 
-    fetched_leagues = [name for _, name in LEAGUES]
+    # Bug fix: this used to be the full static LEAGUES list, so a league whose
+    # download/parse failed (network blip, Cricsheet rate-limit, corrupt zip —
+    # anything caught by the try/except above) still had its existing rows
+    # DELETEd here with nothing to replace them, silently wiping that league's
+    # history. Only delete leagues we actually parsed at least one row for.
+    fetched_leagues = sorted({r["league"] for r in all_rows})
     with engine.begin() as conn:
         ensure_schema(conn)
         seed_aliases(conn)
