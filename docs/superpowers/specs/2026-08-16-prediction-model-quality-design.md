@@ -155,30 +155,55 @@ instrument every later change gets measured through.
 - `composer/routers/predictions.py` needs to consult the override list at
   serving time.
 
-**Known limitation (as of merge):** `run_model`'s override routing is
-implemented and correct, but `fixtures.league` (populated from CricAPI's
-raw `series` field via `bot/fixtures_provider.py::_resolve_league`) does
-not currently match the canonical league labels used in
-`league_elo_override` (populated from the Cricsheet ingest league map in
-`bot/scripts/ingest_all_leagues.py`) for most leagues — e.g. CricAPI's
-`"Indian Premier League"` vs. the canonical `"IPL"`. Confirmed via
-`bot/tests/data/provider_matches.json`'s fixture data. As a result, the
-override routing is currently a safe no-op against real production
-fixtures (it always falls through to the model path) until this
-namespace is resolved — most likely via an alias table in
-`bot/fixtures_provider.py::_resolve_league`, keyed off the same
-canonical labels `bot/scripts/ingest_all_leagues.py`'s `LEAGUES` list
-already defines. The routing also does not yet cover 3 other places the
-model is called for live predictions (`bot/run.py::tick`, the
-GH-Actions X-posting cron; `composer/routers/generate.py`'s
-`/generate/bot`; `composer/routers/live_predict.py`) — only
+**Known limitation (as of merge, corrected 2026-08-17 against a live
+CricAPI probe — see below):** `run_model`'s override routing is
+implemented and correct, but `fixtures.league` does not currently match
+the canonical league labels used in `league_elo_override` (populated
+from the Cricsheet ingest league map in `bot/scripts/ingest_all_leagues.py`).
+The mismatch is deeper than a simple naming difference:
+
+- A live call to CricAPI's `currentMatches` endpoint (2026-08-17, 18
+  matches sampled) returned **no `series` field on any match** — only a
+  `series_id` UUID. `bot/fixtures_provider.py::_resolve_league`'s
+  `raw = m.get("series") or m.get("name") or ""` therefore always falls
+  through to `name`, which is the full match-description string (e.g.
+  `"Jamaica Kingsmen vs Trinbago Knight Riders, 8th Match, Caribbean
+  Premier League 2026"`), not a competition name — for every league
+  except The Hundred, which `_resolve_league` special-cases on a
+  substring match against that same description string.
+- Resolving `series_id` via CricAPI's separate `series_info` endpoint
+  does return a real tournament name (verified live: `"Women's T20I
+  Quadrangular Series in Namibia 2026"`) — but that string still isn't
+  one of `bot/scripts/ingest_all_leagues.py`'s canonical short labels
+  (`"IPL"`, `"T20 Blast"`, etc.), so a fix needs both an extra API call
+  per distinct series (against a 100-credit/day free-tier budget — 2 of
+  100 used by this verification alone) and a normalization table, not
+  just a lookup.
+- `bot/tests/data/provider_matches.json`, the test fixture asserting
+  `"series": "Indian Premier League"`, does **not** reflect live API
+  behavior — it's what led the final-review pass to originally
+  characterize this as a simple `"Indian Premier League"` vs `"IPL"`
+  naming mismatch. That characterization is wrong; this note supersedes
+  it. Do not treat that fixture as documentation of the live `series`
+  field's shape.
+- Consequence is unchanged from the original note: the override routing
+  is a safe no-op against real production fixtures today (it always
+  falls through to the model path, identical to pre-branch behavior).
+  Nothing shipped is worse — only this note's prior framing of *why* was
+  incomplete.
+
+The routing also does not yet cover 3 other places the model is called
+for live predictions (`bot/run.py::tick`, the GH-Actions X-posting cron;
+`composer/routers/generate.py`'s `/generate/bot`;
+`composer/routers/live_predict.py`) — only
 `composer/routers/predictions.py::run_model` consults the override
 list. This branch adds observability (see `run_model`'s logging) so this
 gap is visible in production logs on the first retrain that populates
-`league_elo_override`, rather than failing silently. Both items are
-tracked as follow-up work, not fixed in this merge, because a correct
-fix for the first needs real CricAPI response samples not available at
-the time of this review.
+`league_elo_override`, rather than failing silently. Both items remain
+follow-up work, not fixed in this merge — a correct fix now needs a
+`series_id` → `series_info` → canonical-label resolution design with an
+explicit rate-limit budget, which is its own planning cycle, not a
+same-PR patch.
 
 ### 2. Split fix + sigmoid calibration (atomic)
 
