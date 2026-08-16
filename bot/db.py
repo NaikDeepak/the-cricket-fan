@@ -289,10 +289,10 @@ def seed_teams_if_empty(conn: sa.Connection) -> None:
     from .team_seed import INITIAL_TEAMS
 
     try:
-        count = conn.execute(sa.select(sa.func.count(teams.c.id))).scalar()
-        if count == 0:
-            now = datetime.now(timezone.utc)
-            for t in INITIAL_TEAMS:
+        existing_names = set(conn.execute(sa.select(teams.c.name)).scalars().all())
+        now = datetime.now(timezone.utc)
+        for t in INITIAL_TEAMS:
+            if t["name"] not in existing_names:
                 conn.execute(
                     teams.insert().values(
                         name=t["name"],
@@ -310,5 +310,6 @@ def seed_teams_if_empty(conn: sa.Connection) -> None:
                         created_at=now,
                     )
                 )
+                existing_names.add(t["name"])
     except Exception:
         pass

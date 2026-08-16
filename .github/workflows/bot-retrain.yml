@@ -19,7 +19,7 @@ jobs:
       - name: Download Cricsheet T20 archives
         run: |
           mkdir -p /tmp/cricsheet
-          for comp in ipl bbl psl sat cpl hnd t20s; do
+          for comp in ipl hnd_male hnd_female wpl bbl_male wbb psl cpl_male sat mlc ilt lpl bpl ntb ssm_male ssm_female wcl cec wtb wsl wtc sma msl npl ctc frb t20s_male t20s_female; do
             curl -fsSL -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
               --retry 6 --retry-delay 5 --retry-all-errors \
               "https://cricsheet.org/downloads/${comp}_json.zip" \
@@ -32,8 +32,36 @@ jobs:
       - name: Build league map
         run: |
           cat > /tmp/league_map.json <<'EOF'
-          {"ipl": "IPL", "bbl": "BBL", "psl": "PSL", "sat": "SA20",
-           "cpl": "CPL", "hnd": "The Hundred", "t20s": "T20I"}
+          {
+            "ipl": "IPL",
+            "hnd_male": "The Hundred",
+            "hnd_female": "The Hundred Women",
+            "wpl": "WPL",
+            "bbl_male": "BBL",
+            "wbb": "WBBL",
+            "psl": "PSL",
+            "cpl_male": "CPL",
+            "sat": "SA20",
+            "mlc": "MLC",
+            "ilt": "ILT20",
+            "lpl": "LPL",
+            "bpl": "BPL",
+            "ntb": "T20 Blast",
+            "ssm_male": "Super Smash",
+            "ssm_female": "Super Smash Women",
+            "wcl": "WCPL",
+            "cec": "Charlotte Edwards Cup",
+            "wtb": "Women's T20 Blast",
+            "wsl": "WSL",
+            "wtc": "Women's T20 Challenge",
+            "sma": "SMAT",
+            "msl": "MSL",
+            "npl": "NPL",
+            "ctc": "CSA T20",
+            "frb": "FairBreak",
+            "t20s_male": "T20I",
+            "t20s_female": "WT20I"
+          }
           EOF
       - name: Refresh feature store
         run: |

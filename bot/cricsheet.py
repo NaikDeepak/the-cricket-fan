@@ -10,17 +10,95 @@ from pathlib import Path
 # default `city in team` check misses them. Cricsheet's `info.city` field is
 # checked against these instead.
 _HOME_CITY_OVERRIDES: dict[str, set[str]] = {
+    # IPL
     "Punjab Kings": {"mohali", "chandigarh", "new chandigarh", "dharamsala"},
     "Kings XI Punjab": {"mohali", "chandigarh", "new chandigarh", "dharamsala"},
     "Rajasthan Royals": {"jaipur"},
     "Gujarat Titans": {"ahmedabad"},
     "Gujarat Lions": {"rajkot"},
     "Deccan Chargers": {"hyderabad"},
+    "Sunrisers Hyderabad": {"hyderabad"},
     "Kochi Tuskers Kerala": {"kochi"},
     "Pune Warriors India": {"pune"},
     "Rising Pune Supergiant": {"pune"},
     "Rising Pune Supergiants": {"pune"},
+    "Royal Challengers Bangalore": {"bangalore", "bengaluru"},
+    "Royal Challengers Bengaluru": {"bangalore", "bengaluru"},
+    # The Hundred (Men & Women)
+    "Southern Brave": {"southampton"},
+    "Southern Brave Women": {"southampton"},
+    "Northern Superchargers": {"leeds"},
+    "Northern Superchargers Women": {"leeds"},
+    "Sunrisers Leeds": {"leeds"},
+    "Sunrisers Leeds Women": {"leeds"},
+    "Trent Rockets": {"nottingham"},
+    "Trent Rockets Women": {"nottingham"},
+    "Welsh Fire": {"cardiff"},
+    "Welsh Fire Women": {"cardiff"},
+    "London Spirit": {"london"},
+    "London Spirit Women": {"london"},
+    "Oval Invincibles": {"london", "kennington"},
+    "Oval Invincibles Women": {"london", "kennington"},
+    "MI London": {"london"},
+    "MI London Women": {"london"},
+    "Manchester Originals": {"manchester"},
+    "Manchester Originals Women": {"manchester"},
+    "Manchester Super Giants": {"manchester"},
+    "Birmingham Phoenix": {"birmingham"},
+    "Birmingham Phoenix Women": {"birmingham"},
+    # WPL
+    "Royal Challengers Bengaluru Women": {"bangalore", "bengaluru"},
+    "Mumbai Indians Women": {"mumbai", "navi mumbai"},
+    "Delhi Capitals Women": {"delhi"},
+    "UP Warriorz": {"lucknow"},
+    "Gujarat Giants Women": {"ahmedabad", "rajkot"},
+    # BBL & WBBL
+    "Adelaide Strikers": {"adelaide"},
+    "Adelaide Strikers Women": {"adelaide"},
+    "Brisbane Heat": {"brisbane"},
+    "Brisbane Heat Women": {"brisbane"},
+    "Hobart Hurricanes": {"hobart"},
+    "Hobart Hurricanes Women": {"hobart"},
+    "Melbourne Renegades": {"melbourne", "geelong"},
+    "Melbourne Renegades Women": {"melbourne", "geelong"},
+    "Melbourne Stars": {"melbourne"},
+    "Melbourne Stars Women": {"melbourne"},
+    "Perth Scorchers": {"perth"},
+    "Perth Scorchers Women": {"perth"},
+    "Sydney Sixers": {"sydney"},
+    "Sydney Sixers Women": {"sydney"},
+    "Sydney Thunder": {"sydney", "canberra"},
+    "Sydney Thunder Women": {"sydney", "canberra"},
 }
+
+
+def normalize_cricsheet_team_name(team: str, league: str) -> str:
+    """Normalizes raw team names from Cricsheet to canonical team names."""
+    if not team:
+        return team
+    t = team.strip()
+
+    if league in ("The Hundred Women", "WBBL", "WCPL"):
+        if not t.endswith(" Women"):
+            return f"{t} Women"
+    elif league == "WPL":
+        if t in ("Royal Challengers Bangalore", "Royal Challengers Bengaluru"):
+            return "Royal Challengers Bengaluru Women"
+        if t == "Mumbai Indians":
+            return "Mumbai Indians Women"
+        if t == "Delhi Capitals":
+            return "Delhi Capitals Women"
+        if t == "Gujarat Giants":
+            return "Gujarat Giants Women"
+        if t == "UP Warriorz":
+            return "UP Warriorz"
+        if not t.endswith(" Women") and t != "UP Warriorz":
+            return f"{t} Women"
+    elif league == "IPL":
+        if t == "Royal Challengers Bangalore":
+            return "Royal Challengers Bengaluru"
+
+    return t
 
 
 def _is_home(team: str, city: str) -> bool:
@@ -116,26 +194,30 @@ def parse_match_dict(data: dict, league: str) -> list[TeamMatchRow]:
     innings_list = data.get("innings", [])
     first_batting_team = innings_list[0]["team"] if innings_list else None
 
+    norm_winner = normalize_cricsheet_team_name(winner, league)
+
     rows = []
     for team in teams:
         opponent = next(t for t in teams if t != team)
         scored = stats.get(team)
         conceded = stats.get(opponent)
+        norm_team = normalize_cricsheet_team_name(team, league)
+        norm_opponent = normalize_cricsheet_team_name(opponent, league)
         rows.append(
             TeamMatchRow(
-                team=team,
-                opponent=opponent,
+                team=norm_team,
+                opponent=norm_opponent,
                 date=match_date,
                 season=season,
                 league=league,
                 venue=venue,
-                won=(team == winner),
+                won=(norm_team == norm_winner),
                 dls=dls,
                 runs_scored=scored["runs"] if scored else None,
                 overs_faced=scored["balls"] / 6.0 if scored else None,
                 runs_conceded=conceded["runs"] if conceded else None,
                 overs_bowled=conceded["balls"] / 6.0 if conceded else None,
-                home=_is_home(team, city),
+                home=_is_home(norm_team, city),
                 batted_first=(team == first_batting_team),
                 pp_runs_scored=scored["pp_runs"] if scored else None,
                 pp_overs_faced=scored["pp_balls"] / 6.0 if scored else None,
