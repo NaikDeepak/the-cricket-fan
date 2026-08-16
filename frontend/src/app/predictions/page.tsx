@@ -26,9 +26,6 @@ export default function PredictionsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setOffset(0);
-    setHasMore(true);
     const leagueParam = selectedLeague || undefined;
 
     Promise.all([
@@ -44,12 +41,14 @@ export default function PredictionsPage() {
         if (cancelled) return;
         setPending(pendingRows);
         setSettled(settledRows);
+        setOffset(0);
         setHasMore(settledRows.length === PAGE_SIZE);
       })
       .catch(() => {
         if (cancelled) return;
         setPending([]);
         setSettled([]);
+        setOffset(0);
         setHasMore(false);
       })
       .finally(() => {
