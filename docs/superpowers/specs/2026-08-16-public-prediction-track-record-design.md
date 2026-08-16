@@ -193,17 +193,30 @@ the new backend param).
   handles the 2026 rebrand teams correctly as of this session's fixes).
 - Model pick + probability (e.g. "Manchester Super Giants 51.6%").
 - Predicted-on date (`created_at`).
-- Outcome, Honest-State-styled per DESIGN.md — four distinct states, not
-  a binary right/wrong:
-  - `pending` — no result yet, distinct neutral treatment, not styled as
-    a loading skeleton (a pending prediction is a real, final state until
-    the match resolves, not a transient one).
-  - `correct` — actual result shown, positive accent.
-  - `incorrect` — actual result shown, neutral/muted accent (not Wire
-    Red — Wire Red is reserved for primary actions per the One Red Rule,
-    not for signaling a wrong call).
-  - `void` — no-result/abandoned match, its own explicit label (not
-    hidden, not lumped into "incorrect").
+- Outcome — four distinct states, not a binary right/wrong. **Correction
+  during planning:** DESIGN.md's dark Press-Box tokens (Wire Red, Void
+  Black, Oswald) are not actually implemented anywhere in the code —
+  verified `globals.css` has none of them; `/stories` and this new page
+  both run on the real, later, lighter token system in `globals.css`
+  (`--bg`, `--surface`, `--fg`, `--fg-muted`, `--success`/`--warning`/
+  `--error` + their `-tint` pairs, Fraunces/Plus Jakarta Sans). Owner
+  confirmed matching `/stories`' actual shipped look over the stale doc.
+  The underlying principle (don't hide or flatten unfavorable states into
+  a binary) still holds, expressed with the real tokens:
+  - `pending` — `var(--fg-muted)` text on `var(--surface)`, no tint
+    background. A real, final state until the match resolves, not a
+    transient one — must not be styled as a loading skeleton.
+  - `correct` — `var(--success)` text on `var(--success-tint)`
+    background.
+  - `incorrect` — `var(--warning)` text on `var(--warning-tint)`
+    background, not `var(--error)`. A wrong prediction is a normal,
+    expected outcome of a probabilistic model being shown transparently —
+    `--error`'s red is this app's signal for an actual failure state
+    (a broken fetch, a 500), and reusing it here would visually conflate
+    "the model called it wrong" with "something is broken."
+  - `void` — `var(--fg-muted)` text on `var(--surface)`, same neutral
+    family as `pending` but its own explicit label text ("No Result") so
+    it's never misread as still-pending.
 - `result_summary` when present (e.g. "won by 5 wickets").
 
 **Empty state:** if a league filter returns zero predictions, Honest-State
@@ -246,11 +259,12 @@ already writes to it: `bot/run.py`'s automated cron tick, Composer's
 `frontend/src/app/stories/layout.tsx`'s existing pattern exactly (a
 `Metadata` export: title, description, openGraph — no client logic).
 
-`frontend/src/app/predictions/page.tsx` itself: Server Component for the
-initial data fetch (accuracy strip + first page of pending/settled +
-league list), Client Component boundary for the interactive league filter
-and "load more" — same split `/stories/page.tsx` already uses for its own
-filters.
+`frontend/src/app/predictions/page.tsx` itself: `"use client"`, data
+fetched client-side via `useEffect`/`useState` calling `composerApi`
+directly — matches `/stories/page.tsx`'s actual pattern (verified: that
+page is entirely a Client Component, no Server/Client split exists
+anywhere in this frontend today; introducing one here would be
+inconsistent with the rest of the app, not an improvement).
 
 **Navigation:** the reviewer flagged this as missing, correctly, but
 pointed at `AppleGlobalNav.tsx` — verified that component is mounted only
