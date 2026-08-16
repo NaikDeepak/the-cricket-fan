@@ -224,3 +224,62 @@ def test_outcome_accepts_comma_separated_list(client, conn):
     rows = client.get("/predictions", params={"outcome": "correct"}).json()
     assert [r["fixture_id"] for r in rows] == [1]
 
+
+def test_leagues_route_not_shadowed_by_pred_id(client):
+    # Same failure mode as test_today_route_not_shadowed_by_pred_id above:
+    # if /predictions/leagues is declared after /predictions/{pred_id},
+    # FastAPI matches {pred_id} first and 422s trying to int-parse
+    # "leagues" instead of returning the league list.
+    r = client.get("/predictions/leagues")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_leagues_returns_only_leagues_with_recorded_predictions(client, conn):
+    _mk_fixture(conn, fid=1)  # league="IPL" per _mk_fixture default
+    conn.execute(
+        fixtures.insert().values(
+            id=2,
+            provider_match_id="m2",
+            team_a="Trent Rockets",
+            team_b="Manchester Super Giants",
+            venue="Lord's, London",
+            league="The Hundred",
+            start_time=datetime(2026, 8, 16, tzinfo=timezone.utc),
+            status="upcoming",
+        )
+    )
+    _mk_prediction(conn, fid=1, outcome="correct")  # -> IPL
+    conn.execute(
+        predictions.insert().values(
+            fixture_id=2,
+            team_a="Trent Rockets",
+            team_b="Manchester Super Giants",
+            league="The Hundred",
+            venue="Lord's, London",
+            prob_team_a=0.48,
+            reasons_json="[]",
+            features_json="{}",
+            created_at=datetime(2026, 8, 16, tzinfo=timezone.utc),
+            outcome="pending",
+        )
+    )
+    # A league with a fixture but no prediction at all must NOT appear.
+    conn.execute(
+        fixtures.insert().values(
+            id=3,
+            provider_match_id="m3",
+            team_a="Adelaide Strikers Women",
+            team_b="Brisbane Heat Women",
+            venue="Adelaide Oval",
+            league="WBBL",
+            start_time=datetime(2026, 8, 20, tzinfo=timezone.utc),
+            status="upcoming",
+        )
+    )
+    conn.commit()
+
+    r = client.get("/predictions/leagues")
+    assert r.status_code == 200
+    assert r.json() == ["IPL", "The Hundred"]
+
