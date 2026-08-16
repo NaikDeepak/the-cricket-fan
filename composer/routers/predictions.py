@@ -593,42 +593,36 @@ def delete_prediction(pred_id: int, conn=Depends(get_conn)) -> Response:
 
 
 @router.post("/predictions/run-model", response_model=RunModelOut)
-def run_model(conn=Depends(get_conn)) -> RunModelOut:
+def run_model(request: Request, conn=Depends(get_conn)) -> RunModelOut:
     """Trigger the LightGBM prediction pipeline for today's fixtures.
 
-    Imports bot.run machinery, builds features from team_matches history,
-    runs the model, and stores predictions. Idempotent — skips fixtures
-    that already have a prediction.
+    Builds features from team_matches history, runs the model, and stores
+    predictions. Idempotent — skips fixtures that already have a
+    prediction. Leagues on the loaded artifact's `league_elo_override`
+    list (populated by bot.train's per-league gate — see bot/gating.py)
+    are served from the Elo baseline instead of the model, since that
+    league has been measured to lose to Elo recently.
     """
-    from pathlib import Path
     import json as _json
     from datetime import datetime, timezone as _tz
 
+    import numpy as np
+
     errors: list[str] = []
 
-    # Load model artifact
-    artifact_path = (
-        Path(__file__).resolve().parent.parent.parent
-        / "bot"
-        / "artifacts"
-        / "model.pkl"
-    )
-    if not artifact_path.exists():
+    artifact = getattr(request.app.state, "artifact", None)
+    if artifact is None:
         raise HTTPException(
-            status_code=503,
-            detail=f"Model artifact not found at {artifact_path}. Run 'python -m bot.train' first.",
+            status_code=503, detail="Prediction model artifact not loaded"
         )
 
-    try:
-        from bot.predict import load_artifact, predict
-        from bot.features import build_features
-        from bot.run import _load_team_matches, _home_team_at_venue
+    from bot.backtest import pair_matches
+    from bot.elo import build_from_matches
+    from bot.features import build_features
+    from bot.predict import predict
+    from bot.run import _load_team_matches, _home_team_at_venue
 
-        artifact = load_artifact(artifact_path)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=503, detail=f"Failed to load model: {exc}"
-        ) from exc
+    override_leagues = set(artifact.get("league_elo_override", []))
 
     # Find upcoming fixtures without a prediction yet
     now = datetime.now(_tz.utc)
@@ -642,6 +636,7 @@ def run_model(conn=Depends(get_conn)) -> RunModelOut:
     ).all()
 
     df = _load_team_matches(conn)
+    elo = build_from_matches(pair_matches(df)) if len(df) else None
     created = 0
     skipped = 0
 
@@ -654,11 +649,21 @@ def run_model(conn=Depends(get_conn)) -> RunModelOut:
             continue
 
         try:
-            home_team = _home_team_at_venue(df, f.venue, f.team_a, f.team_b)
-            feats = build_features(
-                df, f.team_a, f.team_b, f.venue, now.date(), home_team=home_team
-            )
-            prob, reasons = predict(artifact, feats)
+            if f.league in override_leagues and elo is not None:
+                prob = float(np.clip(elo.expect(f.team_a, f.team_b), 0.02, 0.98))
+                reasons = [
+                    f"{f.league} is currently below the model-quality gate "
+                    "— served from the Elo baseline"
+                ]
+                source = "elo_fallback"
+                feats: dict = {}
+            else:
+                home_team = _home_team_at_venue(df, f.venue, f.team_a, f.team_b)
+                feats = build_features(
+                    df, f.team_a, f.team_b, f.venue, now.date(), home_team=home_team
+                )
+                prob, reasons = predict(artifact, feats)
+                source = "model"
         except Exception as exc:
             errors.append(f"Feature/predict error for {f.team_a} vs {f.team_b}: {exc}")
             skipped += 1
@@ -674,6 +679,7 @@ def run_model(conn=Depends(get_conn)) -> RunModelOut:
                 prob_team_a=prob,
                 reasons_json=_json.dumps(reasons),
                 features_json=_json.dumps(feats),
+                source=source,
                 created_at=now,
                 outcome="pending",
             )
@@ -705,7 +711,9 @@ def settle_from_api(conn=Depends(get_conn)) -> SettleFromApiOut:
 
     settings = get_settings()
     api_key = settings.cricket_api_key or os.getenv("CRICKET_API_KEY", "")
-    api_base = settings.cricket_api_base or os.getenv("CRICKET_API_BASE", "https://api.cricapi.com/v1")
+    api_base = settings.cricket_api_base or os.getenv(
+        "CRICKET_API_BASE", "https://api.cricapi.com/v1"
+    )
 
     if not api_key:
         raise HTTPException(

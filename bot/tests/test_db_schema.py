@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import sqlalchemy as sa
 from sqlalchemy.pool import StaticPool
 
-from bot.db import content_bank, ensure_schema, metadata
+from bot.db import content_bank, ensure_schema, metadata, predictions
 
 
 def _engine():
@@ -116,3 +116,27 @@ VALUES (1, 'wiki_record', 'single', '["test"]', 'test:key', \
         assert bool(row.is_published) is True
 
     eng.dispose()
+
+
+def test_predictions_source_column_exists_and_is_nullable():
+    assert "source" in predictions.c
+    assert predictions.c.source.nullable is True
+
+
+def test_insert_prediction_without_source_defaults_null():
+    from datetime import datetime, timezone
+
+    eng = _engine()
+    metadata.create_all(eng)
+    with eng.begin() as conn:
+        ensure_schema(conn)
+        conn.execute(
+            predictions.insert().values(
+                prob_team_a=0.6,
+                reasons_json="[]",
+                created_at=datetime.now(timezone.utc),
+                outcome="pending",
+            )
+        )
+        row = conn.execute(sa.select(predictions.c.source)).first()
+        assert row.source is None

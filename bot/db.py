@@ -73,6 +73,9 @@ predictions = sa.Table(
     sa.Column("result_summary", sa.String(256), nullable=True),
     sa.Column("outcome", sa.String(16), nullable=False, default="pending"),
     # 'pending' | 'correct' | 'incorrect' | 'void'
+    sa.Column("source", sa.String(16), nullable=True),
+    # 'model' | 'elo_fallback' | NULL (rows predating this column, or
+    # freeform predictions created outside run_model)
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("evaluated_at", sa.DateTime(timezone=True), nullable=True),
 )
@@ -274,6 +277,7 @@ def ensure_schema(conn: sa.Connection) -> None:
         ("actual_winner", "VARCHAR(64)"),
         ("result_summary", "VARCHAR(256)"),
         ("evaluated_at", "TIMESTAMP"),
+        ("source", "VARCHAR(16)"),
     ]:
         if col not in pred_cols:
             conn.execute(
