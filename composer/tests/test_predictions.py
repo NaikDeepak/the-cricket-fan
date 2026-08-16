@@ -204,3 +204,23 @@ def test_offset_pages_through_results(client, conn):
 
     page3 = client.get("/predictions", params={"limit": 2, "offset": 10}).json()
     assert page3 == []
+
+
+def test_outcome_accepts_comma_separated_list(client, conn):
+    _mk_fixture(conn, fid=1)
+    _mk_fixture(conn, fid=2, team_a="Kolkata Knight Riders", team_b="Delhi Capitals")
+    _mk_fixture(conn, fid=3, team_a="Royal Challengers Bengaluru", team_b="Punjab Kings")
+    _mk_prediction(conn, fid=1, outcome="correct")
+    _mk_prediction(conn, fid=2, outcome="incorrect")
+    _mk_prediction(conn, fid=3, outcome="pending")
+    conn.commit()
+
+    rows = client.get(
+        "/predictions", params={"outcome": "correct,incorrect,void"}
+    ).json()
+    assert {r["fixture_id"] for r in rows} == {1, 2}
+
+    # Single value still behaves exactly as before this change.
+    rows = client.get("/predictions", params={"outcome": "correct"}).json()
+    assert [r["fixture_id"] for r in rows] == [1]
+

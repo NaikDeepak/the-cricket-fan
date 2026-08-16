@@ -198,7 +198,8 @@ def list_predictions(
     )
 
     if outcome and outcome.strip() and outcome != "all":
-        q = q.where(predictions.c.outcome == outcome.strip())
+        values = [v.strip() for v in outcome.split(",") if v.strip()]
+        q = q.where(predictions.c.outcome.in_(values))
     if league and league.strip() and league != "All":
         q = q.where(
             sa.or_(
