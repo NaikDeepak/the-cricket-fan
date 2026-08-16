@@ -189,6 +189,76 @@ def test_upsert_fixtures_syncs_reschedule(conn, art):
     assert got == rescheduled.start_time
 
 
+def test_upsert_fixtures_dedupes_same_match_under_new_provider_id(conn, art):
+    """The same real-world match can enter fixtures under two different
+    provider_match_id values -- e.g. a manually-entered placeholder later
+    superseded once the live provider lists its own id for that match, or
+    the provider itself reissuing an id. Must adopt the new id onto the
+    existing row (same team pair + same calendar date) instead of
+    inserting a duplicate fixture."""
+    manual = Fixture(
+        provider_match_id="manual-cricbuzz-145005",
+        team_a="Chennai Super Kings",
+        team_b="Mumbai Indians",
+        venue="Wankhede Stadium, Mumbai",
+        league="IPL",
+        start_time=NOW + timedelta(hours=6),
+    )
+    poster = SpyPoster()
+    tick(conn, FakeProvider([manual], []), art, poster, NOW)
+
+    real = Fixture(
+        provider_match_id="cricapi-real-42",
+        team_a="Chennai Super Kings",
+        team_b="Mumbai Indians",
+        venue="Wankhede Stadium, Mumbai",
+        league="IPL",
+        start_time=NOW + timedelta(hours=5),  # same calendar date, refined time
+    )
+    tick(conn, FakeProvider([real], []), art, poster, NOW + timedelta(minutes=5))
+
+    rows = conn.execute(
+        sa.select(fixtures.c.provider_match_id).where(
+            fixtures.c.team_a == "Chennai Super Kings",
+            fixtures.c.team_b == "Mumbai Indians",
+        )
+    ).all()
+    assert [r.provider_match_id for r in rows] == ["cricapi-real-42"]
+
+
+def test_upsert_fixtures_dedupe_is_order_agnostic_on_team_pair(conn, art):
+    """team_a/team_b order isn't guaranteed identical across two ingests of
+    the same match (e.g. a hand-entered row vs. the provider's
+    alphabetically-sorted pair) -- must still be recognized as one match."""
+    manual = Fixture(
+        provider_match_id="manual-1",
+        team_a="Mumbai Indians",
+        team_b="Chennai Super Kings",
+        venue="Wankhede Stadium, Mumbai",
+        league="IPL",
+        start_time=NOW + timedelta(hours=6),
+    )
+    poster = SpyPoster()
+    tick(conn, FakeProvider([manual], []), art, poster, NOW)
+
+    real = Fixture(
+        provider_match_id="cricapi-real-9",
+        team_a="Chennai Super Kings",
+        team_b="Mumbai Indians",
+        venue="Wankhede Stadium, Mumbai",
+        league="IPL",
+        start_time=NOW + timedelta(hours=5),
+    )
+    tick(conn, FakeProvider([real], []), art, poster, NOW + timedelta(minutes=5))
+
+    count = conn.execute(
+        sa.select(sa.func.count())
+        .select_from(fixtures)
+        .where(fixtures.c.provider_match_id.in_(["manual-1", "cricapi-real-9"]))
+    ).scalar_one()
+    assert count == 1
+
+
 def test_posted_state_survives_later_failure_in_same_tick(conn, art, monkeypatch):
     """A tweet already sent must not un-send itself if a later step in the same
     tick raises. The posts.state="posted" write has to be durable independent
@@ -272,7 +342,6 @@ def test_result_flow_correct_and_record(conn, art):
 
     assert any("1/1" in msg for msg in poster.sent)
     assert "#TheCricketFan" in poster.sent[-1]
-
 
 
 def test_abandoned_match_voids_prediction(conn, art):

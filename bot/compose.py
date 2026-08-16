@@ -91,7 +91,9 @@ def trivia_post(df: pd.DataFrame, team_a: str, team_b: str, venue: str) -> str:
                 f"{team_a} vs {team_b} today."
             )
             return _truncate_reserving_tag(content, tag)
-    content = f"📊 {team_a} vs {team_b} today. Two lineups, one result. Numbers at stumps."
+    content = (
+        f"📊 {team_a} vs {team_b} today. Two lineups, one result. Numbers at stumps."
+    )
     return _truncate_reserving_tag(content, tag)
 
 
@@ -141,7 +143,9 @@ def format_post_match_news_tweet(
         if max_body_len >= 0:
             if len(body) > max_body_len:
                 body = (
-                    body[: max_body_len - 3] + "..." if max_body_len >= 3 else body[:max_body_len]
+                    body[: max_body_len - 3] + "..."
+                    if max_body_len >= 3
+                    else body[:max_body_len]
                 )
             return body + read_clause + tag
         # Full URL + tag alone don't fit within 280 chars — drop the
@@ -197,6 +201,3 @@ def live_prediction_post(
         ).strip()
 
     return _truncate_reserving_tag(content, tag)
-
-
-

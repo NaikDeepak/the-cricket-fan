@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from bot.compose import live_prediction_post
 from bot.features import build_features
 from bot.live_adjust import adjust_probability
-from bot.match_input import MatchInput, fetch_and_parse_url, parse_match_text
+from bot.match_input import MatchInput, fetch_and_parse_url, normalize_team_name, parse_match_text
 from bot.predict import predict
 from bot.run import _home_team_at_venue, _load_team_matches
 from bot.score_project import project_match_score
@@ -55,9 +55,12 @@ def run_live_prediction(
     if not body.team_a or not body.team_b:
         raise HTTPException(422, "Both team_a and team_b are required for prediction")
 
+    team_a_norm = normalize_team_name(body.team_a, conn)
+    team_b_norm = normalize_team_name(body.team_b, conn)
+
     inp = MatchInput(
-        team_a=body.team_a,
-        team_b=body.team_b,
+        team_a=team_a_norm,
+        team_b=team_b_norm,
         league=body.league,
         venue=body.venue,
         toss_winner=body.toss_winner,
@@ -92,7 +95,9 @@ def run_live_prediction(
                 home_team=home,
             )
             prob_base, reasons_base = predict(artifact, feats)
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Prediction error: %s", e)
             prob_base = 0.50
             reasons_base = []
 

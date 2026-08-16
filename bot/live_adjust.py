@@ -24,11 +24,15 @@ def adjust_probability(
             toss_chasing = inp.toss_decision == "field"
             chase_advantage = venue_chase_win_rate - 0.50
             if inp.toss_winner == team_a:
-                delta = 0.04 + max(0.0, chase_advantage if toss_chasing else -chase_advantage)
+                delta = 0.04 + max(
+                    0.0, chase_advantage if toss_chasing else -chase_advantage
+                )
                 prob_a = np.clip(prob_a + delta, 0.05, 0.95)
                 reasons.append(f"{team_a} won toss & elected to {inp.toss_decision}")
             else:
-                delta = 0.04 + max(0.0, chase_advantage if toss_chasing else -chase_advantage)
+                delta = 0.04 + max(
+                    0.0, chase_advantage if toss_chasing else -chase_advantage
+                )
                 prob_a = np.clip(prob_a - delta, 0.05, 0.95)
                 reasons.append(f"{team_b} won toss & elected to {inp.toss_decision}")
         return float(prob_a), reasons
@@ -41,28 +45,46 @@ def adjust_probability(
         logit_shift = diff * 0.025
 
         if inp.innings1_team == team_a:
-            prob_a = 1.0 / (1.0 + np.exp(-(np.log(prob_a / (1.0 - prob_a)) + logit_shift)))
+            prob_a = 1.0 / (
+                1.0 + np.exp(-(np.log(prob_a / (1.0 - prob_a)) + logit_shift))
+            )
             if diff > 5:
-                reasons.append(f"{team_a} total ({runs1}) is +{int(diff)} above venue average ({int(venue_avg_1st)})")
+                reasons.append(
+                    f"{team_a} total ({runs1}) is +{int(diff)} above venue average ({int(venue_avg_1st)})"
+                )
             elif diff < -5:
-                reasons.append(f"{team_a} total ({runs1}) is {int(diff)} below venue average ({int(venue_avg_1st)})")
+                reasons.append(
+                    f"{team_a} total ({runs1}) is {int(diff)} below venue average ({int(venue_avg_1st)})"
+                )
             else:
-                reasons.append(f"{team_a} posted par score ({runs1}) matching venue average")
+                reasons.append(
+                    f"{team_a} posted par score ({runs1}) matching venue average"
+                )
         else:
             # Team B batted first
-            prob_a = 1.0 / (1.0 + np.exp(-(np.log(prob_a / (1.0 - prob_a)) - logit_shift)))
+            prob_a = 1.0 / (
+                1.0 + np.exp(-(np.log(prob_a / (1.0 - prob_a)) - logit_shift))
+            )
             if diff > 5:
-                reasons.append(f"{team_b} total ({runs1}) is +{int(diff)} above venue average ({int(venue_avg_1st)})")
+                reasons.append(
+                    f"{team_b} total ({runs1}) is +{int(diff)} above venue average ({int(venue_avg_1st)})"
+                )
             elif diff < -5:
-                reasons.append(f"{team_b} total ({runs1}) is {int(diff)} below venue average ({int(venue_avg_1st)})")
+                reasons.append(
+                    f"{team_b} total ({runs1}) is {int(diff)} below venue average ({int(venue_avg_1st)})"
+                )
             else:
-                reasons.append(f"{team_b} posted par score ({runs1}) matching venue average")
+                reasons.append(
+                    f"{team_b} posted par score ({runs1}) matching venue average"
+                )
 
         return float(np.clip(prob_a, 0.02, 0.98)), reasons
 
     # Chase in Progress Phase
     if inp.phase == "chase_in_progress":
-        target = (inp.innings1_runs + 1) if inp.innings1_runs else int(venue_avg_1st + 1)
+        target = (
+            (inp.innings1_runs + 1) if inp.innings1_runs else int(venue_avg_1st + 1)
+        )
         runs2 = inp.innings2_runs or 0
         w2 = inp.innings2_wickets or 0
         overs2 = inp.innings2_overs or 0.0
@@ -85,7 +107,9 @@ def adjust_probability(
             # Team A is chasing: blend pre-match prior with live match state
             blend_weight = min(0.90, balls_bowled / 100.0)
             prob_a = (1 - blend_weight) * prob_a + blend_weight * chase_win_prob
-            reasons.append(f"{team_a} need {runs_needed} off {balls_left} balls (RRR {rrr:.2f}) with {wickets_in_hand} wkts left")
+            reasons.append(
+                f"{team_a} need {runs_needed} off {balls_left} balls (RRR {rrr:.2f}) with {wickets_in_hand} wkts left"
+            )
         else:
             # Team B is chasing: chase_win_prob is Team B's win probability
             team_b_prob = chase_win_prob
@@ -93,7 +117,9 @@ def adjust_probability(
             prob_b_prior = 1.0 - prob_a
             prob_b = (1 - blend_weight) * prob_b_prior + blend_weight * team_b_prob
             prob_a = 1.0 - prob_b
-            reasons.append(f"{team_b} need {runs_needed} off {balls_left} balls (RRR {rrr:.2f}) with {wickets_in_hand} wkts left")
+            reasons.append(
+                f"{team_b} need {runs_needed} off {balls_left} balls (RRR {rrr:.2f}) with {wickets_in_hand} wkts left"
+            )
 
         return float(np.clip(prob_a, 0.01, 0.99)), reasons
 

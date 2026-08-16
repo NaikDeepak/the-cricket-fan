@@ -1,4 +1,16 @@
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export function getApiBase(): string {
+  if (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.trim().length > 0) {
+    return process.env.NEXT_PUBLIC_API_URL.trim().replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined" && window.location.hostname) {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0") {
+      return "http://localhost:8000";
+    }
+    return "https://the-cricket-fan-api.vercel.app";
+  }
+  return "http://localhost:8000";
+}
 
 export type CardMeta = Record<string, unknown>;
 
@@ -145,6 +157,48 @@ export type Post = {
   team_b: string | null;
 };
 
+export type LastIngestedMatch = {
+  date: string;
+  league: string;
+  team_a: string;
+  team_b: string;
+  venue: string;
+};
+
+export type BacktestOptions = {
+  leagues: string[];
+  seasons_by_league: Record<string, string[]>;
+  total_matches: number;
+  earliest_date: string | null;
+  latest_date: string | null;
+  last_match: LastIngestedMatch | null;
+  matches_by_league: Record<string, number>;
+};
+
+export type BacktestGame = {
+  date: string;
+  team_a: string;
+  team_b: string;
+  venue: string;
+  prob_team_a: number;
+  predicted_winner: string;
+  actual_winner?: string | null;
+  correct?: boolean | null;
+  status?: "completed" | "upcoming";
+};
+
+export type BacktestResult = {
+  league: string;
+  season: string;
+  total: number;
+  correct: number;
+  accuracy_pct: number;
+  elo_accuracy_pct: number;
+  home_accuracy_pct: number;
+  games: BacktestGame[];
+  upcoming_games?: BacktestGame[];
+};
+
 export type MatchInput = {
   team_a: string;
   team_b: string;
@@ -192,7 +246,8 @@ export type EventIn = {
 };
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
+  const baseUrl = getApiBase();
+  const res = await fetch(`${baseUrl}${path}`, {
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
     ...init,
@@ -259,6 +314,7 @@ export const composerApi = {
     const p = new URLSearchParams(q as Record<string, string>).toString();
     return req<Draft[]>(`/drafts${p ? `?${p}` : ""}`);
   },
+  getDraft: (id: number) => req<Draft>(`/drafts/${id}`),
   createDraft: (body: DraftIn) =>
     req<Draft>("/drafts", { method: "POST", body: JSON.stringify(body) }),
   patchDraft: (id: number, body: DraftPatch) =>
@@ -365,5 +421,12 @@ export const composerApi = {
     req<RunModelResult>("/predictions/run-model", { method: "POST" }),
   settleFromApi: () =>
     req<SettleFromApiResult>("/predictions/settle-from-api", { method: "POST" }),
+  backtestOptions: () =>
+    req<BacktestOptions>("/predictions/backtest/options"),
+  runBacktest: (league: string, season: string) => {
+    const p = new URLSearchParams({ league, season }).toString();
+    return req<BacktestResult>(`/predictions/backtest?${p}`);
+  },
 };
+
 

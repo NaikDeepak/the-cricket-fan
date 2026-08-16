@@ -40,8 +40,8 @@ describe("OnThisDayRail", () => {
 
   it("renders matching stories with the date stamp", () => {
     render(<OnThisDayRail stories={[story]} />);
-    expect(screen.getByText(/on this day/i)).toBeInTheDocument();
-    expect(screen.getByText("The Dated Classic")).toBeInTheDocument();
+    expect(screen.getAllByText(/on this day/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("The Dated Classic").length).toBeGreaterThan(0);
   });
 });
 

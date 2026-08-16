@@ -1,15 +1,24 @@
+import ctypes
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+# Preload OpenMP library for LightGBM on Linux serverless runtimes
+_libgomp = Path(__file__).resolve().parent.parent / "lib" / "libgomp.so.1"
+if _libgomp.exists():
+    try:
+        ctypes.CDLL(str(_libgomp), mode=ctypes.RTLD_GLOBAL)
+    except Exception:
+        pass
 
-from bot.db import ensure_schema
-from bot.predict import load_artifact
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
-from .config import get_settings
-from .deps import init_engine
+from bot.db import ensure_schema  # noqa: E402
+from bot.predict import load_artifact  # noqa: E402
+
+from .config import get_settings  # noqa: E402
+from .deps import init_engine  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -24,23 +33,32 @@ def create_app() -> FastAPI:
             ensure_schema(conn)
             conn.commit()
         try:
-            app.state.artifact = load_artifact(
+            model_path = (
                 Path(__file__).resolve().parent.parent
                 / "bot"
                 / "artifacts"
                 / "model.pkl"
             )
-        except Exception:
+            app.state.artifact = load_artifact(model_path)
+            logger.info("Successfully loaded prediction model artifact from %s", model_path)
+        except Exception as e:
             logger.warning(
-                "model artifact not loaded; /generate/bot prediction disabled"
+                "model artifact not loaded (%s); /generate/bot prediction disabled", e
             )
             app.state.artifact = None
         yield
 
     app = FastAPI(title="Cricket Composer API", lifespan=lifespan)
+
+    origins = [
+        settings.cors_origin,
+        "http://localhost:3000",
+        "https://the-cricket-fan.vercel.app",
+    ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.cors_origin],
+        allow_origins=["*"] if settings.cors_origin == "*" else origins,
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -53,6 +71,7 @@ def create_app() -> FastAPI:
     from .routers import content_bank as content_bank_router
     from .routers import drafts as drafts_router
     from .routers import generate as generate_router
+    from .routers import harvest as harvest_router
     from .routers import live_predict as live_predict_router
     from .routers import posts as posts_router
     from .routers import predictions as predictions_router
@@ -68,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(posts_router.router)
     app.include_router(stories_router.router)
     app.include_router(teams_router.router)
+    app.include_router(harvest_router.router)
 
     return app
 

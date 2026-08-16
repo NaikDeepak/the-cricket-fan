@@ -174,7 +174,6 @@ HISTORIC_STORIES = [
 ]
 
 
-
 def harvest_wikipedia_story_candidates() -> list[dict]:
     """Return pre-structured verified historical story candidates for content_bank ingestion."""
     return HISTORIC_STORIES

@@ -193,7 +193,9 @@ def test_post_match_news_tweet_short_url_included_as_before():
 
 def test_live_prediction_post_phases_and_no_emojis():
     # Pre-match
-    pre = live_prediction_post("CSK", "MI", 0.65, ["form5_a"], phase="pre_match", league="IPL")
+    pre = live_prediction_post(
+        "CSK", "MI", 0.65, ["form5_a"], phase="pre_match", league="IPL"
+    )
     assert len(pre) <= 280
     assert "CSK 65% to beat MI" in pre
     assert "#TheCricketFan" in pre
@@ -229,4 +231,3 @@ def test_live_prediction_post_phases_and_no_emojis():
     assert "MI 60% vs CSK 40%" in chase
     assert "#TheCricketFan" in chase
     assert all(ord(char) < 10000 for char in chase)
-

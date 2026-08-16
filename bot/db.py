@@ -276,7 +276,9 @@ def ensure_schema(conn: sa.Connection) -> None:
         ("evaluated_at", "TIMESTAMP"),
     ]:
         if col not in pred_cols:
-            conn.execute(sa.text(f"ALTER TABLE predictions ADD COLUMN {col} {col_type}"))
+            conn.execute(
+                sa.text(f"ALTER TABLE predictions ADD COLUMN {col} {col_type}")
+            )
 
     seed_teams_if_empty(conn)
 
@@ -310,5 +312,3 @@ def seed_teams_if_empty(conn: sa.Connection) -> None:
                 )
     except Exception:
         pass
-
-

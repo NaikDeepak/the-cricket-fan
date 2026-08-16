@@ -48,7 +48,9 @@ def list_content_bank(
                 last_used_days=(now - used_at).days if used_at is not None else None,
                 event_month_day=r.event_month_day,
                 on_this_day=r.event_month_day == today_md,
-                is_published=bool(r.is_published) if r.is_published is not None else True,
+                is_published=bool(r.is_published)
+                if r.is_published is not None
+                else True,
             )
         )
     # on-this-day matches first, ahead of everything else; within each group,
@@ -64,7 +66,9 @@ def list_content_bank(
 
 
 @router.patch("/content-bank/{item_id}/publish", response_model=ContentBankOut)
-def set_published(item_id: int, body: PublishIn, conn=Depends(get_conn)) -> ContentBankOut:
+def set_published(
+    item_id: int, body: PublishIn, conn=Depends(get_conn)
+) -> ContentBankOut:
     row = conn.execute(
         sa.select(content_bank).where(content_bank.c.id == item_id)
     ).first()
@@ -76,9 +80,7 @@ def set_published(item_id: int, body: PublishIn, conn=Depends(get_conn)) -> Cont
         .values(is_published=body.is_published)
     )
     conn.commit()
-    r = conn.execute(
-        sa.select(content_bank).where(content_bank.c.id == item_id)
-    ).one()
+    r = conn.execute(sa.select(content_bank).where(content_bank.c.id == item_id)).one()
     return ContentBankOut(
         id=r.id,
         content_key=r.content_key,

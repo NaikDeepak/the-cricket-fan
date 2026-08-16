@@ -4,6 +4,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   wiki_record: "RECORD",
   anecdote: "ANECDOTE",
   story: "STORY",
+  lore: "LORE",
 };
 
 export default function StoryCardImg({ story }: { story: Story }) {

@@ -70,7 +70,7 @@ def create_team(body: TeamIn, conn=Depends(get_conn)) -> TeamOut:
             accent_color=(body.accent_color or body.primary_color).strip(),
             gradient=body.gradient
             or f"linear-gradient(135deg, {body.primary_color} 0%, {body.secondary_color} 100%)",
-            glow=body.glow or f"rgba(255, 255, 255, 0.4)",
+            glow=body.glow or "rgba(255, 255, 255, 0.4)",
             text_dark=body.text_dark,
             logo_url=body.logo_url,
             aliases_json=json.dumps(body.aliases),

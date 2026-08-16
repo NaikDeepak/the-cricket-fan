@@ -51,12 +51,16 @@ describe("Vault low-count placeholder", () => {
     expect(screen.queryByText(/MORE STORIES COMING/i)).toBeNull();
   });
 
-  it("applies ds-tag-scroll to the tag row for mobile horizontal scroll", async () => {
+  it("renders source filter tabs", async () => {
     vi.spyOn(storiesApi, "listStories").mockResolvedValue([
-      { ...story("a", "Story A"), tags: ["rivalry", "iconic"] },
+      { ...story("a", "Story A"), source_type: "reddit", category: "lore" },
     ]);
     render(<StoriesPage />);
     await screen.findByText("Story A");
-    expect(screen.getByText("All Stories").parentElement).toHaveClass("ds-tag-scroll");
+    expect(screen.getByText("All Sources")).toBeInTheDocument();
+    expect(screen.getByText("Wikipedia Archive")).toBeInTheDocument();
+    expect(screen.getByText("r/Cricket Lore")).toBeInTheDocument();
+    expect(screen.getByText("Dressing Room & Memoirs")).toBeInTheDocument();
   });
 });
+

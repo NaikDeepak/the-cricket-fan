@@ -106,7 +106,10 @@ def test_wire_returns_posted_drafts_newest_first(client, engine):
     res = client.get("/stories/wire")
     assert res.status_code == 200
     items = res.json()
-    assert [i["text"] for i in items] == ["tweet 2", "tweet 1"]  # posted only, newest first
+    assert [i["text"] for i in items] == [
+        "tweet 2",
+        "tweet 1",
+    ]  # posted only, newest first
     assert items[0]["posted_at"] is not None
 
     res_limited = client.get("/stories/wire?limit=1")

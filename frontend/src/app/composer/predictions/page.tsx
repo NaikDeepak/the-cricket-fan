@@ -38,9 +38,12 @@ function fmtDate(iso: string) {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
   const matchDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   if (matchDay.getTime() === today.getTime()) return "Today";
   if (matchDay.getTime() === yesterday.getTime()) return "Yesterday";
+  if (matchDay.getTime() === tomorrow.getTime()) return "Tomorrow";
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -228,6 +231,7 @@ function MatchCard({ match, onRunModel, running }: { match: TodayMatch; onRunMod
       <div className="match-card-header">
         <span className="ds-chip ds-chip-category">{match.league}</span>
         <span className="text-caption" style={{ textAlign: "right" }}>
+          {match.start_time && fmtDate(match.start_time) !== "Today" ? `${fmtDate(match.start_time)}, ` : ""}
           {fmtTime(match.start_time)} &middot; {match.venue}
         </span>
       </div>

@@ -1,6 +1,6 @@
 import json
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DraftIn(BaseModel):
@@ -209,6 +209,47 @@ class SettleFromApiOut(BaseModel):
     errors: list[str] = []
 
 
+class LastIngestedMatch(BaseModel):
+    date: str
+    league: str
+    team_a: str
+    team_b: str
+    venue: str
+
+
+class BacktestOptions(BaseModel):
+    leagues: list[str]
+    seasons_by_league: dict[str, list[str]]
+    total_matches: int
+    earliest_date: str | None = None
+    latest_date: str | None = None
+    last_match: LastIngestedMatch | None = None
+    matches_by_league: dict[str, int] = {}
+
+
+class BacktestGame(BaseModel):
+    date: str
+    team_a: str
+    team_b: str
+    venue: str
+    prob_team_a: float
+    predicted_winner: str
+    actual_winner: str | None = None
+    correct: bool | None = None
+    status: str = "completed"  # 'completed' | 'upcoming'
+
+
+class BacktestResult(BaseModel):
+    league: str
+    season: str
+    total: int
+    correct: int
+    accuracy_pct: int
+    elo_accuracy_pct: int
+    home_accuracy_pct: int
+    games: list[BacktestGame]
+    upcoming_games: list[BacktestGame] = []
+
 
 class PostOut(BaseModel):
     id: int
@@ -242,7 +283,9 @@ class MatchInputSchema(BaseModel):
     innings2_runs: int | None = None
     innings2_wickets: int | None = None
     innings2_overs: float | None = None
-    phase: str = "pre_match"  # 'pre_match' | 'innings_break' | 'chase_in_progress' | 'completed'
+    phase: str = (
+        "pre_match"  # 'pre_match' | 'innings_break' | 'chase_in_progress' | 'completed'
+    )
     top_performers: list[dict] = []
 
 
@@ -360,4 +403,27 @@ def team_row_to_out(row) -> TeamOut:
         is_active=bool(row.is_active),
         theme=theme,
     )
+
+
+class HarvestIn(BaseModel):
+    sources: list[str] = ["wikipedia", "reddit", "quora", "cricsheet"]
+    commit: bool = False
+    threshold: float = Field(default=0.68, ge=0.0, le=1.0)
+
+
+class DuplicateReportOut(BaseModel):
+    candidate_key: str
+    candidate_title: str
+    matched_key: str | None = None
+    score: float
+    reason: str
+
+
+class HarvestOut(BaseModel):
+    harvested_total: int
+    inserted: int
+    skipped_duplicates: int
+    enriched: int
+    novel_candidates: list[dict] = []
+    duplicate_reports: list[DuplicateReportOut] = []
 

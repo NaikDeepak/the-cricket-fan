@@ -110,4 +110,45 @@ describe("composerApi", () => {
     expect(String(url)).toContain("/live-predict/run");
     expect(init?.method).toBe("POST");
   });
+
+  it("backtestOptions fetches options and ingestion telemetry", async () => {
+    const mockOpts = {
+      leagues: ["IPL"],
+      seasons_by_league: { IPL: ["2024"] },
+      total_matches: 70,
+      earliest_date: "2024-03-22",
+      latest_date: "2024-05-26",
+      last_match: {
+        date: "2024-05-26",
+        league: "IPL",
+        team_a: "KKR",
+        team_b: "SRH",
+        venue: "MA Chidambaram Stadium",
+      },
+      matches_by_league: { IPL: 70 },
+    };
+    const f = mockFetch(mockOpts);
+    const out = await composerApi.backtestOptions();
+    expect(out.leagues).toContain("IPL");
+    expect(out.total_matches).toBe(70);
+    expect(String(f.mock.calls[0][0])).toContain("/predictions/backtest/options");
+  });
+
+  it("runBacktest calls backtest with query params", async () => {
+    const mockResult = {
+      league: "IPL",
+      season: "2024",
+      total: 70,
+      correct: 46,
+      accuracy_pct: 66,
+      elo_accuracy_pct: 61,
+      home_accuracy_pct: 53,
+      games: [],
+    };
+    const f = mockFetch(mockResult);
+    const out = await composerApi.runBacktest("IPL", "2024");
+    expect(out.accuracy_pct).toBe(66);
+    expect(String(f.mock.calls[0][0])).toContain("/predictions/backtest?league=IPL&season=2024");
+  });
 });
+

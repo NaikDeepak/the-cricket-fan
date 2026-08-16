@@ -12,6 +12,7 @@ const TABS = [
   { href: "/composer/templates", label: "Templates & Themes" },
   { href: "/composer/live-predict", label: "Live Predict" },
   { href: "/composer/predictions", label: "Predictions" },
+  { href: "/composer/backtest", label: "Backtest" },
   { href: "/composer/posts", label: "Posts" },
   { href: "/composer/analytics", label: "Analytics" },
   { href: "/composer/teams", label: "Teams & Colors" },

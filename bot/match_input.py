@@ -9,6 +9,7 @@ import httpx
 
 try:
     import lxml.html
+
     HAS_LXML = True
 except ImportError:
     HAS_LXML = False
@@ -131,6 +132,57 @@ COMMON_ABBREVIATIONS: dict[str, str] = {
     "washington freedom": "Washington Freedom",
     "sfu": "San Francisco Unicorns",
     "san francisco unicorns": "San Francisco Unicorns",
+    # The Hundred
+    "tre": "Trent Rockets",
+    "trent rockets": "Trent Rockets",
+    "msg": "Manchester Originals",
+    "manchester super giants": "Manchester Originals",
+    "manchester originals": "Manchester Originals",
+    "mo": "Manchester Originals",
+    "ls": "London Spirit",
+    "mil": "London Spirit",
+    "mi london": "London Spirit",
+    "london spirit": "London Spirit",
+    "oi": "Oval Invincibles",
+    "oval invincibles": "Oval Invincibles",
+    "sb": "Southern Brave",
+    "southern brave": "Southern Brave",
+    "wf": "Welsh Fire",
+    "welsh fire": "Welsh Fire",
+    "nsc": "Northern Superchargers",
+    "srl": "Northern Superchargers",
+    "sunrisers leeds": "Northern Superchargers",
+    "northern superchargers": "Northern Superchargers",
+    "bp": "Birmingham Phoenix",
+    "birmingham phoenix": "Birmingham Phoenix",
+    # The Hundred Women
+    "trew": "Trent Rockets Women",
+    "trent rockets women": "Trent Rockets Women",
+    "sulw": "Northern Superchargers Women",
+    "sunrisers leeds women": "Northern Superchargers Women",
+    "nscw": "Northern Superchargers Women",
+    "northern superchargers women": "Northern Superchargers Women",
+    "bpw": "Birmingham Phoenix Women",
+    "birmingham phoenix women": "Birmingham Phoenix Women",
+    "lsw": "London Spirit Women",
+    "london spirit women": "London Spirit Women",
+    "mow": "Manchester Originals Women",
+    "manchester originals women": "Manchester Originals Women",
+    "oiw": "Oval Invincibles Women",
+    "oval invincibles women": "Oval Invincibles Women",
+    "sbw": "Southern Brave Women",
+    "southern brave women": "Southern Brave Women",
+    "wfw": "Welsh Fire Women",
+    "welsh fire women": "Welsh Fire Women",
+    # WBBL
+    "asw": "Adelaide Strikers Women",
+    "bhw": "Brisbane Heat Women",
+    "hhw": "Hobart Hurricanes Women",
+    "mrw": "Melbourne Renegades Women",
+    "msw": "Melbourne Stars Women",
+    "psw": "Perth Scorchers Women",
+    "ssw": "Sydney Sixers Women",
+    "stw": "Sydney Thunder Women",
     # Internationals
     "ind": "India",
     "aus": "Australia",
@@ -167,8 +219,12 @@ class MatchInput:
     innings2_runs: int | None = None
     innings2_wickets: int | None = None
     innings2_overs: float | None = None
-    phase: str = "pre_match"  # 'pre_match' | 'innings_break' | 'chase_in_progress' | 'completed'
-    top_performers: list[dict] = None  # [{'name': '...', 'stat': '...', 'role': 'bat'|'bowl'}]
+    phase: str = (
+        "pre_match"  # 'pre_match' | 'innings_break' | 'chase_in_progress' | 'completed'
+    )
+    top_performers: list[dict] = (
+        None  # [{'name': '...', 'stat': '...', 'role': 'bat'|'bowl'}]
+    )
 
     def __post_init__(self):
         if self.top_performers is None:
@@ -178,16 +234,17 @@ class MatchInput:
         return asdict(self)
 
 
-def normalize_team_name(name: str, conn=None) -> str:
+def normalize_team_name(name: str, conn=None, kind: str = "team") -> str:
     cleaned = name.strip()
     if not cleaned:
         return cleaned
-    lower = cleaned.lower()
-    if lower in COMMON_ABBREVIATIONS:
-        return COMMON_ABBREVIATIONS[lower]
+    if kind == "team":
+        lower = cleaned.lower()
+        if lower in COMMON_ABBREVIATIONS:
+            return COMMON_ABBREVIATIONS[lower]
     if conn:
         try:
-            return resolve(conn, "team", cleaned)
+            return resolve(conn, kind, cleaned)
         except UnresolvedEntityError:
             pass
     return cleaned
@@ -221,36 +278,60 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
         re.IGNORECASE,
     )
     if venue_match:
-        result.venue = venue_match.group(1).strip()
+        raw_v = venue_match.group(1).strip()
+        result.venue = normalize_team_name(raw_v, conn, kind="venue") if conn else raw_v
     else:
-        for line in lines:
-            if any(
-                k in line
-                for k in [
-                    "Stadium",
-                    "Ground",
-                    "Oval",
-                    "Garden",
-                    "Gardens",
-                    "Park",
-                    "Chepauk",
-                    "Chinnaswamy",
-                    "Wankhede",
-                    "Kotla",
-                    "Motera",
-                ]
-            ):
-                clean_line = re.sub(r"^(?:at|,)\s+", "", line, flags=re.IGNORECASE).strip()
-                if not any(
-                    stop in clean_line.lower()
-                    for stop in ["vs", "premier league", "league", "toss", "won the toss"]
+        # Check known venue names
+        known_venues = [
+            ("lord's", "Lord's, London"),
+            ("the oval", "Kennington Oval, London"),
+            ("trent bridge", "Trent Bridge, Nottingham"),
+            ("headingley", "Headingley, Leeds"),
+            ("edgbaston", "Edgbaston, Birmingham"),
+            ("old trafford", "Old Trafford, Manchester"),
+            ("sophia gardens", "Sophia Gardens, Cardiff"),
+            ("the rose bowl", "The Rose Bowl, Southampton"),
+            ("wankhede", "Wankhede Stadium, Mumbai"),
+            ("chinnaswamy", "M Chinnaswamy Stadium, Bengaluru"),
+            ("eden gardens", "Eden Gardens, Kolkata"),
+            ("arun jaitley", "Arun Jaitley Stadium, Delhi"),
+            ("narendra modi", "Narendra Modi Stadium, Ahmedabad"),
+            ("chepauk", "MA Chidambaram Stadium, Chepauk, Chennai"),
+        ]
+        text_low = text.lower()
+        for kw, canonical_v in known_venues:
+            if kw in text_low:
+                result.venue = canonical_v
+                break
+        if not result.venue:
+            for line in lines:
+                if any(
+                    k in line
+                    for k in [
+                        "Stadium",
+                        "Ground",
+                        "Oval",
+                        "Garden",
+                        "Gardens",
+                        "Park",
+                        "Chepauk",
+                        "Chinnaswamy",
+                        "Wankhede",
+                        "Kotla",
+                        "Motera",
+                    ]
                 ):
-                    result.venue = clean_line
-                    break
+                    clean_line = re.sub(r"^(?:at|,)\s+", "", line, flags=re.IGNORECASE).strip()
+                    if not any(
+                        stop in clean_line.lower()
+                        for stop in ["vs", "premier league", "league", "toss"]
+                    ):
+                        result.venue = clean_line
+                        break
 
     # 3. Look for Toss
     toss_match = re.search(
-        r"([A-Za-z0-9\s&'-]+?)\s+(?:won the toss and (?:opted|elected|chose) to|win the toss and (?:opt|elect|choose) to)\s+(bat|bowl|field)",
+        r"([A-Za-z0-9\s&'-]+?)\s+(?:have\s+)?won\s+the\s+toss\s+and\s+(?:have\s+)?(?:elected|opted|decided|chose)\s+to\s+(bat|bowl|field)",
         text,
         re.IGNORECASE,
     )
@@ -261,16 +342,20 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
 
     # 4. Look for League
     league_match = re.search(
-        r"(IPL|Indian Premier League|WPL|Women's Premier League|TNPL|Tamil Nadu Premier League|MPL|Maharashtra Premier League|CPL|Caribbean Premier League|BBL|Big Bash League|PSL|Pakistan Super League|SA20|MLC|Major League Cricket|The Hundred|Vitality Blast|ILT20|T20I|World Cup|T20)",
+        r"(The Hundred|Hundred|IPL|Indian Premier League|WPL|Women's Premier League|WBBL|Women's Big Bash|TNPL|Tamil Nadu Premier League|MPL|Maharashtra Premier League|CPL|Caribbean Premier League|BBL|Big Bash League|PSL|Pakistan Super League|SA20|MLC|Major League Cricket|Vitality Blast|ILT20|T20I|World Cup|T20)",
         text,
         re.IGNORECASE,
     )
     if league_match:
         league_str = league_match.group(1).upper()
-        if "IPL" in league_str or "INDIAN PREMIER LEAGUE" in league_str:
+        if "HUNDRED" in league_str:
+            result.league = "The Hundred"
+        elif "IPL" in league_str or "INDIAN PREMIER LEAGUE" in league_str:
             result.league = "IPL"
-        elif "WPL" in league_str or "WOMEN" in league_str:
+        elif "WPL" in league_str:
             result.league = "WPL"
+        elif "WBBL" in league_str:
+            result.league = "WBBL"
         elif "TNPL" in league_str or "TAMIL NADU" in league_str:
             result.league = "TNPL"
         elif "MPL" in league_str or "MAHARASHTRA" in league_str:
@@ -291,7 +376,6 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
             result.league = league_str
 
     # 5. Extract Player Performers (Batters & Bowlers from scorecard/commentary)
-    # Examples: "Sai Sudharsan 82 (45)", "V Kohli 113* (72)", "V Chakaravarthy 3/18 (4.0)"
     performers = []
     bat_pattern = re.compile(
         r"([A-Z][a-zA-Z\s.]+?)\s+(\d{1,3}\*?)\s*\(([\d]{1,3})\s*(?:b|balls)?\)",
@@ -301,12 +385,16 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
         p_name = m.group(1).strip()
         runs_str = m.group(2)
         balls_str = m.group(3)
-        if len(p_name) > 2 and not any(k in p_name.lower() for k in ["overs", "runs", "target", "extras"]):
-            performers.append({
-                "name": p_name,
-                "stat": f"{runs_str} ({balls_str})",
-                "role": "bat",
-            })
+        if len(p_name) > 2 and not any(
+            k in p_name.lower() for k in ["overs", "runs", "target", "extras"]
+        ):
+            performers.append(
+                {
+                    "name": p_name,
+                    "stat": f"{runs_str} ({balls_str})",
+                    "role": "bat",
+                }
+            )
 
     bowl_pattern = re.compile(
         r"([A-Z][a-zA-Z\s.]+?)\s+(\d{1,2}/\d{1,3})\s*(?:\(([\d.]+)\s*(?:ov|overs)?\))?",
@@ -316,18 +404,20 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
         p_name = m.group(1).strip()
         fig_str = m.group(2)
         ov_str = m.group(3) or ""
-        if len(p_name) > 2 and not any(k in p_name.lower() for k in ["overs", "runs", "target", "extras"]):
+        if len(p_name) > 2 and not any(
+            k in p_name.lower() for k in ["overs", "runs", "target", "extras"]
+        ):
             stat_text = f"{fig_str} ({ov_str} ov)" if ov_str else fig_str
-            performers.append({
-                "name": p_name,
-                "stat": stat_text,
-                "role": "bowl",
-            })
+            performers.append(
+                {
+                    "name": p_name,
+                    "stat": stat_text,
+                    "role": "bowl",
+                }
+            )
     result.top_performers = performers[:6]
 
     # 5. Look for Innings / Scores
-    # Patterns:
-    # "Antigua & Barbuda Falcons 163/4 (20.0 ov)" or "CSK 175-4 (20)" or "MI: 82/3 in 10.2 overs"
     score_pattern = re.compile(
         r"(?:([A-Za-z0-9\s&'-]+?)[:\s]+)?(\d{1,3})[-/](\d{1,2})\s*(?:\(([\d.]+)(?:\s*(?:ov|overs|ovs))?\)?|in\s+([\d.]+)\s*(?:ov|overs|ovs))",
         re.IGNORECASE,
@@ -340,7 +430,11 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
             wickets = int(m.group(3))
             overs_str = m.group(4) or m.group(5) or "20"
             overs = float(overs_str)
-            team_norm = normalize_team_name(team_raw.strip(), conn) if team_raw.strip() else None
+            team_norm = (
+                normalize_team_name(team_raw.strip(), conn)
+                if team_raw.strip()
+                else None
+            )
             # Filter out false positives
             if runs <= 400 and wickets <= 10 and overs <= 50:
                 scores.append((team_norm, runs, wickets, overs))
@@ -368,24 +462,26 @@ def parse_match_text(text: str, conn=None) -> MatchInput:
     # 6. Determine Phase
     if result.innings2_runs is not None:
         if (
-            result.innings2_overs is not None and result.innings2_overs >= 20.0
-        ) or (
-            result.innings2_wickets == 10
-        ) or (
-            result.innings1_runs is not None and result.innings2_runs > result.innings1_runs
-        ) or (
-            "won by" in text.lower()
+            (result.innings2_overs is not None and result.innings2_overs >= 20.0)
+            or (result.innings2_wickets == 10)
+            or (
+                result.innings1_runs is not None
+                and result.innings2_runs > result.innings1_runs
+            )
+            or ("won by" in text.lower())
         ):
             result.phase = "completed"
         else:
             result.phase = "chase_in_progress"
     elif result.innings1_runs is not None:
         if (
-            result.innings1_overs is not None and result.innings1_overs >= 20.0
-        ) or (
-            result.innings1_wickets == 10
-        ) or (
-            "innings break" in text.lower() or "opt to bowl" in text.lower() or "target" in text.lower()
+            (result.innings1_overs is not None and result.innings1_overs >= 20.0)
+            or (result.innings1_wickets == 10)
+            or (
+                "innings break" in text.lower()
+                or "opt to bowl" in text.lower()
+                or "target" in text.lower()
+            )
         ):
             result.phase = "innings_break"
         else:
@@ -400,7 +496,7 @@ def fetch_and_parse_url(url: str, conn=None) -> MatchInput:
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/126.0.0.0"
         ),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
@@ -409,17 +505,24 @@ def fetch_and_parse_url(url: str, conn=None) -> MatchInput:
         resp.raise_for_status()
         html = resp.text
 
+    headings = []
     if HAS_LXML:
         doc = lxml.html.fromstring(html)
         title = doc.findtext(".//title") or ""
+        for h in doc.xpath("//h1 | //h2"):
+            t = h.text_content().strip()
+            if t:
+                headings.append(t)
         page_text = doc.text_content()
     else:
         title_m = re.search(r"<title>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
         title = title_m.group(1).strip() if title_m else ""
+        for h_m in re.finditer(r"<h[12][^>]*>(.*?)</h[12]>", html, re.IGNORECASE | re.DOTALL):
+            headings.append(re.sub(r"<[^>]+>", " ", h_m.group(1)).strip())
         page_text = re.sub(r"<[^>]+>", " ", html)
 
-    # Combine title and body text for parsing
-    full_text = f"{title}\n\n{page_text}"
+    headings_str = "\n".join(headings)
+    full_text = f"{headings_str}\n\n{title}\n\n{page_text}"
     parsed = parse_match_text(full_text, conn=conn)
 
     return parsed

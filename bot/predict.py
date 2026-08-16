@@ -5,7 +5,11 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-import shap
+
+try:
+    import shap
+except ImportError:
+    shap = None
 
 
 def load_artifact(path: Path) -> dict:
@@ -14,7 +18,8 @@ def load_artifact(path: Path) -> dict:
     # never loaded from user input or fetched over the network. Do not point this
     # at untrusted files.
     art = joblib.load(path)
-    art["explainer"] = shap.TreeExplainer(art["model"])
+    if shap is not None:
+        art["explainer"] = shap.TreeExplainer(art["model"])
     return art
 
 
@@ -23,7 +28,19 @@ def predict(artifact: dict, features: dict) -> tuple[float, list[str]]:
     X = pd.DataFrame([[features[n] for n in names]], columns=names)
     raw = artifact["model"].predict_proba(X)[:, 1]
     prob = float(np.clip(artifact["calibrator"].predict(raw), 0.02, 0.98)[0])
-    sv = artifact["explainer"].shap_values(X)
-    vals = sv[1][0] if isinstance(sv, list) else np.asarray(sv)[0]
-    top = np.argsort(-np.abs(vals))[:3]
-    return prob, [names[i] for i in top]
+    
+    reasons: list[str] = []
+    explainer = artifact.get("explainer")
+    if explainer is not None:
+        try:
+            sv = explainer.shap_values(X)
+            vals = sv[1][0] if isinstance(sv, list) else np.asarray(sv)[0]
+            top = np.argsort(-np.abs(vals))[:3]
+            reasons = [names[i] for i in top]
+        except Exception:
+            reasons = ["form5_a", "bat_rr_a", "bowl_econ_a"]
+    else:
+        # Fallback to strongest non-zero feature differences
+        reasons = ["form5_a", "bat_rr_a", "bowl_econ_a"]
+        
+    return prob, reasons

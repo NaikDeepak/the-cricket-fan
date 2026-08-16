@@ -34,7 +34,9 @@ def scan_cricsheet_match_file(file_path: Path) -> dict | None:
             last_over = overs[-1]
             last_over_num = last_over.get("over", 0)
             deliveries = last_over.get("deliveries", [])
-            runs_in_last_over = sum(d.get("runs", {}).get("total", 0) for d in deliveries)
+            runs_in_last_over = sum(
+                d.get("runs", {}).get("total", 0) for d in deliveries
+            )
 
             # If last over had 12+ runs and match was won by chasing team on last over
             if runs_in_last_over >= 12 and winner == teams[1]:
@@ -56,7 +58,7 @@ def scan_cricsheet_match_file(file_path: Path) -> dict | None:
                     "tags": ["last_over", "thriller", "cricsheet"],
                     "source": f"cricsheet:{match_id}",
                     "segments": [
-                        f"🏏 Last-Over Drama ({year}): {teams[1]} needed a heroic final over to beat {teams[0]} at {venue}, hitting {runs_in_last_over} runs in over {last_over_num+1}! #Cricket #TheCricketFan"
+                        f"🏏 Last-Over Drama ({year}): {teams[1]} needed a heroic final over to beat {teams[0]} at {venue}, hitting {runs_in_last_over} runs in over {last_over_num + 1}! #Cricket #TheCricketFan"
                     ],
                 }
     except Exception as e:

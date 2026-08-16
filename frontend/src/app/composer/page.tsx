@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import CardPreview from "@/components/composer/CardPreview";
 import Editor from "@/components/composer/Editor";
@@ -9,6 +10,17 @@ import { composerApi, type Draft } from "@/lib/composerApi";
 import { HERO_REVEAL_VARIANTS, prefersReducedMotion } from "@/lib/motion";
 
 export default function ComposerPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "var(--space-xl)", color: "var(--fg-muted)" }}>Loading Composer Studio…</div>}>
+      <ComposerContent />
+    </Suspense>
+  );
+}
+
+function ComposerContent() {
+  const searchParams = useSearchParams();
+  const draftIdParam = searchParams.get("draft_id");
+
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -18,9 +30,25 @@ export default function ComposerPage() {
   useEffect(() => {
     composerApi
       .listDrafts()
-      .then((d) => {
+      .then(async (d) => {
         setDrafts(d);
         setLoadError(null);
+
+        if (draftIdParam) {
+          const targetId = Number(draftIdParam);
+          const found = d.find((x) => x.id === targetId);
+          if (found) {
+            setSelected(found);
+          } else {
+            try {
+              const fetched = await composerApi.getDraft(targetId);
+              setDrafts((prev) => [fetched, ...prev]);
+              setSelected(fetched);
+            } catch {
+              // ignore fetch error if draft doesn't exist
+            }
+          }
+        }
       })
       .catch(() =>
         setLoadError(
@@ -28,7 +56,7 @@ export default function ComposerPage() {
         )
       )
       .finally(() => setLoading(false));
-  }, []);
+  }, [draftIdParam]);
 
   const handleCreated = useCallback((d: Draft) => {
     setDrafts((prev) => [d, ...prev]);

@@ -49,6 +49,43 @@ def _upsert_fixtures(conn, fixture_list) -> None:
                 .values(venue=f.venue, start_time=f.start_time, league=f.league)
             )
             continue
+
+        # Same real-world match, different provider_match_id -- e.g. a
+        # manually-entered fixture (provider hadn't listed it yet) later
+        # superseded by the provider's own id for that match, or the
+        # provider reissuing an id. Match on team pair (order-agnostic --
+        # a hand-entered row isn't guaranteed to match the provider's
+        # alphabetical sort) + calendar date rather than re-inserting a
+        # duplicate fixture the UI would then show twice.
+        dupe = conn.execute(
+            sa.select(fixtures.c.id).where(
+                fixtures.c.status == "upcoming",
+                sa.func.date(fixtures.c.start_time) == f.start_time.date(),
+                sa.or_(
+                    sa.and_(
+                        fixtures.c.team_a == f.team_a, fixtures.c.team_b == f.team_b
+                    ),
+                    sa.and_(
+                        fixtures.c.team_a == f.team_b, fixtures.c.team_b == f.team_a
+                    ),
+                ),
+            )
+        ).first()
+        if dupe:
+            conn.execute(
+                fixtures.update()
+                .where(fixtures.c.id == dupe.id)
+                .values(
+                    provider_match_id=f.provider_match_id,
+                    team_a=f.team_a,
+                    team_b=f.team_b,
+                    venue=f.venue,
+                    league=f.league,
+                    start_time=f.start_time,
+                )
+            )
+            continue
+
         fid = conn.execute(
             fixtures.insert().values(
                 provider_match_id=f.provider_match_id,
@@ -196,7 +233,9 @@ def _has_upcoming_fixture_within_24h(conn, now: datetime) -> bool:
             if r.start_time.tzinfo
             else r.start_time.replace(tzinfo=timezone.utc)
         )
-        if start.date() == now.date() or (now - timedelta(hours=2) <= start <= now + timedelta(hours=24)):
+        if start.date() == now.date() or (
+            now - timedelta(hours=2) <= start <= now + timedelta(hours=24)
+        ):
             return True
     return False
 
@@ -375,8 +414,6 @@ def tick(
             )
             _try_post(conn, poster, prow, text, now)
 
-
-
         # Post-Match News Recap Tweet
         news_post_existing = conn.execute(
             sa.select(posts.c.id).where(
@@ -404,7 +441,6 @@ def tick(
 
             news_text = get_match_recap_tweet(frow.team_a, frow.team_b)
             _try_post(conn, poster, news_prow, news_text, now)
-
 
     # Standalone trivia (quiet-day filler, no fixture involved)
     if (force_trivia or _standalone_trivia_due(conn, now)) and not (
