@@ -2,6 +2,8 @@
 
 from collections import defaultdict
 
+import pandas as pd
+
 K = 20
 
 
@@ -20,3 +22,23 @@ class Elo:
         score = 1.0 if a_won else 0.0
         self._r[team_a] += K * (score - ea)
         self._r[team_b] += K * ((1.0 - score) - (1.0 - ea))
+
+
+def build_from_matches(paired: pd.DataFrame) -> Elo:
+    """Replays a paired-matches dataframe (bot.backtest.pair_matches's output
+    shape: date/team_a/team_b/won_a, among other columns) chronologically
+    into a fresh Elo, and returns it with final post-history ratings --
+    ready for .expect() on a new, not-yet-played fixture.
+
+    Used at live-serving time (composer/routers/predictions.py's run_model)
+    to produce an Elo-baseline probability for leagues on the model's
+    league_elo_override list (see bot/gating.py), without re-running the
+    LightGBM model at all.
+    """
+    elo = Elo()
+    if paired.empty:
+        return elo
+    ordered = paired.sort_values(by=["date", "team_a", "team_b"], kind="stable")
+    for _, row in ordered.iterrows():
+        elo.update(row["team_a"], row["team_b"], a_won=bool(row["won_a"]))
+    return elo
