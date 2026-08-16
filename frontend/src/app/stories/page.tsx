@@ -212,6 +212,15 @@ function Vault() {
             The Vault
           </Link>
           <Link
+            href="/predictions"
+            className="ds-nav-link"
+            style={{
+              fontSize: 14,
+            }}
+          >
+            Predictions
+          </Link>
+          <Link
             href="/composer"
             className="ds-nav-link"
             style={{

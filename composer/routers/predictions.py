@@ -181,22 +181,39 @@ def get_prediction_accuracy(conn=Depends(get_conn)) -> PredictionAccuracyStats:
     )
 
 
+@router.get("/predictions/leagues", response_model=list[str])
+def list_prediction_leagues(conn=Depends(get_conn)) -> list[str]:
+    """Distinct leagues that have at least one recorded prediction --
+    NOT the same set as /predictions/backtest/options' `leagues` (that one
+    is derived from team_matches history, for the Backtest replay; this
+    one reflects what the bot has actually predicted). Built on
+    _build_prediction_select() so the league value matches exactly what
+    list_predictions/get_prediction_accuracy already show for the same
+    rows, including the existing coalesce-to-"IPL" fallback."""
+    sub = _build_prediction_select().subquery()
+    rows = conn.execute(sa.select(sub.c.league).distinct()).all()
+    return sorted({r[0] for r in rows if r[0]})
+
+
 @router.get("/predictions", response_model=list[PredictionOut])
 def list_predictions(
     outcome: str | None = None,
     league: str | None = None,
     search: str | None = None,
     limit: int = 100,
+    offset: int = 0,
     conn=Depends(get_conn),
 ) -> list[PredictionOut]:
     q = (
         _build_prediction_select()
         .order_by(predictions.c.created_at.desc())
         .limit(limit)
+        .offset(offset)
     )
 
     if outcome and outcome.strip() and outcome != "all":
-        q = q.where(predictions.c.outcome == outcome.strip())
+        values = [v.strip() for v in outcome.split(",") if v.strip()]
+        q = q.where(predictions.c.outcome.in_(values))
     if league and league.strip() and league != "All":
         q = q.where(
             sa.or_(

@@ -175,3 +175,111 @@ def test_delete_prediction(client, conn):
 
     get_res = client.get(f"/predictions/{pid}")
     assert get_res.status_code == 404
+
+
+def test_offset_pages_through_results(client, conn):
+    for i in range(1, 4):
+        _mk_fixture(conn, fid=i, team_a=f"Team {i}", team_b="Opponent")
+        conn.execute(
+            predictions.insert().values(
+                fixture_id=i,
+                team_a=f"Team {i}",
+                team_b="Opponent",
+                league="IPL",
+                venue="Wankhede Stadium",
+                prob_team_a=0.6,
+                reasons_json="[]",
+                features_json="{}",
+                created_at=datetime(2026, 7, 20 + i, tzinfo=timezone.utc),
+                outcome="pending",
+            )
+        )
+    conn.commit()
+    # created_at desc: Team 3 (7/23), Team 2 (7/22), Team 1 (7/21)
+    page1 = client.get("/predictions", params={"limit": 2, "offset": 0}).json()
+    assert [r["team_a"] for r in page1] == ["Team 3", "Team 2"]
+
+    page2 = client.get("/predictions", params={"limit": 2, "offset": 2}).json()
+    assert [r["team_a"] for r in page2] == ["Team 1"]
+
+    page3 = client.get("/predictions", params={"limit": 2, "offset": 10}).json()
+    assert page3 == []
+
+
+def test_outcome_accepts_comma_separated_list(client, conn):
+    _mk_fixture(conn, fid=1)
+    _mk_fixture(conn, fid=2, team_a="Kolkata Knight Riders", team_b="Delhi Capitals")
+    _mk_fixture(conn, fid=3, team_a="Royal Challengers Bengaluru", team_b="Punjab Kings")
+    _mk_prediction(conn, fid=1, outcome="correct")
+    _mk_prediction(conn, fid=2, outcome="incorrect")
+    _mk_prediction(conn, fid=3, outcome="pending")
+    conn.commit()
+
+    rows = client.get(
+        "/predictions", params={"outcome": "correct,incorrect,void"}
+    ).json()
+    assert {r["fixture_id"] for r in rows} == {1, 2}
+
+    # Single value still behaves exactly as before this change.
+    rows = client.get("/predictions", params={"outcome": "correct"}).json()
+    assert [r["fixture_id"] for r in rows] == [1]
+
+
+def test_leagues_route_not_shadowed_by_pred_id(client):
+    # Same failure mode as test_today_route_not_shadowed_by_pred_id above:
+    # if /predictions/leagues is declared after /predictions/{pred_id},
+    # FastAPI matches {pred_id} first and 422s trying to int-parse
+    # "leagues" instead of returning the league list.
+    r = client.get("/predictions/leagues")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_leagues_returns_only_leagues_with_recorded_predictions(client, conn):
+    _mk_fixture(conn, fid=1)  # league="IPL" per _mk_fixture default
+    conn.execute(
+        fixtures.insert().values(
+            id=2,
+            provider_match_id="m2",
+            team_a="Trent Rockets",
+            team_b="Manchester Super Giants",
+            venue="Lord's, London",
+            league="The Hundred",
+            start_time=datetime(2026, 8, 16, tzinfo=timezone.utc),
+            status="upcoming",
+        )
+    )
+    _mk_prediction(conn, fid=1, outcome="correct")  # -> IPL
+    conn.execute(
+        predictions.insert().values(
+            fixture_id=2,
+            team_a="Trent Rockets",
+            team_b="Manchester Super Giants",
+            league="The Hundred",
+            venue="Lord's, London",
+            prob_team_a=0.48,
+            reasons_json="[]",
+            features_json="{}",
+            created_at=datetime(2026, 8, 16, tzinfo=timezone.utc),
+            outcome="pending",
+        )
+    )
+    # A league with a fixture but no prediction at all must NOT appear.
+    conn.execute(
+        fixtures.insert().values(
+            id=3,
+            provider_match_id="m3",
+            team_a="Adelaide Strikers Women",
+            team_b="Brisbane Heat Women",
+            venue="Adelaide Oval",
+            league="WBBL",
+            start_time=datetime(2026, 8, 20, tzinfo=timezone.utc),
+            status="upcoming",
+        )
+    )
+    conn.commit()
+
+    r = client.get("/predictions/leagues")
+    assert r.status_code == 200
+    assert r.json() == ["IPL", "The Hundred"]
+

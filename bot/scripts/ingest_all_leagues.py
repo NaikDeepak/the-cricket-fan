@@ -16,25 +16,55 @@ Usage:
 import io
 import json
 import os
+from pathlib import Path
 import ssl
 import urllib.request
 import zipfile
 
+from dotenv import load_dotenv
 import pandas as pd
 import sqlalchemy as sa
+
+_repo_root = Path(__file__).resolve().parent.parent.parent
+load_dotenv(_repo_root / ".env.local")
+load_dotenv(_repo_root / ".env")
 
 from bot.aliases import seed_aliases
 from bot.cricsheet import parse_match_dict
 from bot.db import ensure_schema, get_engine, team_matches
 
 LEAGUES = [
+    # Men's Major Leagues
     ("ipl", "IPL"),
-    ("bbl", "BBL"),
+    ("hnd_male", "The Hundred"),
+    ("bbl_male", "BBL"),
     ("psl", "PSL"),
-    ("cpl", "CPL"),
+    ("cpl_male", "CPL"),
     ("sat", "SA20"),
-    ("hnd", "The Hundred"),
-    ("t20s", "T20I"),
+    ("mlc", "MLC"),
+    ("ilt", "ILT20"),
+    ("lpl", "LPL"),
+    ("bpl", "BPL"),
+    ("ntb", "T20 Blast"),
+    ("ssm_male", "Super Smash"),
+    ("msl", "MSL"),
+    ("npl", "NPL"),
+    ("ctc", "CSA T20"),
+    ("sma", "SMAT"),
+    # Women's Major Leagues
+    ("hnd_female", "The Hundred Women"),
+    ("wpl", "WPL"),
+    ("wbb", "WBBL"),
+    ("wcl", "WCPL"),
+    ("ssm_female", "Super Smash Women"),
+    ("cec", "Charlotte Edwards Cup"),
+    ("wtb", "Women's T20 Blast"),
+    ("wsl", "WSL"),
+    ("wtc", "Women's T20 Challenge"),
+    ("frb", "FairBreak"),
+    # International T20s
+    ("t20s_male", "T20I"),
+    ("t20s_female", "WT20I"),
 ]
 
 
@@ -99,15 +129,12 @@ def ingest_all(database_url: str) -> None:
     with engine.begin() as conn:
         ensure_schema(conn)
         seed_aliases(conn)
-        # Only replace rows for the leagues this run actually fetched — a
-        # full drop() here would also wipe other leagues already in the
-        # table (e.g. WPL/WBBL/Hundred-Women seeded by other scripts).
         conn.execute(
             sa.delete(team_matches).where(team_matches.c.league.in_(fetched_leagues))
         )
         conn.execute(team_matches.insert(), df.to_dict(orient="records"))
 
-    print(f"✓ Ingestion complete! {len(df)} rows loaded successfully into database.")
+    print(f"✓ Ingestion complete! {len(df)} rows loaded successfully into {database_url.split('@')[-1] if '@' in database_url else database_url}.")
 
 
 def main() -> None:
@@ -118,11 +145,27 @@ def main() -> None:
         or "sqlite:///composer.db"
     )
     if db_url.startswith("postgresql+asyncpg://"):
-        # sync engine needs the psycopg3 dialect explicitly — bare
-        # "postgresql://" defaults to psycopg2, which isn't installed here.
         db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
 
     ingest_all(db_url)
+
+    # If remote DB was targeted, also sync local SQLite for offline/dev workflows
+    if not db_url.startswith("sqlite:"):
+        print("\nAlso syncing to local sqlite:///composer.db for local workflows...")
+        try:
+            local_engine = get_engine("sqlite:///composer.db")
+            with local_engine.begin() as conn:
+                ensure_schema(conn)
+                seed_aliases(conn)
+                remote_engine = get_engine(db_url)
+                with remote_engine.connect() as r_conn:
+                    rows = r_conn.execute(sa.select(team_matches)).mappings().all()
+                    if rows:
+                        conn.execute(sa.delete(team_matches))
+                        conn.execute(team_matches.insert(), [dict(r) for r in rows])
+            print("✓ Local SQLite composer.db synced!")
+        except Exception as exc:
+            print(f"⚠ Could not sync local SQLite: {exc}")
 
 
 if __name__ == "__main__":

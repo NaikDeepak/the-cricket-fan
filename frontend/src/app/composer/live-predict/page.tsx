@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { composerApi, type MatchInput, type LivePredictionResult, type Draft } from "@/lib/composerApi";
-import TeamBadge from "@/components/composer/TeamBadge";
+import TeamBadge from "@/components/common/TeamBadge";
 import PredictionCardImg from "@/components/composer/cards/PredictionCardImg";
 import SegmentedControl from "@/components/composer/SegmentedControl";
 import { getTeamTheme } from "@/lib/teamColors";

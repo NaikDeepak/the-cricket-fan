@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { type Post, composerApi } from "@/lib/composerApi";
-import TeamBadge from "@/components/composer/TeamBadge";
+import TeamBadge from "@/components/common/TeamBadge";
 
 const STATE_STYLE: Record<Post["state"], { label: string; color: string }> = {
   posted: { label: "posted", color: "var(--floodlight-cyan)" },

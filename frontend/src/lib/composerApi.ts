@@ -368,13 +368,14 @@ export const composerApi = {
     }),
   deleteTeam: (id: number) => req<void>(`/teams/${id}`, { method: "DELETE" }),
   analytics: () => req<Analytics>("/analytics"),
-  predictions: (q: { outcome?: string; league?: string; search?: string; limit?: number } = {}) => {
+  predictions: (q: { outcome?: string; league?: string; search?: string; limit?: number; offset?: number } = {}) => {
     const p = new URLSearchParams(
       Object.fromEntries(Object.entries(q).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))
     ).toString();
     return req<Prediction[]>(`/predictions${p ? `?${p}` : ""}`);
   },
   predictionAccuracy: () => req<PredictionAccuracyStats>("/predictions/accuracy"),
+  predictionLeagues: () => req<string[]>("/predictions/leagues"),
   createPrediction: (body: PredictionIn) =>
     req<Prediction>("/predictions", {
       method: "POST",
