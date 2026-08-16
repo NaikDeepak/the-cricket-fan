@@ -79,7 +79,7 @@ subsystem.
 
 ```python
 def list_predictions(
-    outcome: str | None = None,
+    outcome: str | None = None,   # now also accepts comma-separated values
     league: str | None = None,
     search: str | None = None,
     limit: int = 100,
@@ -92,14 +92,37 @@ def list_predictions(
         .limit(limit)
         .offset(offset)     # new
     )
+    if outcome and outcome.strip() and outcome != "all":
+        values = [v.strip() for v in outcome.split(",") if v.strip()]
+        q = q.where(predictions.c.outcome.in_(values))   # was == outcome.strip()
     ...
 ```
+
+`outcome` changing from exact-match to `IN (...)` is backward compatible —
+every existing caller (Composer's own predictions page) passes a single
+value, and `.in_(["correct"])` behaves identically to `== "correct"`. This
+is what lets the public page fetch `outcome=pending` for the featured
+block and `outcome=correct,incorrect,void` for settled history as two
+distinct, cleanly-paginated queries — mixing pending into the same offset
+sequence as settled history would make "load more" page sizes
+unpredictable (a pending row consumes a slot in the offset count without
+appearing in the settled section).
 
 No response-shape change on `list_predictions` — `PredictionOut` is
 already public-safe (no internal fields like `features_json` leak through
 it).
 
-New endpoint for the league filter, same file:
+New endpoint for the league filter, same file — **placement matters**:
+Starlette matches routes top-to-bottom, and `GET /predictions/{pred_id}`
+(line 311) uses a bare `{pred_id}` path segment with no `:int` converter
+in the route string (the `pred_id: int` Python type hint only affects
+FastAPI's post-match parameter coercion, not which route matches). A bare
+`{pred_id}` matches any single path segment, including the literal string
+`"leagues"` — so this endpoint MUST be declared before line 311, grouped
+with the other static routes (`/predictions/accuracy`,
+`/predictions/backtest/options`, `/predictions/today`) that already
+follow this rule. Declaring it after line 311 would make it unreachable
+(every request would 422 at `get_prediction("leagues")` instead).
 
 ```python
 @router.get("/predictions/leagues", response_model=list[str])
@@ -118,7 +141,8 @@ def list_prediction_leagues(conn=Depends(get_conn)) -> list[str]:
     return sorted({r[0] for r in rows if r[0]})
 ```
 
-No new router file — same `composer/routers/predictions.py`.
+No new router file — same `composer/routers/predictions.py`, placed
+alongside the other static GET routes before line 311.
 
 ### Frontend
 
@@ -132,18 +156,32 @@ the new backend param).
 1. One Display-weight headline per the Loud-Then-Quiet Rule (e.g. "Every
    Prediction We've Made" or similar — copy TBD at implementation, not a
    design-spec concern).
-2. League filter — same dropdown visual pattern as Backtest's, but sourced
+2. **Accuracy summary strip** — e.g. "62% Hit Rate • 23 Evaluated • 3-Win
+   Streak." Sourced from the existing `GET /predictions/accuracy`
+   (`composer/routers/predictions.py:96`, already returns `accuracy_pct`,
+   `evaluated`, `streak`, `streak_type`) via the existing
+   `composerApi.predictionAccuracy()` — zero new backend work. This is
+   the single number that answers a fan's "is this bot actually any
+   good" question at a glance, directly serving the transparency purpose
+   of the page.
+3. League filter — same dropdown visual pattern as Backtest's, but sourced
    from the new `GET /predictions/leagues` (see Backend change) — the set
    of leagues with actual predictions, not Backtest's history-derived
    list.
-3. **Pending predictions first** (`outcome == "pending"`) — these are the
-   live, currently-relevant ones (e.g. today's Hundred final). Shown as
-   a small set of featured cards at the top, not buried in
-   chronological order with the settled history.
-4. **Settled history below**, `created_at` descending — one card per
-   prediction, paginated (initial page + "load more" appending the next
-   `offset` batch; matches WireStrip's existing incremental-load pattern
-   rather than introducing full page-number pagination).
+4. **Pending predictions first** — fetched as its own request,
+   `GET /predictions?outcome=pending&league=...` (no pagination needed;
+   this is always a handful of items — the live, currently-relevant ones,
+   e.g. today's Hundred final). Shown as a small set of featured cards at
+   the top, not merged into the settled-history request.
+5. **Settled history below**, `created_at` descending — fetched
+   separately from pending via `GET /predictions?outcome=correct,
+   incorrect,void&league=...&limit=20&offset=0`. One card per prediction,
+   paginated (initial page + "load more" appending the next `offset`
+   batch — matches WireStrip's existing incremental-load pattern rather
+   than introducing full page-number pagination). Keeping this fetch
+   scoped to non-pending outcomes means every page has a predictable
+   size and "load more" never re-fetches a pending row that later
+   resolves mid-scroll.
 
 **Card content** (new component,
 `frontend/src/components/predictions/PredictionTrackCard.tsx`):
@@ -180,8 +218,11 @@ out a div-with-onClick for "load more").
 
 ```
 Public page (/predictions)
-  -> GET /predictions?league=...&limit=20&offset=0   (composer, existing + offset)
-  -> GET /predictions/leagues                         (composer, new — leagues with predictions)
+  -> GET /predictions/accuracy                                  (composer, existing — summary strip)
+  -> GET /predictions/leagues                                   (composer, new — league filter options)
+  -> GET /predictions?outcome=pending&league=...                (composer, existing — featured block)
+  -> GET /predictions?outcome=correct,incorrect,void&league=...
+        &limit=20&offset=0                                      (composer, existing + outcome-list + offset — settled history)
 ```
 
 No new tables, no new persisted state, no new backend module. The
@@ -190,21 +231,60 @@ already writes to it: `bot/run.py`'s automated cron tick, Composer's
 `live-predict` tool, and `POST /predictions/{id}/result` /
 `sync-results` settling them.
 
+### Frontend plumbing
+
+`frontend/src/lib/composerApi.ts`:
+- `predictions()` gains `offset?: number` in its query param object
+  (existing function, already takes `outcome`/`league`/`search`/`limit`).
+- New `predictionLeagues: () => req<string[]>("/predictions/leagues")`.
+- `predictionAccuracy()` — already exists, no change, reused as-is.
+
+`frontend/src/app/predictions/layout.tsx` — new, mirrors
+`frontend/src/app/stories/layout.tsx`'s existing pattern exactly (a
+`Metadata` export: title, description, openGraph — no client logic).
+
+`frontend/src/app/predictions/page.tsx` itself: Server Component for the
+initial data fetch (accuracy strip + first page of pending/settled +
+league list), Client Component boundary for the interactive league filter
+and "load more" — same split `/stories/page.tsx` already uses for its own
+filters.
+
+**Navigation:** the reviewer flagged this as missing, correctly, but
+pointed at `AppleGlobalNav.tsx` — verified that component is mounted only
+in `composer/layout.tsx` (composer/routers/predictions.py's internal
+nav), never rendered on the public site. Adding a fan-facing link there
+would put it inside the admin tool, not in front of fans. The public site
+has no shared nav component yet — `frontend/src/app/stories/page.tsx`
+builds its own inline `<header>`/`<nav>` (`Link` to `/stories`,
+`/composer`, "Write Story →"). The real fix: add a
+`<Link href="/predictions">` to that inline nav, and give
+`/predictions/page.tsx` its own matching inline header (same convention,
+not a new shared component — introducing one is out of scope for this
+spec).
+
 ### Testing
 
 - Backend: `composer/tests/test_predictions.py` (existing file) gets new
   cases —
   - `offset`: page 2 returns the next slice, not a repeat of page 1;
     `offset` beyond total returns `[]`, not an error.
+  - `outcome` as a comma-separated list (`outcome=correct,incorrect,void`)
+    returns the union, excluding `pending`; a single value still behaves
+    exactly as before (regression check on the existing behavior).
   - `/predictions/leagues`: returns only leagues with a recorded
     prediction (not every league in `team_matches`); a league present in
     `fixtures` but with zero predictions is excluded; result is
-    deduplicated and sorted.
+    deduplicated and sorted; requesting the literal path `/predictions/
+    leagues` returns the league list, not a 422 (regression guard against
+    the route-ordering bug this spec found).
 - Frontend: new `frontend/src/app/predictions/__tests__/page.test.tsx`
-  covering: pending predictions render above settled history; each of the
-  four outcome states renders its distinct treatment; empty-league-filter
-  shows the Honest-State empty copy, not a blank grid; "load more" fetches
-  the next offset and appends (doesn't replace) the existing list.
+  covering: pending predictions (from the dedicated `outcome=pending`
+  fetch) render above settled history; each of the four outcome states
+  renders its distinct treatment; empty-league-filter shows the
+  Honest-State empty copy, not a blank grid; "load more" fetches the next
+  offset of settled history and appends (doesn't replace) the existing
+  list, without ever including a pending row; accuracy strip renders the
+  values from `GET /predictions/accuracy` verbatim.
 
 ## Open questions closed during brainstorming
 
