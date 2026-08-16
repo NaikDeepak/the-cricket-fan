@@ -623,6 +623,12 @@ def run_model(request: Request, conn=Depends(get_conn)) -> RunModelOut:
     from bot.run import _load_team_matches, _home_team_at_venue
 
     override_leagues = set(artifact.get("league_elo_override", []))
+    if override_leagues:
+        logger.info(
+            "run_model: league_elo_override active for %d league(s): %s",
+            len(override_leagues),
+            sorted(override_leagues),
+        )
 
     # Find upcoming fixtures without a prediction yet
     now = datetime.now(_tz.utc)
@@ -639,6 +645,8 @@ def run_model(request: Request, conn=Depends(get_conn)) -> RunModelOut:
     elo = build_from_matches(pair_matches(df)) if len(df) else None
     created = 0
     skipped = 0
+    elo_fallback_count = 0
+    model_count = 0
 
     for f in upcoming:
         existing = conn.execute(
@@ -657,6 +665,7 @@ def run_model(request: Request, conn=Depends(get_conn)) -> RunModelOut:
                 ]
                 source = "elo_fallback"
                 feats: dict = {}
+                elo_fallback_count += 1
             else:
                 home_team = _home_team_at_venue(df, f.venue, f.team_a, f.team_b)
                 feats = build_features(
@@ -664,6 +673,7 @@ def run_model(request: Request, conn=Depends(get_conn)) -> RunModelOut:
                 )
                 prob, reasons = predict(artifact, feats)
                 source = "model"
+                model_count += 1
         except Exception as exc:
             errors.append(f"Feature/predict error for {f.team_a} vs {f.team_b}: {exc}")
             skipped += 1
@@ -685,6 +695,21 @@ def run_model(request: Request, conn=Depends(get_conn)) -> RunModelOut:
             )
         )
         created += 1
+
+    if override_leagues:
+        logger.info(
+            "run_model: %d fixture(s) routed to elo_fallback, %d routed to model "
+            "(of %d upcoming)",
+            elo_fallback_count,
+            model_count,
+            len(upcoming),
+        )
+        unmatched_leagues = sorted({f.league for f in upcoming} - override_leagues)
+        if unmatched_leagues:
+            logger.info(
+                "run_model: fixture league(s) not matching any override league: %s",
+                unmatched_leagues,
+            )
 
     conn.commit()
     return RunModelOut(

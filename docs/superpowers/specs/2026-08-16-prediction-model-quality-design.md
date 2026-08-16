@@ -155,6 +155,31 @@ instrument every later change gets measured through.
 - `composer/routers/predictions.py` needs to consult the override list at
   serving time.
 
+**Known limitation (as of merge):** `run_model`'s override routing is
+implemented and correct, but `fixtures.league` (populated from CricAPI's
+raw `series` field via `bot/fixtures_provider.py::_resolve_league`) does
+not currently match the canonical league labels used in
+`league_elo_override` (populated from the Cricsheet ingest league map in
+`bot/scripts/ingest_all_leagues.py`) for most leagues — e.g. CricAPI's
+`"Indian Premier League"` vs. the canonical `"IPL"`. Confirmed via
+`bot/tests/data/provider_matches.json`'s fixture data. As a result, the
+override routing is currently a safe no-op against real production
+fixtures (it always falls through to the model path) until this
+namespace is resolved — most likely via an alias table in
+`bot/fixtures_provider.py::_resolve_league`, keyed off the same
+canonical labels `bot/scripts/ingest_all_leagues.py`'s `LEAGUES` list
+already defines. The routing also does not yet cover 3 other places the
+model is called for live predictions (`bot/run.py::tick`, the
+GH-Actions X-posting cron; `composer/routers/generate.py`'s
+`/generate/bot`; `composer/routers/live_predict.py`) — only
+`composer/routers/predictions.py::run_model` consults the override
+list. This branch adds observability (see `run_model`'s logging) so this
+gap is visible in production logs on the first retrain that populates
+`league_elo_override`, rather than failing silently. Both items are
+tracked as follow-up work, not fixed in this merge, because a correct
+fix for the first needs real CricAPI response samples not available at
+the time of this review.
+
 ### 2. Split fix + sigmoid calibration (atomic)
 
 **Why second, and why "atomic":** ships behind gate #1 so its actual
