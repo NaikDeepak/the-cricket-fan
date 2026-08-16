@@ -75,72 +75,72 @@ function ComposerContent() {
 
   return (
     <div>
-      {/* Apple Hero Header Banner with Titanium Render */}
+      {/* Apple Hero Header Banner */}
       <motion.div
-        className="ds-spatial-card-dark"
+        className="ds-card"
         variants={HERO_REVEAL_VARIANTS}
         initial={isReduced ? false : "hidden"}
         animate="visible"
         style={{
-          borderRadius: 24,
-          padding: "var(--space-xl)",
-          marginBottom: "var(--space-xl)",
+          borderRadius: "var(--radius-lg)",
+          padding: "var(--space-lg) var(--space-xl)",
+          marginBottom: "var(--space-lg)",
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
           gap: "var(--space-xl)",
           alignItems: "center",
-          backgroundImage: "linear-gradient(135deg, rgba(10, 10, 14, 0.95) 0%, rgba(20, 20, 30, 0.9) 100%)",
+          background: "#111114",
+          color: "#ffffff",
+          border: "1px solid rgba(255, 255, 255, 0.12)",
         }}
       >
         <div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: "var(--space-xs)" }}>
             <span
+              className="ds-badge"
               style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: "var(--wire-red)",
-                boxShadow: "0 0 8px var(--wire-red)",
+                background: "rgba(255, 255, 255, 0.1)",
+                color: "#ffffff",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
               }}
-            />
-            <span className="text-micro" style={{ color: "rgba(255, 255, 255, 0.7)" }}>
-              PRESS BOX COMPOSER STUDIO
+            >
+              Press Box Studio
             </span>
           </div>
 
           <h1
             style={{
-              fontSize: "var(--text-2xl)",
+              fontSize: 22,
               fontWeight: 700,
               color: "#ffffff",
               margin: "var(--space-xs) 0 var(--space-sm) 0",
               letterSpacing: "-0.02em",
-              lineHeight: 1.15,
+              lineHeight: 1.25,
             }}
           >
-            Craft High-Fidelity Cricket Match Content.
+            Craft Match Content &amp; Shareables.
           </h1>
 
           <p
             style={{
-              fontSize: "var(--text-base)",
-              color: "rgba(255, 255, 255, 0.8)",
-              lineHeight: 1.6,
+              fontSize: 13,
+              color: "#a1a1aa",
+              lineHeight: 1.55,
               margin: 0,
-              maxWidth: 460,
+              maxWidth: 480,
             }}
           >
-            Draft stories, records, and predictions from content bank or AI generators. Edit copy, select card themes, and export high-resolution PNG assets.
+            Draft stories, records, and predictions from the content bank or AI generators. Customize copy, apply official team palettes, and export high-resolution PNG cards.
           </p>
         </div>
 
         {/* Product photography render overlay */}
-        <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 16px 40px rgba(0,0,0,0.5)" }}>
+        <div style={{ borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid rgba(255, 255, 255, 0.1)" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/composer_hero.jpg"
             alt="Cricket Titanium Render"
-            style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }}
+            style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
           />
         </div>
       </motion.div>
@@ -148,9 +148,6 @@ function ComposerContent() {
       {/* Main Composer Tool Grid */}
       <div className="composer-grid">
         <div>
-          <h2 className="text-title" style={{ marginBottom: "var(--space-md)", color: "#000000", fontSize: "var(--text-xl)" }}>
-            Drafts &amp; Generators
-          </h2>
           <Feed
             drafts={drafts}
             loading={loading}
@@ -168,14 +165,8 @@ function ComposerContent() {
             gap: "var(--space-md)",
           }}
         >
-          <h2 className="text-title" style={{ color: "#000000", fontSize: "var(--text-xl)" }}>
-            Editor &amp; Preview
-          </h2>
           {selected ? (
-            <div
-              key={selected.id}
-              style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}
-            >
+            <>
               <Editor draft={selected} onChange={handleUpdated} />
               <CardPreview
                 draft={selected}
@@ -183,20 +174,22 @@ function ComposerContent() {
                 onDelete={handleDeleted}
                 onDuplicate={handleCreated}
               />
-            </div>
+            </>
           ) : (
             <div
               className="ds-card"
               style={{
-                cursor: "default",
+                padding: "var(--space-xl)",
                 textAlign: "center",
-                padding: "var(--space-xl) var(--space-md)",
                 background: "#ffffff",
-                borderRadius: 16,
+                color: "var(--fg-muted)",
               }}
             >
-              <p style={{ margin: 0, color: "var(--fg-muted)", fontSize: "var(--text-sm)" }}>
-                Select or create a draft to start editing.
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "var(--fg)" }}>
+                No draft selected
+              </p>
+              <p className="text-caption" style={{ marginTop: 4 }}>
+                Select a draft from the queue on the left or generate a new card.
               </p>
             </div>
           )}

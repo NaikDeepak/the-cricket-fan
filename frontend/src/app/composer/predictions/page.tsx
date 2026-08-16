@@ -66,21 +66,40 @@ const OUTCOME_LABEL: Record<string, string> = {
 
 // ─── Small shared bits ──────────────────────────────────────────────────────
 
-function StatusPill({ outcome }: { outcome: "correct" | "incorrect" | "pending" | "void" }) {
-  return <span className={`status-pill status-pill--${outcome}`}>{OUTCOME_LABEL[outcome]}</span>;
+function StatusBadge({ outcome }: { outcome: "correct" | "incorrect" | "pending" | "void" }) {
+  if (outcome === "correct") {
+    return <span className="ds-badge ds-badge-success">{OUTCOME_LABEL[outcome]}</span>;
+  }
+  if (outcome === "incorrect") {
+    return <span className="ds-badge ds-badge-danger">{OUTCOME_LABEL[outcome]}</span>;
+  }
+  if (outcome === "pending") {
+    return <span className="ds-badge ds-badge-warning">{OUTCOME_LABEL[outcome]}</span>;
+  }
+  return <span className="ds-badge ds-badge-neutral">{OUTCOME_LABEL[outcome]}</span>;
 }
 
-function Crest({ team, size = 28 }: { team: string; size?: number }) {
+function Crest({ team, size = 26 }: { team: string; size?: number }) {
   const logo = teamLogoPath(team);
   if (logo) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={logo} alt="" className="team-crest" style={{ width: size, height: size }} />;
+    return <img src={logo} alt="" style={{ width: size, height: size, objectFit: "contain", borderRadius: 4 }} />;
   }
   const theme = getTeamTheme(team);
   return (
     <span
-      className="team-crest-fallback"
-      style={{ width: size, height: size, background: theme.primary }}
+      style={{
+        width: size,
+        height: size,
+        background: theme.primary,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 4,
+        fontSize: 10,
+        fontWeight: 700,
+        color: "#ffffff",
+      }}
       aria-hidden
     >
       {teamInitials(team)}
@@ -97,7 +116,7 @@ function ChevronIcon({ open }: { open: boolean }) {
       fill="none"
       style={{
         transform: open ? "rotate(180deg)" : "rotate(0deg)",
-        transition: "transform var(--duration-fast) var(--ease-apple)",
+        transition: "transform 0.15s ease",
         flexShrink: 0,
       }}
       aria-hidden
@@ -112,11 +131,11 @@ function ChevronIcon({ open }: { open: boolean }) {
 function AccuracySummary({ stats }: { stats: PredictionAccuracyStats | null }) {
   if (!stats) {
     return (
-      <div className="card-container" style={{ padding: "var(--space-lg)", display: "flex", gap: "var(--space-lg)" }}>
-        <div className="ds-skeleton" style={{ width: 128, height: 128, minHeight: 0, borderRadius: "50%" }} />
+      <div className="ds-card" style={{ padding: "var(--space-lg)", display: "flex", gap: "var(--space-lg)" }}>
+        <div className="ds-skeleton" style={{ width: 120, height: 120, minHeight: 0, borderRadius: "50%" }} />
         <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "var(--space-sm)" }}>
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="ds-skeleton" style={{ minHeight: 64, borderRadius: "16px" }} />
+            <div key={i} className="ds-skeleton" style={{ minHeight: 56, borderRadius: "8px" }} />
           ))}
         </div>
       </div>
@@ -126,35 +145,36 @@ function AccuracySummary({ stats }: { stats: PredictionAccuracyStats | null }) {
   const offset = stats.evaluated > 0 ? CIRCUMFERENCE * (1 - stats.accuracy_pct / 100) : CIRCUMFERENCE;
   const streakLabel =
     stats.streak > 1
-      ? `${stats.streak} ${stats.streak_type === "win" ? "correct" : "incorrect"} in a row`
+      ? `${stats.streak} ${stats.streak_type === "win" ? "hits" : "misses"} in a row`
       : null;
 
   return (
     <div
-      className="card-container"
+      className="ds-card"
       style={{
-        padding: "var(--space-lg)",
+        padding: "20px 24px",
         display: "flex",
         alignItems: "center",
         gap: "var(--space-xl)",
         flexWrap: "wrap",
+        background: "#ffffff",
       }}
     >
-      <div style={{ position: "relative", width: 128, height: 128, flexShrink: 0 }}>
-        <svg width={128} height={128} viewBox="0 0 128 128" role="img" aria-label={`${stats.accuracy_pct}% prediction accuracy`}>
-          <circle cx={64} cy={64} r={RADIUS} fill="none" stroke="var(--border)" strokeWidth={10} />
+      <div style={{ position: "relative", width: 120, height: 120, flexShrink: 0 }}>
+        <svg width={120} height={120} viewBox="0 0 128 128" role="img" aria-label={`${stats.accuracy_pct}% accuracy`}>
+          <circle cx={64} cy={64} r={RADIUS} fill="none" stroke="var(--border)" strokeWidth={8} />
           <circle
             cx={64}
             cy={64}
             r={RADIUS}
             fill="none"
-            stroke="var(--wire-red)"
-            strokeWidth={10}
+            stroke="var(--success-text)"
+            strokeWidth={8}
             strokeLinecap="round"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={offset}
             transform="rotate(-90 64 64)"
-            style={{ transition: `stroke-dashoffset var(--duration-slow) var(--ease-apple)` }}
+            style={{ transition: "stroke-dashoffset 0.6s ease" }}
           />
         </svg>
         <div
@@ -165,134 +185,49 @@ function AccuracySummary({ stats }: { stats: PredictionAccuracyStats | null }) {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
+            textAlign: "center",
           }}
         >
-          <span
-            style={{
-              fontFamily: "var(--font-oswald), sans-serif",
-              fontSize: 28,
-              fontWeight: 700,
-              color: "var(--fg)",
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            {stats.accuracy_pct}%
+          <span style={{ fontSize: 24, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--fg)" }}>
+            {stats.accuracy_pct.toFixed(0)}%
           </span>
-          <span className="text-micro" style={{ margin: 0 }}>Accuracy</span>
+          <span style={{ fontSize: 10, fontWeight: 600, color: "var(--fg-muted)", textTransform: "uppercase" }}>
+            Hit Rate
+          </span>
         </div>
       </div>
 
-      <div style={{ flex: 1, minWidth: 260, display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))", gap: "var(--space-sm)" }}>
-          <div className="ds-metric-pill">
-            <span style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{stats.correct}</span>
-            <span className="text-micro" style={{ margin: 0 }}>Correct</span>
-          </div>
-          <div className="ds-metric-pill">
-            <span style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{stats.incorrect}</span>
-            <span className="text-micro" style={{ margin: 0 }}>Incorrect</span>
-          </div>
-          <div className="ds-metric-pill">
-            <span style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{stats.pending}</span>
-            <span className="text-micro" style={{ margin: 0 }}>Pending</span>
-          </div>
-          <div className="ds-metric-pill">
-            <span style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{stats.void}</span>
-            <span className="text-micro" style={{ margin: 0 }}>Void</span>
+      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12 }}>
+        <div style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)", background: "var(--surface-tertiary)" }}>
+          <span className="text-micro">Total Picks</span>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "var(--fg)", fontVariantNumeric: "tabular-nums", marginTop: 2 }}>
+            {stats.total}
           </div>
         </div>
+
+        <div style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)", background: "var(--surface-tertiary)" }}>
+          <span className="text-micro">Hits / Misses</span>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "var(--fg)", fontVariantNumeric: "tabular-nums", marginTop: 2 }}>
+            {stats.correct} <span style={{ fontSize: 13, color: "var(--fg-muted)", fontWeight: 500 }}>/ {stats.incorrect}</span>
+          </div>
+        </div>
+
+        <div style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)", background: "var(--surface-tertiary)" }}>
+          <span className="text-micro">Pending</span>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "var(--fg)", fontVariantNumeric: "tabular-nums", marginTop: 2 }}>
+            {stats.pending}
+          </div>
+        </div>
+
         {streakLabel && (
-          <span
-            className={`status-pill status-pill--${stats.streak_type === "win" ? "correct" : "incorrect"}`}
-            style={{ alignSelf: "flex-start" }}
-          >
-            {streakLabel}
-          </span>
+          <div style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)", background: "var(--surface-tertiary)" }}>
+            <span className="text-micro">Streak</span>
+            <div style={{ fontSize: 14, fontWeight: 600, color: stats.streak_type === "win" ? "var(--success-text)" : "var(--error-text)", marginTop: 4 }}>
+              {streakLabel}
+            </div>
+          </div>
         )}
       </div>
-    </div>
-  );
-}
-
-// ─── Today Match Card ───────────────────────────────────────────────────────
-
-function MatchCard({ match, onRunModel, running }: { match: TodayMatch; onRunModel: () => void; running: boolean }) {
-  const themeA = getTeamTheme(match.team_a);
-  const themeB = getTeamTheme(match.team_b);
-  const pred = match.prediction;
-
-  const probA = pred ? pred.prob_team_a : 0.5;
-  const probB = 1 - probA;
-  const outcome = (pred?.outcome ?? "pending") as "correct" | "incorrect" | "pending" | "void";
-  const isSettled = outcome === "correct" || outcome === "incorrect" || outcome === "void";
-
-  return (
-    <div className="card-container match-card">
-      <div className="match-card-header">
-        <span className="ds-chip ds-chip-category">{match.league}</span>
-        <span className="text-caption" style={{ textAlign: "right" }}>
-          {match.start_time && fmtDate(match.start_time) !== "Today" ? `${fmtDate(match.start_time)}, ` : ""}
-          {fmtTime(match.start_time)} &middot; {match.venue}
-        </span>
-      </div>
-
-      <div className="match-teams-row">
-        <div className="team-slot">
-          <Crest team={match.team_a} />
-          <span className="team-name-sm">{match.team_a}</span>
-        </div>
-        <span className="vs-divider">VS</span>
-        <div className="team-slot team-slot--end">
-          <Crest team={match.team_b} />
-          <span className="team-name-sm">{match.team_b}</span>
-        </div>
-      </div>
-
-      {pred ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xs)" }}>
-          <div className="prob-track">
-            <div className="prob-fill" style={{ width: pct(probA * 100), background: themeA.primary }} />
-            <div className="prob-fill" style={{ width: pct(probB * 100), background: themeB.primary }} />
-          </div>
-          <div className="prob-readout">
-            <span style={{ color: themeA.primary }}>{pct(probA * 100)}</span>
-            <span style={{ color: themeB.primary }}>{pct(probB * 100)}</span>
-          </div>
-          <p className="text-caption" style={{ margin: 0 }}>
-            Model pick: <strong style={{ color: "var(--fg)" }}>{pred.predicted_winner}</strong>
-          </p>
-          {pred.reasons.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
-              {pred.reasons.slice(0, 2).map((r, i) => (
-                <span key={i} className="ds-chip ds-chip-category" style={{ fontSize: 10 }}>
-                  {r.replace(/_/g, " ")}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-sm)" }}>
-          <span className="text-caption">Model hasn&apos;t run for this fixture yet.</span>
-          <button
-            className="ds-btn-primary"
-            style={{ padding: "8px 16px", fontSize: 12, flexShrink: 0 }}
-            onClick={onRunModel}
-            disabled={running}
-          >
-            {running ? "Running…" : "Run Model"}
-          </button>
-        </div>
-      )}
-
-      {isSettled && (
-        <div className="match-card-footer">
-          <StatusPill outcome={outcome} />
-          {match.winner && outcome !== "void" && (
-            <span className="text-caption">Winner: {match.winner}</span>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -307,67 +242,95 @@ function PredictionRow({ p }: { p: Prediction }) {
   const probB = 1 - probA;
 
   return (
-    <div className="history-row" onClick={() => setExpanded((v) => !v)}>
-      <div className="history-row-main">
-        <StatusPill outcome={p.outcome} />
+    <div
+      className="ds-card"
+      style={{
+        padding: "12px 16px",
+        background: "#ffffff",
+        cursor: "pointer",
+        transition: "all 0.15s ease",
+      }}
+      onClick={() => setExpanded((v) => !v)}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <StatusBadge outcome={p.outcome} />
 
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", flex: 1, minWidth: 220 }}>
-          <span className="text-caption" style={{ color: themeA.primary, fontWeight: 600 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 200 }}>
+          <Crest team={p.team_a} size={22} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>
             {p.team_a}
           </span>
-          <div className="prob-track" style={{ flex: 1, minWidth: 60 }}>
+          <div className="prob-track" style={{ flex: 1, minWidth: 60, height: 6 }}>
             <div className="prob-fill" style={{ width: pct(probA * 100), background: themeA.primary }} />
             <div className="prob-fill" style={{ width: pct(probB * 100), background: themeB.primary }} />
           </div>
-          <span className="text-caption" style={{ color: themeB.primary, fontWeight: 600 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>
             {p.team_b}
           </span>
+          <Crest team={p.team_b} size={22} />
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 110 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 120 }}>
           <span className="text-micro" style={{ margin: 0 }}>Pick</span>
           <span
-            className="text-caption"
-            style={{ fontWeight: 600, color: probA >= 0.5 ? themeA.primary : themeB.primary }}
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: probA >= 0.5 ? themeA.primary : themeB.primary,
+              fontVariantNumeric: "tabular-nums",
+            }}
           >
-            {p.predicted_winner} &middot; {pct(Math.max(probA, probB) * 100)}
+            {p.predicted_winner} · {pct(Math.max(probA, probB) * 100)}
           </span>
         </div>
 
         <div style={{ minWidth: 90 }}>
           {p.actual_winner ? (
-            <span className="text-caption" style={{ fontWeight: 600 }}>{p.actual_winner}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>{p.actual_winner}</span>
           ) : (
-            <span className="text-caption">—</span>
+            <span style={{ fontSize: 13, color: "var(--fg-muted)" }}>—</span>
           )}
         </div>
 
-        <span className="ds-chip ds-chip-category">{p.league}</span>
+        <span className="ds-badge" style={{ background: "var(--surface-tertiary)", color: "var(--fg-secondary)" }}>
+          {p.league}
+        </span>
+
         <span style={{ marginLeft: "auto" }}>
           <ChevronIcon open={expanded} />
         </span>
       </div>
 
       {expanded && (
-        <div className="history-row-detail" onClick={(e) => e.stopPropagation()}>
-          <div className="history-detail-item">
-            <span className="text-micro" style={{ width: 90, flexShrink: 0 }}>Venue</span>
-            <span className="text-caption">{p.venue}</span>
+        <div
+          style={{
+            marginTop: 12,
+            paddingTop: 12,
+            borderTop: "1px solid var(--border)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="text-micro" style={{ width: 80, flexShrink: 0 }}>Venue</span>
+            <span style={{ fontSize: 13, color: "var(--fg)" }}>{p.venue}</span>
           </div>
           {p.start_time && (
-            <div className="history-detail-item">
-              <span className="text-micro" style={{ width: 90, flexShrink: 0 }}>Match time</span>
-              <span className="text-caption">
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="text-micro" style={{ width: 80, flexShrink: 0 }}>Match Time</span>
+              <span style={{ fontSize: 13, color: "var(--fg)", fontVariantNumeric: "tabular-nums" }}>
                 {new Date(p.start_time).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
               </span>
             </div>
           )}
           {p.reasons.length > 0 && (
-            <div className="history-detail-item">
-              <span className="text-micro" style={{ width: 90, flexShrink: 0 }}>Reasons</span>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <span className="text-micro" style={{ width: 80, flexShrink: 0, marginTop: 4 }}>Reasons</span>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {p.reasons.map((r, i) => (
-                  <span key={i} className="ds-chip ds-chip-category" style={{ fontSize: 10 }}>
+                  <span key={i} className="ds-badge" style={{ background: "var(--surface-tertiary)", color: "var(--fg-secondary)" }}>
                     {r.replace(/_/g, " ")}
                   </span>
                 ))}
@@ -375,9 +338,9 @@ function PredictionRow({ p }: { p: Prediction }) {
             </div>
           )}
           {p.result_summary && (
-            <div className="history-detail-item">
-              <span className="text-micro" style={{ width: 90, flexShrink: 0 }}>Result</span>
-              <span className="text-caption">{p.result_summary}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="text-micro" style={{ width: 80, flexShrink: 0 }}>Result</span>
+              <span style={{ fontSize: 13, color: "var(--fg)" }}>{p.result_summary}</span>
             </div>
           )}
         </div>
@@ -483,173 +446,182 @@ export default function PredictionsPage() {
   const grouped = useMemo(() => groupByDate(filtered), [filtered]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xl)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--space-md)", flexWrap: "wrap" }}>
         <div>
-          <h1 className="text-tool-headline" style={{ margin: 0 }}>Predictions</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: "var(--fg)", letterSpacing: "-0.02em" }}>
+            Model Predictions
+          </h1>
           <p className="text-caption" style={{ margin: "4px 0 0" }}>
-            LightGBM win-probability picks, tracked against real results.
+            LightGBM win-probability picks tracked against real match outcomes.
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <button
             id="run-model-btn"
-            className="ds-btn-primary"
+            type="button"
+            className="ds-btn ds-btn-primary"
             onClick={handleRunModel}
             disabled={runningModel}
           >
-            {runningModel ? "Running…" : "Run Model"}
+            {runningModel ? "Running Model…" : "Run Model"}
           </button>
           <button
-            id="settle-api-btn"
-            className="ds-btn-secondary"
+            type="button"
+            className="ds-btn ds-btn-secondary"
             onClick={handleSettle}
             disabled={settling}
           >
-            {settling ? "Settling…" : "Settle from API"}
-          </button>
-          <button
-            id="sync-results-btn"
-            className="ds-nav-link"
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
-            onClick={async () => {
-              await composerApi.syncPredictionResults();
-              await loadHistory();
-            }}
-          >
-            Sync DB
+            {settling ? "Settling…" : "Settle Results"}
           </button>
         </div>
       </div>
 
       {error && (
         <div
-          className="text-caption"
+          className="ds-card"
           style={{
+            padding: "10px 14px",
             background: "var(--error-tint)",
-            border: "1px solid rgba(255, 59, 48, 0.25)",
-            borderRadius: 16,
-            padding: "var(--space-sm) var(--space-md)",
-            color: "var(--error)",
-            fontWeight: 600,
+            borderColor: "rgba(239, 68, 68, 0.2)",
+            color: "var(--error-text)",
+            fontSize: 13,
           }}
         >
           {error}
         </div>
       )}
+
       {runResult && (
         <div
-          className="text-caption"
+          className="ds-card"
           style={{
+            padding: "10px 14px",
             background: "var(--success-tint)",
-            border: "1px solid rgba(52, 199, 89, 0.25)",
-            borderRadius: 16,
-            padding: "var(--space-sm) var(--space-md)",
-            display: "flex",
-            gap: "var(--space-lg)",
-            flexWrap: "wrap",
+            borderColor: "rgba(34, 197, 94, 0.2)",
+            color: "var(--success-text)",
+            fontSize: 13,
           }}
         >
-          <span style={{ fontWeight: 700, color: "#1c8a3f" }}>Model ran</span>
-          <span>Created: <strong>{runResult.predictions_created}</strong></span>
-          <span>Skipped: {runResult.predictions_skipped}</span>
-          <span>Fixtures found: {runResult.fixtures_found}</span>
-          {runResult.errors.length > 0 && <span>{runResult.errors[0]}</span>}
+          Generated {runResult.predictions_created} prediction{runResult.predictions_created !== 1 ? "s" : ""}.
         </div>
       )}
 
       {/* Accuracy summary */}
-      <AccuracySummary stats={loadingHistory ? null : stats} />
+      <AccuracySummary stats={stats} />
 
-      {/* Today's Matches */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
-        <span className="text-micro">Today&apos;s Matches</span>
-        {loadingToday ? (
-          <div className="match-grid">
-            {[0, 1].map((i) => (
-              <div key={i} className="ds-skeleton" style={{ minHeight: 190 }} />
-            ))}
+      {/* Today's upcoming matches */}
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-sm)" }}>
+          <span className="text-micro">Today&apos;s Fixtures ({todayMatches.length})</span>
+        </div>
+
+        {loadingToday && (
+          <div className="ds-card" style={{ padding: "var(--space-md)", textAlign: "center", color: "var(--fg-muted)", fontSize: 13 }}>
+            Checking today&apos;s schedule…
           </div>
-        ) : todayMatches.length === 0 ? (
-          <div
-            className="card-container"
-            style={{ padding: "var(--space-xl)", textAlign: "center", display: "flex", flexDirection: "column", gap: 4 }}
-          >
-            <span className="text-title" style={{ margin: 0 }}>No fixtures for today</span>
-            <span className="text-caption">
-              Nothing kicking off in a tracked league right now. Click <strong>Run Model</strong> to check for newly published fixtures.
-            </span>
+        )}
+
+        {!loadingToday && todayMatches.length === 0 && (
+          <div className="ds-card" style={{ padding: "var(--space-md)", textAlign: "center", color: "var(--fg-muted)", fontSize: 13, background: "#ffffff" }}>
+            No matches scheduled for today. Run the model when fixtures are live.
           </div>
-        ) : (
-          <div className="match-grid">
+        )}
+
+        {!loadingToday && todayMatches.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
             {todayMatches.map((m) => (
-              <MatchCard key={m.fixture_id} match={m} onRunModel={handleRunModel} running={runningModel} />
+              <div key={m.fixture_id} className="ds-card" style={{ padding: "14px 16px", background: "#ffffff" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <span className="ds-badge" style={{ background: "var(--surface-tertiary)", color: "var(--fg-secondary)" }}>
+                    {m.league}
+                  </span>
+                  <span style={{ fontSize: 11, color: "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }}>
+                    {fmtTime(m.start_time)}
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0" }}>
+                  <Crest team={m.team_a} size={22} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{m.team_a}</span>
+                  <span style={{ fontSize: 11, color: "var(--fg-muted)", margin: "0 auto" }}>vs</span>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{m.team_b}</span>
+                  <Crest team={m.team_b} size={22} />
+                </div>
+                <div style={{ fontSize: 11, color: "var(--fg-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {m.venue}
+                </div>
+              </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* History */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "var(--space-sm)" }}>
+      {/* History section */}
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-sm)", flexWrap: "wrap", gap: 8 }}>
           <span className="text-micro">Prediction History ({filtered.length})</span>
-          <div style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
-            <select
-              id="outcome-filter"
-              className="ds-select"
-              value={outcomeFilter}
-              onChange={(e) => setOutcomeFilter(e.target.value)}
-            >
-              <option value="all">All outcomes</option>
-              <option value="correct">Correct</option>
-              <option value="incorrect">Incorrect</option>
-              <option value="pending">Pending</option>
-              <option value="void">Void</option>
-            </select>
-            <select
-              id="league-filter"
-              className="ds-select"
-              value={leagueFilter}
-              onChange={(e) => setLeagueFilter(e.target.value)}
-            >
-              {leagues.map((l) => (
-                <option key={l} value={l}>{l}</option>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {/* Outcome Filter */}
+            <div className="ds-segmented-control">
+              {["all", "correct", "incorrect", "pending"].map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => setOutcomeFilter(o)}
+                  className={`ds-segmented-item ${outcomeFilter === o ? "ds-segmented-item--active" : ""}`}
+                  style={{ fontSize: 11, padding: "3px 8px", textTransform: "capitalize" }}
+                >
+                  {o === "all" ? "All" : o === "correct" ? "Hits" : o === "incorrect" ? "Misses" : "Pending"}
+                </button>
               ))}
-            </select>
+            </div>
+
+            {/* League Filter */}
+            <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
+              {leagues.map((lg) => (
+                <button
+                  key={lg}
+                  type="button"
+                  onClick={() => setLeagueFilter(lg)}
+                  className={`ds-filter-tab ${leagueFilter === lg ? "ds-filter-tab--active" : ""}`}
+                  style={{ fontSize: 11, padding: "3px 8px" }}
+                >
+                  {lg}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {loadingHistory ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="ds-skeleton" style={{ minHeight: 56, borderRadius: 16 }} />
+        {loadingHistory && (
+          <div className="ds-card" style={{ padding: "var(--space-md)", textAlign: "center", color: "var(--fg-muted)", fontSize: 13 }}>
+            Loading prediction history…
+          </div>
+        )}
+
+        {!loadingHistory && filtered.length === 0 && (
+          <div className="ds-card" style={{ padding: "var(--space-lg)", textAlign: "center", color: "var(--fg-muted)", fontSize: 13, background: "#ffffff" }}>
+            No predictions match the selected filter.
+          </div>
+        )}
+
+        {!loadingHistory && filtered.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {Object.entries(grouped).map(([dateLabel, rows]) => (
+              <div key={dateLabel} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span className="text-micro" style={{ color: "var(--fg-muted)" }}>
+                  {dateLabel}
+                </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {rows.map((p) => (
+                    <PredictionRow key={p.id} p={p} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
-        ) : filtered.length === 0 ? (
-          <div
-            className="card-container"
-            style={{ padding: "var(--space-xl)", textAlign: "center", display: "flex", flexDirection: "column", gap: 4 }}
-          >
-            <span className="text-title" style={{ margin: 0 }}>No predictions yet</span>
-            <span className="text-caption">
-              Click <strong>Run Model</strong> above to generate your first prediction.
-            </span>
-          </div>
-        ) : (
-          Object.entries(grouped).map(([date, preds]) => (
-            <div key={date}>
-              <div
-                className="text-micro"
-                style={{ borderBottom: "1px solid var(--border)", paddingBottom: 6, marginBottom: 8 }}
-              >
-                {date}
-              </div>
-              {preds.map((p) => (
-                <PredictionRow key={p.id} p={p} />
-              ))}
-            </div>
-          ))
         )}
       </div>
     </div>

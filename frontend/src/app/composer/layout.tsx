@@ -9,14 +9,13 @@ import { prefersReducedMotion } from "@/lib/motion";
 
 const TABS = [
   { href: "/composer", label: "Compose" },
-  { href: "/composer/templates", label: "Templates & Themes" },
+  { href: "/composer/templates", label: "Templates" },
   { href: "/composer/live-predict", label: "Live Predict" },
   { href: "/composer/predictions", label: "Predictions" },
   { href: "/composer/backtest", label: "Backtest" },
   { href: "/composer/posts", label: "Posts" },
   { href: "/composer/analytics", label: "Analytics" },
-  { href: "/composer/teams", label: "Teams & Colors" },
-  { href: "/stories", label: "Vault" },
+  { href: "/composer/teams", label: "Teams" },
 ];
 
 export default function ComposerLayout({ children }: { children: ReactNode }) {
@@ -33,12 +32,12 @@ export default function ComposerLayout({ children }: { children: ReactNode }) {
     >
       <AppleGlobalNav />
 
-      {/* Composer Sub-Nav Pill Bar */}
+      {/* Composer Sub-Nav Bar */}
       <div
         style={{
           borderBottom: "1px solid var(--border)",
           background: "#ffffff",
-          padding: "12px var(--space-lg)",
+          padding: "10px var(--space-lg)",
         }}
       >
         <div
@@ -49,38 +48,32 @@ export default function ComposerLayout({ children }: { children: ReactNode }) {
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: "var(--space-md)",
+            gap: "var(--space-sm)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-xs)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
             <span
               style={{
-                display: "inline-block",
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: "var(--wire-red)",
-                boxShadow: "0 0 8px var(--wire-red)",
+                fontSize: 13,
+                fontWeight: 700,
+                color: "var(--fg)",
+                letterSpacing: "-0.01em",
               }}
-            />
-            <span className="text-micro" style={{ color: "#000000", fontWeight: 700 }}>
-              PRESS BOX STUDIO
+            >
+              Studio
             </span>
+            <span style={{ color: "var(--fg-muted)", fontSize: 13 }}>/</span>
+            <span style={{ color: "var(--fg-muted)", fontSize: 13 }}>Press Box</span>
           </div>
 
-          <nav style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
+          <nav className="ds-segmented-control">
             {TABS.map((tab) => {
               const active = pathname === tab.href;
               return (
                 <Link
                   key={tab.href}
                   href={tab.href}
-                  className={active ? "ds-btn-pill ds-btn-pill-dark" : "ds-btn-pill ds-btn-pill-light"}
-                  style={{
-                    textDecoration: "none",
-                    fontSize: 12,
-                    padding: "6px 16px",
-                  }}
+                  className={`ds-segmented-item ${active ? "ds-segmented-item--active" : ""}`}
                 >
                   {tab.label}
                 </Link>
@@ -91,11 +84,11 @@ export default function ComposerLayout({ children }: { children: ReactNode }) {
       </div>
 
       <motion.main
-        initial={isReduced ? false : { opacity: 0, y: 12 }}
+        initial={isReduced ? false : { opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
         style={{
-          padding: "var(--space-xl) var(--space-lg)",
+          padding: "var(--space-lg)",
           maxWidth: 1200,
           margin: "0 auto",
         }}

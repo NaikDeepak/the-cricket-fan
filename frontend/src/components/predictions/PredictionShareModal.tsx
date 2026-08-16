@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { Prediction, Draft } from "@/lib/composerApi";
-import { captureCard, copyImageToClipboard, downloadCard, shareCard } from "@/lib/share";
+import { captureCard, copyImageToClipboard, downloadCard } from "@/lib/share";
 import PredictionCardImg from "@/components/composer/cards/PredictionCardImg";
 
 type AspectRatio = "1:1" | "16:9" | "4:5";
@@ -59,9 +59,9 @@ export default function PredictionShareModal({
     try {
       const blob = await captureCard(captureRef.current);
       await copyImageToClipboard(blob);
-      setFeedback("Image copied to clipboard! 📋");
+      setFeedback("Copied to clipboard");
     } catch {
-      setFeedback("Copy failed. Try Download PNG instead.");
+      setFeedback("Copy failed. Use download.");
     } finally {
       setBusy(false);
       setTimeout(() => setFeedback(null), 2500);
@@ -75,24 +75,9 @@ export default function PredictionShareModal({
       const blob = await captureCard(captureRef.current);
       const filename = `${prediction.team_a.toLowerCase().replace(/\s+/g, "_")}_vs_${prediction.team_b.toLowerCase().replace(/\s+/g, "_")}_prediction.png`;
       await downloadCard(blob, filename);
-      setFeedback("Card downloaded! ⬇️");
+      setFeedback("Card downloaded");
     } catch {
       setFeedback("Failed to download image.");
-    } finally {
-      setBusy(false);
-      setTimeout(() => setFeedback(null), 2500);
-    }
-  }
-
-  async function handleNativeShare() {
-    if (!captureRef.current) return;
-    setBusy(true);
-    try {
-      const blob = await captureCard(captureRef.current);
-      const filename = `${prediction.team_a.toLowerCase().replace(/\s+/g, "_")}_vs_${prediction.team_b.toLowerCase().replace(/\s+/g, "_")}_prediction.png`;
-      await shareCard(blob, filename);
-    } catch {
-      setFeedback("Share cancelled or not supported.");
     } finally {
       setBusy(false);
       setTimeout(() => setFeedback(null), 2500);
@@ -115,8 +100,9 @@ export default function PredictionShareModal({
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        background: "rgba(0, 0, 0, 0.75)",
-        backdropFilter: "blur(10px)",
+        background: "rgba(0, 0, 0, 0.65)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -125,14 +111,13 @@ export default function PredictionShareModal({
       onClick={onClose}
     >
       <div
-        className="card-container"
+        className="ds-card"
         style={{
-          background: "#111116",
-          borderRadius: 24,
+          background: "#111114",
+          borderRadius: "var(--radius-lg)",
           border: "1px solid rgba(255, 255, 255, 0.12)",
-          boxShadow: "0 24px 64px rgba(0, 0, 0, 0.8)",
           width: "100%",
-          maxWidth: 680,
+          maxWidth: 640,
           maxHeight: "92vh",
           overflowY: "auto",
           color: "#ffffff",
@@ -147,34 +132,16 @@ export default function PredictionShareModal({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "var(--text-xs)",
-                  fontWeight: 700,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: "var(--fg-muted)",
-                }}
-              >
+              <span className="ds-badge" style={{ background: "rgba(255, 255, 255, 0.1)", color: "#ffffff" }}>
                 SHAREABLE MATCH CARD
               </span>
               {isUpcoming && (
-                <span
-                  style={{
-                    fontSize: 10,
-                    padding: "2px 8px",
-                    borderRadius: 999,
-                    background: "rgba(99, 102, 241, 0.2)",
-                    color: "#a5b4fc",
-                    fontWeight: 700,
-                  }}
-                >
-                  UPCOMING
+                <span className="ds-badge" style={{ background: "rgba(0, 113, 227, 0.2)", color: "var(--apple-blue)" }}>
+                  Upcoming
                 </span>
               )}
             </div>
-            <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 700, margin: "4px 0 0 0", color: "#ffffff" }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, margin: "6px 0 0 0", color: "#ffffff" }}>
               {prediction.team_a} vs {prediction.team_b}
             </h2>
           </div>
@@ -186,14 +153,14 @@ export default function PredictionShareModal({
               background: "rgba(255, 255, 255, 0.1)",
               border: "none",
               color: "#ffffff",
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
+              width: 28,
+              height: 28,
+              borderRadius: 6,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 16,
+              fontSize: 14,
             }}
           >
             ✕
@@ -201,72 +168,45 @@ export default function PredictionShareModal({
         </div>
 
         {/* Aspect Ratio Selector */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div className="ds-segmented-control" style={{ background: "rgba(255, 255, 255, 0.08)" }}>
           <button
             type="button"
             onClick={() => setAspect("1:1")}
-            className="ds-nav-link"
-            style={{
-              fontSize: 12,
-              padding: "6px 14px",
-              borderRadius: 999,
-              border: "1px solid var(--border)",
-              background: aspect === "1:1" ? "#ffffff" : "rgba(255,255,255,0.08)",
-              color: aspect === "1:1" ? "#000000" : "#ffffff",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
+            className={`ds-segmented-item ${aspect === "1:1" ? "ds-segmented-item--active" : ""}`}
+            style={{ color: aspect === "1:1" ? "#000000" : "#d4d4d8" }}
           >
-            1:1 Square (Instagram / X)
+            1:1 Square
           </button>
           <button
             type="button"
             onClick={() => setAspect("16:9")}
-            className="ds-nav-link"
-            style={{
-              fontSize: 12,
-              padding: "6px 14px",
-              borderRadius: 999,
-              border: "1px solid var(--border)",
-              background: aspect === "16:9" ? "#ffffff" : "rgba(255,255,255,0.08)",
-              color: aspect === "16:9" ? "#000000" : "#ffffff",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
+            className={`ds-segmented-item ${aspect === "16:9" ? "ds-segmented-item--active" : ""}`}
+            style={{ color: aspect === "16:9" ? "#000000" : "#d4d4d8" }}
           >
-            16:9 Landscape (Feed / Banner)
+            16:9 Landscape
           </button>
           <button
             type="button"
             onClick={() => setAspect("4:5")}
-            className="ds-nav-link"
-            style={{
-              fontSize: 12,
-              padding: "6px 14px",
-              borderRadius: 999,
-              border: "1px solid var(--border)",
-              background: aspect === "4:5" ? "#ffffff" : "rgba(255,255,255,0.08)",
-              color: aspect === "4:5" ? "#000000" : "#ffffff",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
+            className={`ds-segmented-item ${aspect === "4:5" ? "ds-segmented-item--active" : ""}`}
+            style={{ color: aspect === "4:5" ? "#000000" : "#d4d4d8" }}
           >
-            4:5 Portrait (Stories / Reels)
+            4:5 Portrait
           </button>
         </div>
 
         {/* Live Card Preview Box */}
         <div
           style={{
-            background: "#09090c",
-            borderRadius: 16,
+            background: "#000000",
+            borderRadius: "var(--radius-md)",
             padding: "var(--space-md)",
             border: "1px solid rgba(255, 255, 255, 0.08)",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             overflow: "hidden",
-            minHeight: 340,
+            minHeight: 320,
           }}
         >
           <div
@@ -285,14 +225,13 @@ export default function PredictionShareModal({
         {feedback && (
           <div
             style={{
-              padding: "8px 14px",
-              borderRadius: 8,
-              background: "rgba(16, 185, 129, 0.15)",
-              border: "1px solid var(--success)",
+              padding: "6px 12px",
+              borderRadius: 6,
+              background: "rgba(52, 199, 89, 0.15)",
               color: "var(--success)",
-              fontSize: "var(--text-sm)",
+              fontSize: 13,
               textAlign: "center",
-              fontWeight: 600,
+              fontWeight: 500,
             }}
           >
             {feedback}
@@ -300,107 +239,64 @@ export default function PredictionShareModal({
         )}
 
         {/* Action Toolbar */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <button
             type="button"
             disabled={busy}
             onClick={handleCopyImage}
-            className="ds-nav-link"
+            className="ds-btn ds-btn-secondary"
             style={{
-              padding: "10px",
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: 999,
+              fontSize: 12,
               background: "rgba(255, 255, 255, 0.1)",
               color: "#ffffff",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              justifyContent: "center",
-              cursor: "pointer",
+              borderColor: "rgba(255, 255, 255, 0.15)",
             }}
           >
-            📋 Copy PNG to Clipboard
+            Copy PNG to Clipboard
           </button>
 
           <button
             type="button"
             disabled={busy}
             onClick={handleDownloadImage}
-            className="ds-nav-link"
+            className="ds-btn ds-btn-secondary"
             style={{
-              padding: "10px",
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: 999,
+              fontSize: 12,
               background: "rgba(255, 255, 255, 0.1)",
               color: "#ffffff",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              justifyContent: "center",
-              cursor: "pointer",
+              borderColor: "rgba(255, 255, 255, 0.15)",
             }}
           >
-            ⬇️ Download PNG File
+            Download PNG
           </button>
 
           <button
             type="button"
             onClick={handleShareX}
-            className="ds-nav-link"
+            className="ds-btn"
             style={{
-              padding: "10px",
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: 999,
+              fontSize: 12,
               background: "#000000",
               color: "#ffffff",
               border: "1px solid rgba(255, 255, 255, 0.2)",
-              justifyContent: "center",
-              cursor: "pointer",
             }}
           >
-            🐦 Share to X / Twitter
+            Share to X
           </button>
 
           <button
             type="button"
             onClick={handleShareWhatsApp}
-            className="ds-nav-link"
+            className="ds-btn"
             style={{
-              padding: "10px",
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: 999,
+              fontSize: 12,
               background: "#25D366",
               color: "#ffffff",
-              border: "none",
-              justifyContent: "center",
-              cursor: "pointer",
             }}
           >
-            💬 Share to WhatsApp
+            Share to WhatsApp
           </button>
         </div>
-
-        {typeof navigator !== "undefined" && "share" in navigator && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={handleNativeShare}
-            className="ds-nav-link"
-            style={{
-              padding: "10px",
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: 999,
-              background: "rgba(99, 102, 241, 0.2)",
-              color: "#a5b4fc",
-              border: "1px solid rgba(99, 102, 241, 0.4)",
-              justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >
-            📱 Share Card via Device (Instagram, Stories, AirDrop...)
-          </button>
-        )}
       </div>
     </div>
   );
