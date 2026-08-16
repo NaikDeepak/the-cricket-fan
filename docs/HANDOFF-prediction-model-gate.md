@@ -1,9 +1,23 @@
 # Handoff — Prediction model per-league gate (Phase 1)
 
-Written 2026-08-16, mid-execution, paused by request. Everything below is
-committed except this file itself (commit it as your first action on
-resume). Read this, then the spec, then the plan, then resume the SDD
-loop.
+Written 2026-08-16, mid-execution, paused by request. Everything below,
+including this file, is committed (`HEAD` = `c5b71e0`). Read this, then
+the spec, then the plan, then resume the SDD loop.
+
+## Status at a glance
+
+| Task | What it builds | Status |
+|---|---|---|
+| 1. `bot/gating.py` — per-league gate (pure function) | `per_league_gate()` + 7 unit tests | ✅ **DONE** — implemented, reviewed, approved. Commits `b71d7f2..2d512b7`. 2 minors parked (non-blocking). |
+| 2. Wire gate into `bot/train.py` + `bot/predict.py` | `league` in `build_dataset`'s meta; `per_league`/`league_elo_override` in metrics + artifact; `load_artifact` backward-compat | ✅ **DONE** — implemented, reviewed, approved. Commits `2d512b7..62b3423`. 1 Important finding parked with ruling + 2 minors parked (all non-blocking, see below). |
+| 3. `bot/elo.py::build_from_matches` | Replay match history into a ready `Elo` instance for live serving | ⬜ **TODO** — not started. Next action on resume. |
+| 4. `predictions.source` column + `run_model` Elo-fallback routing | `bot/db.py` schema + `composer/routers/predictions.py` | ⬜ **TODO** — not started. Depends on Tasks 2 (done) and 3 (todo). |
+| Final whole-branch review | — | ⬜ **TODO** — after Task 4. |
+| PR into `feature/mvp` | — | ⬜ **TODO** — after final review, via `finishing-a-development-branch`. |
+
+**Nothing is mid-loop.** Both done tasks closed cleanly (reviewed +
+ledgered `complete`) before the pause — resuming is just "start Task 3,"
+not "reconcile an in-flight subagent."
 
 ## What this is
 
