@@ -1,4 +1,5 @@
 "use client";
+
 import { useCallback, useMemo, useState } from "react";
 import { composerApi, type CardMeta, type Draft } from "@/lib/composerApi";
 import {
@@ -9,13 +10,13 @@ import {
 import { useDebouncedSave } from "./useDebouncedSave";
 
 const CARD_TYPES = [
-  "record",
-  "battle",
-  "milestone",
-  "quote",
-  "wire",
-  "prediction",
-  "trivia",
+  { id: "record", label: "Record" },
+  { id: "battle", label: "Player Battle" },
+  { id: "milestone", label: "Match Milestone" },
+  { id: "quote", label: "Quote & Lore" },
+  { id: "wire", label: "Wire Dispatch" },
+  { id: "prediction", label: "Prediction Pick" },
+  { id: "trivia", label: "Trivia Quiz" },
 ] as const;
 
 export default function Editor({
@@ -104,9 +105,10 @@ export default function Editor({
 
   return (
     <div
-      className="card-container"
+      className="ds-card"
       style={{
-        padding: "var(--space-md)",
+        padding: "18px 20px",
+        background: "#ffffff",
         display: "flex",
         flexDirection: "column",
         gap: "var(--space-md)",
@@ -119,14 +121,18 @@ export default function Editor({
           alignItems: "center",
         }}
       >
-        <span className="ds-chip ds-chip-source">
-          #{draft.id} · {draft.source}
-        </span>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <span className="text-micro">Draft Editor</span>
+          <span className="ds-badge" style={{ background: "var(--surface-tertiary)", color: "var(--fg-secondary)" }}>
+            #{draft.id} · {draft.source}
+          </span>
+        </div>
         <span
-          className="text-micro"
           style={{
             margin: 0,
-            color: over ? "var(--wire-red)" : "var(--muted)",
+            fontSize: 11,
+            fontWeight: 600,
+            color: over ? "var(--error-text)" : "var(--fg-muted)",
             fontVariantNumeric: "tabular-nums",
           }}
         >
@@ -140,14 +146,13 @@ export default function Editor({
         onChange={(e) => setText(e.target.value)}
         rows={4}
         className="ds-input"
-        placeholder="Draft post text or card commentary..."
+        placeholder="Draft post text or commentary…"
         style={{
           width: "100%",
-          fontFamily: "inherit",
-          fontSize: "var(--text-base)",
+          fontSize: 14,
           lineHeight: 1.5,
           resize: "vertical",
-          borderColor: over ? "var(--wire-red)" : undefined,
+          borderColor: over ? "var(--error)" : undefined,
         }}
       />
 
@@ -163,10 +168,10 @@ export default function Editor({
           className="text-micro"
           style={{
             display: "flex",
-            gap: "var(--space-xs)",
+            gap: 4,
             flexDirection: "column",
             margin: 0,
-            flex: "1 1 120px",
+            flex: "1 1 140px",
             minWidth: 0,
           }}
         >
@@ -181,8 +186,8 @@ export default function Editor({
             style={{ width: "100%", minWidth: 0 }}
           >
             {CARD_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t.toUpperCase()}
+              <option key={t.id} value={t.id}>
+                {t.label}
               </option>
             ))}
           </select>
@@ -192,10 +197,10 @@ export default function Editor({
           className="text-micro"
           style={{
             display: "flex",
-            gap: "var(--space-xs)",
+            gap: 4,
             flexDirection: "column",
             margin: 0,
-            flex: "1 1 120px",
+            flex: "1 1 140px",
             minWidth: 0,
           }}
         >
@@ -204,11 +209,11 @@ export default function Editor({
             aria-label="category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g. TNPL, IPL, STAT"
+            placeholder="e.g. IPL, STAT, WPL"
             className="ds-input"
             style={{
-              padding: "6px 10px",
-              fontSize: "var(--text-sm)",
+              padding: "7px 10px",
+              fontSize: 13,
               width: "100%",
               minWidth: 0,
             }}
@@ -218,18 +223,17 @@ export default function Editor({
 
       {/* Template-Specific Metadata Controls */}
       <div
+        className="ds-card"
         style={{
-          background: "rgba(255, 255, 255, 0.02)",
-          border: "1px solid var(--border)",
-          borderRadius: 8,
-          padding: "var(--space-sm)",
+          background: "var(--surface-tertiary)",
+          padding: "12px 14px",
           display: "flex",
           flexDirection: "column",
-          gap: "var(--space-xs)",
+          gap: 8,
         }}
       >
         <span className="text-micro" style={{ color: "var(--fg-muted)" }}>
-          {cardType?.toUpperCase()} CARD DETAILS
+          {cardType?.toUpperCase()} METADATA
         </span>
 
         {/* Battle Fields */}
@@ -252,14 +256,14 @@ export default function Editor({
             <input
               className="ds-input"
               style={{ fontSize: 13, padding: "6px 10px" }}
-              placeholder="Team 1 Name / Color"
+              placeholder="Team 1 Name"
               value={(cardMeta.team_1 as string) || ""}
               onChange={(e) => updateMeta("team_1", e.target.value)}
             />
             <input
               className="ds-input"
               style={{ fontSize: 13, padding: "6px 10px" }}
-              placeholder="Team 2 Name / Color"
+              placeholder="Team 2 Name"
               value={(cardMeta.team_2 as string) || ""}
               onChange={(e) => updateMeta("team_2", e.target.value)}
             />
@@ -279,7 +283,7 @@ export default function Editor({
             <input
               className="ds-input"
               style={{ fontSize: 13, padding: "6px 10px" }}
-              placeholder="Hero Stat (e.g. 103* (47) or 5/18)"
+              placeholder="Hero Stat (e.g. 103* (47))"
               value={(cardMeta.stat as string) || ""}
               onChange={(e) => updateMeta("stat", e.target.value)}
             />
@@ -379,7 +383,7 @@ export default function Editor({
                 min="0"
                 max="1"
                 className="ds-input"
-                style={{ fontSize: 13, padding: "6px 10px", width: "100%" }}
+                style={{ fontSize: 13, padding: "6px 10px", width: "100%", marginTop: 2 }}
                 value={
                   typeof cardMeta.prob_a === "number" ? cardMeta.prob_a : 0.5
                 }
@@ -404,7 +408,7 @@ export default function Editor({
             <input
               className="ds-input"
               style={{ fontSize: 13, padding: "6px 10px" }}
-              placeholder="Team Theme (e.g. India, CSK, TKR)"
+              placeholder="Team Theme (e.g. India, CSK)"
               value={(cardMeta.team as string) || ""}
               onChange={(e) => updateMeta("team", e.target.value)}
             />
@@ -412,7 +416,7 @@ export default function Editor({
         )}
       </div>
 
-      {/* Team Color Palettes & Custom Swatches Picker */}
+      {/* Team Color Palettes */}
       <div
         style={{
           borderTop: "1px solid var(--border)",
@@ -429,9 +433,7 @@ export default function Editor({
             alignItems: "center",
           }}
         >
-          <span className="text-micro" style={{ color: "var(--fg-muted)" }}>
-            APPLY TEAM PALETTE
-          </span>
+          <span className="text-micro">Apply Team Palette</span>
           {/* League Filter */}
           <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
             {leagues.map((lg) => (
@@ -439,17 +441,8 @@ export default function Editor({
                 key={lg}
                 type="button"
                 onClick={() => setSelectedLeague(lg)}
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  padding: "2px 6px",
-                  borderRadius: 4,
-                  border: "1px solid var(--border)",
-                  background:
-                    selectedLeague === lg ? "var(--fg)" : "transparent",
-                  color: selectedLeague === lg ? "var(--bg)" : "var(--muted)",
-                  cursor: "pointer",
-                }}
+                className={`ds-filter-tab ${selectedLeague === lg ? "ds-filter-tab--active" : ""}`}
+                style={{ fontSize: 11, padding: "2px 8px" }}
               >
                 {lg}
               </button>
@@ -484,20 +477,13 @@ export default function Editor({
                 type="button"
                 onClick={() => handleTeamSelect(t.name)}
                 title={`${t.name} (${t.league})`}
+                className="ds-btn ds-btn-secondary"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
                   padding: "4px 8px",
-                  borderRadius: 6,
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  background: "var(--surface)",
-                  color: "#ffffff",
                   fontSize: 11,
-                  fontWeight: 600,
-                  cursor: "pointer",
                   whiteSpace: "nowrap",
                   flexShrink: 0,
+                  gap: 6,
                 }}
               >
                 <span
@@ -506,7 +492,6 @@ export default function Editor({
                     height: 8,
                     borderRadius: "50%",
                     background: t.theme.accent,
-                    boxShadow: `0 0 6px ${t.theme.glow}`,
                   }}
                 />
                 {t.short}

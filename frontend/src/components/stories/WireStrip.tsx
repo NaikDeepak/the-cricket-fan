@@ -22,63 +22,50 @@ export default function WireStrip({ items }: { items: WireItem[] }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "var(--space-md)",
+          marginBottom: "var(--space-sm)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span
             style={{
-              display: "inline-block",
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              backgroundColor: "#0284c7",
-              boxShadow: "0 0 0 3px rgba(2, 132, 199, 0.15)",
-            }}
-          />
-          <p
-            style={{
-              fontFamily: "var(--font-sans)",
               fontSize: 12,
               fontWeight: 700,
-              letterSpacing: "0.06em",
+              letterSpacing: "0.04em",
               textTransform: "uppercase",
-              color: "#0369a1",
-              margin: 0,
+              color: "var(--fg)",
             }}
           >
-            The Wire — Live Feed Updates
-          </p>
+            The Wire
+          </span>
+          <span style={{ color: "var(--fg-muted)", fontSize: 12 }}>·</span>
+          <span style={{ fontSize: 12, color: "var(--fg-muted)" }}>Live Updates</span>
         </div>
         <span
           style={{
-            fontFamily: "var(--font-sans)",
             fontSize: 11,
-            fontWeight: 600,
-            color: "#94a3b8",
-            textTransform: "uppercase",
-            letterSpacing: "0.04em",
+            fontWeight: 500,
+            color: "var(--fg-muted)",
           }}
         >
-          Live Matchday Feed
+          Matchday Dispatch
         </span>
       </div>
 
       <div
-        className="ds-tag-scroll"
         style={{
           display: "flex",
           gap: "var(--space-md)",
           overflowX: "auto",
-          paddingBottom: "var(--space-sm)",
+          paddingBottom: "var(--space-xs)",
+          scrollbarWidth: "none",
         }}
       >
         {items.map((item) => (
           <motion.div
             key={item.id}
-            style={{ flex: "0 0 auto", minWidth: 320, maxWidth: 420 }}
+            style={{ flex: "0 0 auto", minWidth: 300, maxWidth: 380 }}
             variants={{
-              hidden: { opacity: 0, x: 20 },
+              hidden: { opacity: 0, x: 12 },
               visible: { opacity: 1, x: 0 },
             }}
             whileHover={
@@ -91,11 +78,12 @@ export default function WireStrip({ items }: { items: WireItem[] }) {
             }
           >
             <div
-              className="ds-editorial-card"
+              className="ds-card"
               style={{
-                padding: "16px 20px",
-                borderLeft: "3px solid #0284c7",
+                padding: "16px 18px",
                 background: "#ffffff",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border)",
               }}
             >
               <div
@@ -108,42 +96,37 @@ export default function WireStrip({ items }: { items: WireItem[] }) {
               >
                 {item.category && (
                   <span
+                    className="ds-badge"
                     style={{
-                      fontFamily: "var(--font-sans)",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: "0.04em",
-                      textTransform: "uppercase",
-                      padding: "2px 8px",
-                      borderRadius: 999,
-                      background: "#f0f9ff",
-                      color: "#0369a1",
-                      border: "1px solid #e0f2fe",
+                      background: "var(--surface-tertiary)",
+                      color: "var(--fg-secondary)",
                     }}
                   >
                     {item.category}
                   </span>
                 )}
-                <span
-                  className="text-ledger-mono"
-                  style={{
-                    fontSize: 11,
-                    color: "#94a3b8",
-                    marginLeft: "auto",
-                  }}
-                >
-                  {formatDateStamp(item.posted_at)}
-                </span>
+                {item.posted_at && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "var(--fg-muted)",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {formatDateStamp(item.posted_at)}
+                  </span>
+                )}
               </div>
+
               <p
                 style={{
                   margin: 0,
-                  fontSize: 14,
-                  lineHeight: 1.55,
-                  color: "#334155",
+                  fontSize: 13,
+                  color: "var(--fg)",
+                  lineHeight: 1.5,
                 }}
               >
-                {item.text.slice(0, 140)}
+                {item.text}
               </p>
             </div>
           </motion.div>

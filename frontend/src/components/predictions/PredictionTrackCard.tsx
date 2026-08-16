@@ -10,12 +10,16 @@ import PredictionShareModal from "./PredictionShareModal";
 
 const OUTCOME_DISPLAY: Record<
   Prediction["outcome"],
-  { label: string; color: string; bg: string }
+  { label: string; className: string; style?: React.CSSProperties }
 > = {
-  pending: { label: "Upcoming", color: "var(--fg-muted)", bg: "var(--surface)" },
-  correct: { label: "Correct", color: "var(--success)", bg: "var(--success-tint)" },
-  incorrect: { label: "Incorrect", color: "var(--warning)", bg: "var(--warning-tint)" },
-  void: { label: "No Result", color: "var(--fg-muted)", bg: "var(--surface)" },
+  pending: { label: "Upcoming", className: "ds-badge-neutral" },
+  correct: { label: "Hit · Correct", className: "ds-badge-success" },
+  incorrect: {
+    label: "Miss · Incorrect",
+    className: "ds-badge",
+    style: { color: "var(--warning)", background: "var(--warning-tint)", border: "1px solid rgba(217, 119, 6, 0.2)" },
+  },
+  void: { label: "No Result", className: "ds-badge-neutral" },
 };
 
 export default function PredictionTrackCard({ prediction }: { prediction: Prediction }) {
@@ -26,65 +30,45 @@ export default function PredictionTrackCard({ prediction }: { prediction: Predic
       ? prediction.prob_team_a
       : 1 - prediction.prob_team_a) * 100
   );
-  const outcomeInfo = OUTCOME_DISPLAY[prediction.outcome];
+  const outcomeInfo = OUTCOME_DISPLAY[prediction.outcome] || OUTCOME_DISPLAY.pending;
 
   return (
     <>
       <motion.div
-        className="ds-bento-card"
+        className="ds-card"
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: "var(--space-sm)",
-          padding: "22px 24px",
+          gap: 10,
+          padding: "16px 20px",
+          background: "#ffffff",
         }}
-        whileHover={isReduced ? undefined : { y: -3 }}
+        whileHover={isReduced ? undefined : { y: -2 }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "var(--text-xs)",
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              color: "var(--fg-muted)",
-            }}
-          >
+          <span className="text-micro" style={{ color: "var(--fg-muted)" }}>
             {prediction.league}
           </span>
-          <span
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "var(--text-xs)",
-              fontWeight: 700,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              color: outcomeInfo.color,
-              background: outcomeInfo.bg,
-              padding: "3px 10px",
-              borderRadius: 999,
-            }}
-          >
+          <span className={`ds-badge ${outcomeInfo.className}`} style={outcomeInfo.style}>
             {outcomeInfo.label}
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-          <TeamBadge team={prediction.predicted_winner} size={32} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <TeamBadge team={prediction.predicted_winner} size={28} />
           <div>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: "var(--text-base)", color: "var(--fg)" }}>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "var(--fg)" }}>
               {prediction.predicted_winner} · {pct}%
             </p>
-            <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--fg-muted)" }}>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--fg-muted)" }}>
               {prediction.team_a} vs {prediction.team_b} · {prediction.venue}
             </p>
           </div>
         </div>
 
         {prediction.actual_winner && (
-          <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--fg)" }}>
-            Result: {prediction.actual_winner}
+          <p style={{ margin: 0, fontSize: 13, color: "var(--fg)" }}>
+            Winner: <strong>{prediction.actual_winner}</strong>
             {prediction.result_summary ? ` — ${prediction.result_summary}` : ""}
           </p>
         )}
@@ -94,31 +78,25 @@ export default function PredictionTrackCard({ prediction }: { prediction: Predic
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginTop: "var(--space-xs)",
+            marginTop: 4,
+            paddingTop: 8,
+            borderTop: "1px solid var(--border)",
           }}
         >
-          <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--fg-muted)" }}>
+          <span style={{ fontSize: 11, color: "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }}>
             {formatDateStamp(prediction.created_at)}
-          </p>
+          </span>
           <button
             type="button"
             onClick={() => setShowShare(true)}
-            className="ds-nav-link"
+            className="ds-btn ds-btn-secondary"
             style={{
-              border: "1px solid var(--border)",
-              borderRadius: 999,
-              padding: "4px 12px",
-              fontSize: "var(--text-xs)",
-              fontWeight: 600,
-              background: "var(--surface)",
-              color: "var(--fg)",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
+              padding: "4px 10px",
+              fontSize: 11,
+              borderRadius: 4,
             }}
           >
-            ↗ Share Card
+            Share Card
           </button>
         </div>
       </motion.div>

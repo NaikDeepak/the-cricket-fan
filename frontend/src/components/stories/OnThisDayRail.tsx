@@ -52,55 +52,42 @@ export default function OnThisDayRail({ stories }: { stories: Story[] }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "var(--space-md)",
+          marginBottom: "var(--space-sm)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span
             style={{
-              display: "inline-block",
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              backgroundColor: "#d97706",
-              boxShadow: "0 0 0 3px rgba(217, 119, 6, 0.15)",
-            }}
-          />
-          <p
-            style={{
-              fontFamily: "var(--font-sans)",
               fontSize: 12,
               fontWeight: 700,
-              letterSpacing: "0.06em",
+              letterSpacing: "0.04em",
               textTransform: "uppercase",
-              color: "#b45309",
-              margin: 0,
+              color: "var(--fg)",
             }}
           >
-            On This Day in Cricket History
-          </p>
+            On This Day
+          </span>
+          <span style={{ color: "var(--fg-muted)", fontSize: 12 }}>·</span>
+          <span style={{ fontSize: 12, color: "var(--fg-muted)" }}>Cricket Milestones</span>
         </div>
         <span
           style={{
-            fontFamily: "var(--font-sans)",
             fontSize: 11,
-            fontWeight: 600,
-            color: "#94a3b8",
-            textTransform: "uppercase",
-            letterSpacing: "0.04em",
+            fontWeight: 500,
+            color: "var(--fg-muted)",
           }}
         >
-          Daily Nostalgia &amp; Milestones
+          Daily Archive
         </span>
       </div>
 
       <div
-        className="ds-tag-scroll"
         style={{
           display: "flex",
           gap: "var(--space-md)",
           overflowX: "auto",
-          paddingBottom: "var(--space-sm)",
+          paddingBottom: "var(--space-xs)",
+          scrollbarWidth: "none",
         }}
       >
         {stories.map((s) => {
@@ -114,9 +101,9 @@ export default function OnThisDayRail({ stories }: { stories: Story[] }) {
           return (
             <motion.div
               key={s.content_key}
-              style={{ flex: "0 0 auto", minWidth: 340, maxWidth: 440 }}
+              style={{ flex: "0 0 auto", minWidth: 320, maxWidth: 420 }}
               variants={{
-                hidden: { opacity: 0, x: 20 },
+                hidden: { opacity: 0, x: 12 },
                 visible: { opacity: 1, x: 0 },
               }}
               whileHover={
@@ -129,12 +116,13 @@ export default function OnThisDayRail({ stories }: { stories: Story[] }) {
               }
             >
               <div
-                className="ds-editorial-card"
+                className="ds-card"
                 style={{
                   height: "100%",
-                  padding: "20px 22px",
-                  background: isBirthday ? "#fffafc" : "#ffffff",
-                  borderLeft: isBirthday ? "3px solid #ec4899" : "3px solid #f59e0b",
+                  padding: "18px 20px",
+                  background: "#ffffff",
+                  borderRadius: "var(--radius-lg)",
+                  border: "1px solid var(--border)",
                 }}
               >
                 <div
@@ -146,17 +134,11 @@ export default function OnThisDayRail({ stories }: { stories: Story[] }) {
                   }}
                 >
                   <span
+                    className="ds-badge"
                     style={{
-                      fontFamily: "var(--font-sans)",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      letterSpacing: "0.04em",
                       color: isBirthday ? "#be185d" : "#b45309",
                       background: isBirthday ? "#fdf2f8" : "#fef3c7",
-                      border: `1px solid ${isBirthday ? "#fbcfe8" : "#fde68a"}`,
-                      padding: "3px 10px",
-                      borderRadius: 999,
-                      textTransform: "uppercase",
+                      border: `1px solid ${isBirthday ? "rgba(236,72,153,0.2)" : "rgba(245,158,11,0.2)"}`,
                     }}
                   >
                     {isBirthday ? "Anniversary · " : "On This Day · "}
@@ -168,69 +150,97 @@ export default function OnThisDayRail({ stories }: { stories: Story[] }) {
                     type="button"
                     onClick={(e) => handleDownloadShareCard(e, s)}
                     disabled={isExporting}
+                    className="ds-btn ds-btn-secondary"
                     style={{
-                      fontFamily: "var(--font-sans)",
                       fontSize: 11,
-                      fontWeight: 600,
-                      padding: "4px 10px",
-                      cursor: "pointer",
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 999,
-                      color: "#475569",
-                      transition: "all 0.15s ease",
+                      padding: "3px 8px",
+                      borderRadius: 4,
                     }}
                   >
-                    {isExporting ? "Exporting…" : "Share Card ↗"}
+                    {isExporting ? "Exporting…" : "Share Card"}
                   </button>
                 </div>
 
-                <Link
-                  href={`/stories/${encodeURIComponent(s.content_key)}`}
-                  style={{ textDecoration: "none", color: "inherit", display: "block" }}
-                >
-                  <h4
-                    className="text-editorial-serif"
-                    style={{
-                      margin: "0 0 6px 0",
-                      fontSize: 17,
-                      fontWeight: 700,
-                      color: "#0f172a",
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {displayTitle}
-                  </h4>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 13.5,
-                      lineHeight: 1.55,
-                      color: "#475569",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {s.summary}
-                  </p>
-                </Link>
-
-                {/* Offscreen element for high-res PNG export */}
-                <div
+                <h4
                   style={{
-                    position: "fixed",
-                    left: -9999,
-                    top: -9999,
-                    width: 1080,
-                    height: 1350,
-                    pointerEvents: "none",
+                    margin: "0 0 8px 0",
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: "var(--fg)",
+                    lineHeight: 1.35,
+                    letterSpacing: "-0.01em",
                   }}
                 >
-                  <div ref={(el) => { cardRefs.current[s.content_key] = el; }}>
-                    <OnThisDayCardImg story={s} />
-                  </div>
+                  {displayTitle}
+                </h4>
+
+                <p
+                  style={{
+                    margin: "0 0 12px 0",
+                    fontSize: 13,
+                    color: "var(--fg-secondary)",
+                    lineHeight: 1.5,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {s.summary || s.segments?.[0]}
+                </p>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    paddingTop: 10,
+                    borderTop: "1px solid var(--border)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "var(--fg-muted)",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {s.source_type}
+                  </span>
+                  <Link
+                    href={`/stories/${s.content_key}`}
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "var(--apple-blue)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Read Story →
+                  </Link>
+                </div>
+              </div>
+
+              {/* Hidden Canvas for Card Generation */}
+              <div
+                style={{
+                  position: "fixed",
+                  left: -9999,
+                  top: -9999,
+                  visibility: "hidden",
+                }}
+              >
+                <div
+                  ref={(el) => {
+                    cardRefs.current[s.content_key] = el;
+                  }}
+                >
+                  <OnThisDayCardImg
+                    story={s}
+                    dayStr={dayStr}
+                    monthStr={monthStr}
+                    isBirthday={isBirthday}
+                  />
                 </div>
               </div>
             </motion.div>

@@ -4,8 +4,9 @@ import StoriesPage from "../page";
 import { storiesApi } from "@/lib/storiesApi";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/stories",
 }));
 
 const story = (key: string, title: string) => ({
@@ -59,7 +60,7 @@ describe("Vault low-count placeholder", () => {
     await screen.findByText("Story A");
     expect(screen.getByText("All Sources")).toBeInTheDocument();
     expect(screen.getByText("Wikipedia Archive")).toBeInTheDocument();
-    expect(screen.getByText("r/Cricket Lore")).toBeInTheDocument();
+    expect(screen.getAllByText("r/Cricket Lore").length).toBeGreaterThan(0);
     expect(screen.getByText("Dressing Room & Memoirs")).toBeInTheDocument();
   });
 });

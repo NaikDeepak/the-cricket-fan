@@ -14,49 +14,43 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const SOURCE_BADGES: Record<
   string,
-  { label: string; bg: string; color: string; border: string; accent: string }
+  { label: string; bg: string; color: string; border: string }
 > = {
   reddit: {
     label: "r/Cricket Lore",
     bg: "#fff7ed",
     color: "#c2410c",
-    border: "#ffedd5",
-    accent: "#ea580c",
+    border: "rgba(194, 65, 12, 0.2)",
   },
   quora: {
     label: "Quora Banter",
     bg: "#fef2f2",
     color: "#b91c1c",
-    border: "#fee2e2",
-    accent: "#dc2626",
+    border: "rgba(185, 28, 28, 0.2)",
   },
   memoir: {
     label: "Dressing Room Memoir",
     bg: "#fefce8",
     color: "#a16207",
-    border: "#fef08a",
-    accent: "#ca8a04",
+    border: "rgba(161, 98, 7, 0.2)",
   },
   interview: {
-    label: "Player Interview",
+    label: "Interview",
     bg: "#f0fdfa",
     color: "#0f766e",
-    border: "#ccfbf1",
-    accent: "#0d9488",
+    border: "rgba(15, 118, 110, 0.2)",
   },
   cricsheet: {
     label: "Match Thriller",
     bg: "#f0fdf4",
     color: "#15803d",
-    border: "#dcfce7",
-    accent: "#16a34a",
+    border: "rgba(21, 128, 61, 0.2)",
   },
   wikipedia: {
-    label: "Wikipedia Archive",
+    label: "Archive",
     bg: "#eff6ff",
     color: "#1d4ed8",
-    border: "#dbeafe",
-    accent: "#2563eb",
+    border: "rgba(29, 78, 216, 0.2)",
   },
 };
 
@@ -86,42 +80,28 @@ export default function StoryCard({
   if (featured) {
     return (
       <motion.div
-        className="ds-editorial-card"
+        className="ds-card"
         style={{
           height: "100%",
           display: "flex",
           flexDirection: "column",
           position: "relative",
-          overflow: "hidden",
-          background: "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)",
+          background: "#09090b",
           color: "#ffffff",
-          borderColor: "#334155",
-          borderRadius: 20,
-          padding: 28,
-          boxShadow: "0 12px 32px rgba(15, 23, 42, 0.16)",
-          minHeight: 320,
+          borderColor: "rgba(255, 255, 255, 0.12)",
+          borderRadius: "var(--radius-lg)",
+          padding: 24,
+          minHeight: 300,
         }}
         whileHover={
           isReduced
             ? undefined
             : {
-                y: -3,
+                y: -2,
                 transition: SPRING_PRESET,
               }
         }
       >
-        {/* Subtle Gold Magazine Accent */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 3,
-            background: "linear-gradient(90deg, #d97706 0%, #f59e0b 50%, #3b82f6 100%)",
-          }}
-        />
-
         <div
           style={{
             display: "flex",
@@ -130,46 +110,36 @@ export default function StoryCard({
             marginBottom: "var(--space-md)",
           }}
         >
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             <span
+              className="ds-badge"
               style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: 10,
-                fontWeight: 800,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                background: "rgba(217, 119, 6, 0.2)",
-                color: "#fbbf24",
-                border: "1px solid rgba(251, 191, 36, 0.3)",
-                padding: "3px 10px",
-                borderRadius: 999,
+                background: "rgba(255, 255, 255, 0.12)",
+                color: "#ffffff",
+                border: "1px solid rgba(255, 255, 255, 0.16)",
               }}
             >
               FEATURED STORY
             </span>
             <span
-              className="ds-source-pill"
+              className="ds-badge"
               style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                color: "#e2e8f0",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
+                background: "rgba(255, 255, 255, 0.06)",
+                color: "#d4d4d8",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
               }}
             >
-              <span
-                className="ds-source-dot"
-                style={{ backgroundColor: sourceInfo.accent }}
-              />
-              Source · {sourceInfo.label}
+              {sourceInfo.label}
             </span>
           </div>
 
           {story.year && (
             <span
-              className="text-ledger-mono"
               style={{
                 fontSize: 12,
                 fontWeight: 600,
-                color: "#94a3b8",
+                color: "#a1a1aa",
+                fontVariantNumeric: "tabular-nums",
               }}
             >
               {story.year}
@@ -178,14 +148,13 @@ export default function StoryCard({
         </div>
 
         <h3
-          className="text-editorial-serif"
           style={{
-            fontSize: "clamp(22px, 2.5vw, 28px)",
+            fontSize: "clamp(20px, 2.2vw, 26px)",
             fontWeight: 700,
             color: "#ffffff",
             margin: "0 0 var(--space-sm) 0",
-            lineHeight: 1.22,
-            letterSpacing: "-0.01em",
+            lineHeight: 1.25,
+            letterSpacing: "-0.02em",
           }}
         >
           {displayTitle}
@@ -193,9 +162,9 @@ export default function StoryCard({
 
         <p
           style={{
-            fontSize: 15,
-            lineHeight: 1.6,
-            color: "#cbd5e1",
+            fontSize: 14,
+            lineHeight: 1.55,
+            color: "#a1a1aa",
             margin: "0 0 var(--space-lg) 0",
             display: "-webkit-box",
             WebkitLineClamp: 3,
@@ -218,13 +187,12 @@ export default function StoryCard({
         >
           <span
             style={{
-              fontFamily: "var(--font-sans)",
               fontSize: 13,
               fontWeight: 600,
-              color: "#fbbf24",
+              color: "#ffffff",
               display: "inline-flex",
               alignItems: "center",
-              gap: 6,
+              gap: 4,
             }}
           >
             Read Story →
@@ -233,7 +201,7 @@ export default function StoryCard({
             <span
               style={{
                 fontSize: 12,
-                color: "#94a3b8",
+                color: "#a1a1aa",
                 fontWeight: 500,
               }}
             >
@@ -247,19 +215,20 @@ export default function StoryCard({
 
   return (
     <motion.div
-      className="ds-bento-card"
+      className="ds-card"
       style={{
         height: "100%",
         display: "flex",
         flexDirection: "column",
         background: "#ffffff",
-        padding: "22px 24px",
+        padding: "20px 22px",
+        borderRadius: "var(--radius-lg)",
       }}
       whileHover={
         isReduced
           ? undefined
           : {
-              y: -4,
+              y: -2,
               transition: SPRING_PRESET,
             }
       }
@@ -269,35 +238,25 @@ export default function StoryCard({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 12,
+          marginBottom: 10,
         }}
       >
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <span
-            className="ds-source-pill"
+            className="ds-badge"
             style={{
               background: sourceInfo.bg,
               color: sourceInfo.color,
-              borderColor: sourceInfo.border,
+              border: `1px solid ${sourceInfo.border}`,
             }}
           >
-            <span
-              className="ds-source-dot"
-              style={{ backgroundColor: sourceInfo.accent }}
-            />
-            Source · {sourceInfo.label}
+            {sourceInfo.label}
           </span>
           <span
+            className="ds-badge"
             style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: 10.5,
-              fontWeight: 700,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              padding: "3px 9px",
-              borderRadius: 999,
-              background: "#f1f5f9",
-              color: "#475569",
+              background: "var(--surface-tertiary)",
+              color: "var(--fg-secondary)",
             }}
           >
             {CATEGORY_LABEL[story.category] ?? story.category}
@@ -305,11 +264,11 @@ export default function StoryCard({
         </div>
         {story.year && (
           <span
-            className="text-ledger-mono"
             style={{
               fontSize: 12,
-              fontWeight: 600,
-              color: "#94a3b8",
+              fontWeight: 500,
+              color: "var(--fg-muted)",
+              fontVariantNumeric: "tabular-nums",
             }}
           >
             {story.year}
@@ -318,13 +277,12 @@ export default function StoryCard({
       </div>
 
       <h3
-        className="text-editorial-serif"
         style={{
           margin: "0 0 8px 0",
-          color: "#0f172a",
-          fontSize: 19,
-          fontWeight: 700,
-          lineHeight: 1.28,
+          color: "var(--fg)",
+          fontSize: 17,
+          fontWeight: 600,
+          lineHeight: 1.32,
           letterSpacing: "-0.01em",
         }}
       >
@@ -333,10 +291,10 @@ export default function StoryCard({
 
       <p
         style={{
-          margin: "0 0 16px 0",
-          fontSize: 14,
-          lineHeight: 1.55,
-          color: "#475569",
+          margin: "0 0 14px 0",
+          fontSize: 13,
+          lineHeight: 1.5,
+          color: "var(--fg-secondary)",
           display: "-webkit-box",
           WebkitLineClamp: 2,
           WebkitBoxOrient: "vertical",
@@ -347,18 +305,15 @@ export default function StoryCard({
       </p>
 
       {story.tags && story.tags.length > 0 && (
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           {story.tags.slice(0, 3).map((t) => (
             <span
               key={t}
+              className="ds-badge"
               style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: "#64748b",
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                padding: "2px 8px",
-                borderRadius: 6,
+                background: "var(--surface-tertiary)",
+                color: "var(--fg-muted)",
+                fontWeight: 500,
               }}
             >
               #{t}
@@ -370,8 +325,8 @@ export default function StoryCard({
       <div
         style={{
           marginTop: "auto",
-          paddingTop: 12,
-          borderTop: "1px solid #f1f5f9",
+          paddingTop: 10,
+          borderTop: "1px solid var(--border)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -379,10 +334,9 @@ export default function StoryCard({
       >
         <span
           style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: 12.5,
-            fontWeight: 700,
-            color: "#0f172a",
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--fg)",
             display: "inline-flex",
             alignItems: "center",
             gap: 4,
@@ -394,8 +348,8 @@ export default function StoryCard({
           <span
             style={{
               fontSize: 12,
-              color: "#94a3b8",
-              fontWeight: 600,
+              color: "var(--fg-muted)",
+              fontWeight: 500,
             }}
           >
             {story.teams.slice(0, 2).join(" vs ")}

@@ -40,11 +40,11 @@ function fmtDate(iso: string) {
 
 // ─── Shared UI Components ────────────────────────────────────────────────────
 
-function Crest({ team, size = 26 }: { team: string; size?: number }) {
+function Crest({ team, size = 24 }: { team: string; size?: number }) {
   const logo = teamLogoPath(team);
   if (logo) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={logo} alt="" className="team-crest" style={{ width: size, height: size }} />;
+    return <img src={logo} alt="" className="team-crest" style={{ width: size, height: size, borderRadius: 4 }} />;
   }
   const theme = getTeamTheme(team);
   return (
@@ -53,6 +53,7 @@ function Crest({ team, size = 26 }: { team: string; size?: number }) {
       style={{
         width: size,
         height: size,
+        borderRadius: 4,
         background: theme.primary,
         fontSize: size * 0.42,
       }}
@@ -82,10 +83,10 @@ function AccuracyRing({
         padding: "var(--space-md)",
       }}
     >
-      <div style={{ position: "relative", width: 110, height: 110, flexShrink: 0 }}>
+      <div style={{ position: "relative", width: 96, height: 96, flexShrink: 0 }}>
         <svg
-          width="110"
-          height="110"
+          width="96"
+          height="96"
           viewBox="0 0 110 110"
           style={{ transform: "rotate(-90deg)" }}
         >
@@ -101,15 +102,13 @@ function AccuracyRing({
             cx="55"
             cy="55"
             r={RADIUS}
-            stroke={accuracyPct >= 60 ? "var(--success)" : "var(--wire-red)"}
+            stroke="#000000"
             strokeWidth="8"
+            fill="transparent"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={offset}
             strokeLinecap="round"
-            fill="transparent"
-            style={{
-              transition: "stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-            }}
+            style={{ transition: "stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1)" }}
           />
         </svg>
         <div
@@ -126,42 +125,56 @@ function AccuracyRing({
             style={{
               fontSize: 22,
               fontWeight: 800,
-              letterSpacing: "-0.02em",
               color: "var(--fg)",
+              lineHeight: 1,
+              fontVariantNumeric: "tabular-nums",
             }}
           >
-            {pct(accuracyPct)}
+            {accuracyPct}%
           </span>
-          <span className="text-micro" style={{ fontSize: 9 }}>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: "var(--fg-muted)",
+              marginTop: 2,
+              letterSpacing: "0.02em",
+            }}
+          >
             ACCURACY
           </span>
         </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <span className="text-micro">SEASON PERFORMANCE</span>
         <span
           style={{
-            fontSize: "var(--text-lg)",
-            fontWeight: 700,
-            color: "var(--fg)",
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--fg-muted)",
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
           }}
         >
+          Backtest Performance
+        </span>
+        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--fg)" }}>
           {correct} of {total} Matches Correct
-        </span>
-        <span className="text-caption">
-          Temporal holdout with zero feature leakage. Evaluated strictly against
-          pre-match history.
-        </span>
+        </div>
+        <p className="text-caption" style={{ margin: 0, fontSize: 13 }}>
+          Evaluated strictly chronologically with point-in-time ELO & rolling form without lookahead leakage.
+        </p>
       </div>
     </div>
   );
 }
 
-// ─── Main Backtest Page Component ────────────────────────────────────────────
+// ─── Main Page Component ─────────────────────────────────────────────────────
 
-export default function BacktestPage() {
+export default function BacktestStudioPage() {
   const router = useRouter();
+
+  // State
   const [options, setOptions] = useState<BacktestOptions | null>(null);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [optionsError, setOptionsError] = useState<string | null>(null);
@@ -175,122 +188,127 @@ export default function BacktestPage() {
 
   const [filterOutcome, setFilterOutcome] = useState<"all" | "correct" | "incorrect">("all");
   const [searchTerm, setSearchTerm] = useState("");
-
   const [sharingGame, setSharingGame] = useState<BacktestGame | null>(null);
 
-  // Open in Composer studio with match draft pre-created
-  const handleOpenComposer = useCallback(
-    async (game: BacktestGame) => {
-      try {
-        const probA = Math.round(game.prob_team_a * 100);
-        const probB = 100 - probA;
-        const higherProb = Math.max(probA, probB);
-        const isUpcoming = game.status === "upcoming" || game.actual_winner === null || game.actual_winner === undefined;
-
-        const draft = await composerApi.createDraft({
-          source: "bot",
-          category: "prediction",
-          card_type: "prediction",
-          text: `${selectedLeague || "Cricket"}: ${game.team_a} (${probA}%) vs ${game.team_b} (${probB}%)\nVenue: ${game.venue}\nModel Pick: ${game.predicted_winner} with ${higherProb}% win probability.\n\n#Cricket #TheCricketFan #${game.team_a.replace(/[^a-zA-Z0-9]/g, "")} #${game.team_b.replace(/[^a-zA-Z0-9]/g, "")}`,
-          card_meta: {
-            team_a: game.team_a,
-            team_b: game.team_b,
-            prob_a: game.prob_team_a,
-            venue: game.venue,
-            league: selectedLeague,
-            phase: isUpcoming ? "pre_match" : "completed",
-            score_summary: isUpcoming ? "Match Scheduled" : `Winner: ${game.actual_winner}`,
-            reasons: ["Form Advantage", "Venue Conditions", "Matchup Metrics"],
-            predicted_winner: game.predicted_winner,
-            date: game.date,
-          },
-        });
-        router.push(`/composer?draft_id=${draft.id}`);
-      } catch (err) {
-        console.error("Failed to create draft from backtest match:", err);
-      }
-    },
-    [selectedLeague, router]
-  );
-
-  // Load available options and ingestion telemetry on mount
+  // 1. Fetch available backtest options on mount
   useEffect(() => {
-    let active = true;
-    composerApi
-      .backtestOptions()
-      .then((opts) => {
-        if (!active) return;
-        setOptions(opts);
-        if (opts.leagues.length > 0) {
-          const defaultLeague = opts.leagues.includes("IPL") ? "IPL" : opts.leagues[0];
-          setSelectedLeague(defaultLeague);
-          const seasons = opts.seasons_by_league[defaultLeague] || [];
+    let cancelled = false;
+    async function fetchOpts() {
+      setOptionsLoading(true);
+      setOptionsError(null);
+      try {
+        const data = await composerApi.backtestOptions();
+        if (cancelled) return;
+        setOptions(data);
+
+        // Auto-select first available league & its latest season
+        if (data.leagues.length > 0) {
+          const defaultLg = data.leagues.includes("IPL") ? "IPL" : data.leagues[0];
+          setSelectedLeague(defaultLg);
+          const seasons = data.seasons_by_league[defaultLg] || [];
           if (seasons.length > 0) {
             setSelectedSeason(seasons[0]);
           }
         }
-        setOptionsError(null);
-      })
-      .catch((err) => {
-        if (!active) return;
+      } catch (err: unknown) {
+        if (cancelled) return;
         setOptionsError(err instanceof Error ? err.message : "Failed to load backtest options");
-      })
-      .finally(() => {
-        if (active) setOptionsLoading(false);
-      });
+      } finally {
+        if (!cancelled) setOptionsLoading(false);
+      }
+    }
+    fetchOpts();
     return () => {
-      active = false;
+      cancelled = true;
     };
   }, []);
 
   // Update selected season when league changes
   const handleLeagueChange = (league: string) => {
     setSelectedLeague(league);
-    if (options) {
-      const seasons = options.seasons_by_league[league] || [];
-      if (seasons.length > 0) {
-        setSelectedSeason(seasons[0]);
-      } else {
-        setSelectedSeason("");
-      }
+    if (options && options.seasons_by_league[league]) {
+      const seasons = options.seasons_by_league[league];
+      setSelectedSeason(seasons.length > 0 ? seasons[0] : "");
+    } else {
+      setSelectedSeason("");
     }
+    setResult(null);
   };
 
-  // Run the backtest
+  // 2. Trigger backtest simulation
   const handleRunBacktest = useCallback(async () => {
     if (!selectedLeague || !selectedSeason) return;
     setRunning(true);
     setRunError(null);
+    setResult(null);
+
     try {
       const res = await composerApi.runBacktest(selectedLeague, selectedSeason);
       setResult(res);
-    } catch (err) {
-      setRunError(err instanceof Error ? err.message : "Failed to run backtest");
+    } catch (err: unknown) {
+      setRunError(err instanceof Error ? err.message : "Backtest run failed");
     } finally {
       setRunning(false);
     }
   }, [selectedLeague, selectedSeason]);
 
-  // Filtered games list
+  // 3. Filtered games list
   const filteredGames = useMemo(() => {
-    if (!result || !result.games) return [];
+    if (!result) return [];
     return result.games.filter((g) => {
       if (filterOutcome === "correct" && !g.correct) return false;
       if (filterOutcome === "incorrect" && g.correct) return false;
-      if (searchTerm.trim()) {
-        const term = searchTerm.toLowerCase();
-        const matchesTeamA = g.team_a.toLowerCase().includes(term);
-        const matchesTeamB = g.team_b.toLowerCase().includes(term);
-        const matchesVenue = g.venue.toLowerCase().includes(term);
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        const matchesTeamA = g.team_a.toLowerCase().includes(q);
+        const matchesTeamB = g.team_b.toLowerCase().includes(q);
+        const matchesVenue = g.venue.toLowerCase().includes(q);
         if (!matchesTeamA && !matchesTeamB && !matchesVenue) return false;
       }
       return true;
     });
   }, [result, filterOutcome, searchTerm]);
 
+  // 4. Open in Press Box Studio Composer handler
+  const handleOpenComposer = useCallback(
+    async (game: BacktestGame) => {
+      const probA = Math.round(game.prob_team_a * 100);
+      const probB = 100 - probA;
+      const isUpcoming = game.status === "upcoming" || game.actual_winner === null || game.actual_winner === undefined;
+
+      const draftPayload = {
+        source: "bot" as const,
+        category: "prediction",
+        card_type: "prediction" as const,
+        text: `${result?.league || selectedLeague}: ${game.team_a} (${probA}%) vs ${game.team_b} (${probB}%)\nVenue: ${game.venue}\nModel Pick: ${game.predicted_winner} (${Math.max(probA, probB)}% win prob)\n\n#Cricket #TheCricketFan #${game.team_a.replace(/[^a-zA-Z0-9]/g, "")} #${game.team_b.replace(/[^a-zA-Z0-9]/g, "")}`,
+        card_meta: {
+          team_a: game.team_a,
+          team_b: game.team_b,
+          prob_a: game.prob_team_a,
+          venue: game.venue,
+          league: result?.league || selectedLeague,
+          phase: isUpcoming ? "pre_match" : "completed",
+          score_summary: isUpcoming ? "Match Scheduled" : `Winner: ${game.actual_winner}`,
+          reasons: ["Form Advantage", "Venue Conditions", "Matchup Metrics"],
+          predicted_winner: game.predicted_winner,
+          date: game.date,
+        },
+      };
+
+      try {
+        const created = await composerApi.createDraft(draftPayload);
+        router.push(`/composer?draft_id=${created.id}`);
+      } catch {
+        sessionStorage.setItem("tcf_handoff_draft", JSON.stringify(draftPayload));
+        router.push("/composer");
+      }
+    },
+    [result?.league, selectedLeague, router]
+  );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
-      {/* ── Page Header & Data Ingestion Indicator ──────────────────────── */}
+      {/* ── Page Header ─────────────────────────────────────────────────── */}
       <div
         style={{
           display: "flex",
@@ -301,75 +319,50 @@ export default function BacktestPage() {
         }}
       >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-xs)", marginBottom: 4 }}>
-            <span className="text-micro" style={{ color: "var(--wire-red)" }}>
-              HISTORICAL SIMULATION
-            </span>
-          </div>
+          <span className="text-micro">Historical Simulation</span>
           <h1
             style={{
-              fontSize: "var(--text-2xl)",
-              fontWeight: 800,
+              fontSize: 24,
+              fontWeight: 700,
               letterSpacing: "-0.02em",
-              margin: 0,
+              margin: "4px 0 0 0",
               color: "var(--fg)",
             }}
           >
             Model Backtest Engine
           </h1>
           <p className="text-caption" style={{ margin: "4px 0 0 0", maxWidth: 640 }}>
-            Benchmark committed model artifacts against real match outcomes for any historical season.
-            Strict chronological leakage guard ensures zero lookahead bias.
+            Benchmark committed model artifacts against real match outcomes across 28 domestic & international leagues with zero lookahead leakage.
           </p>
         </div>
 
         {/* Ingestion Telemetry Live Card */}
         {options && (
           <div
-            className="card-container"
+            className="ds-card"
             style={{
-              padding: "10px 16px",
+              padding: "10px 14px",
               background: "#ffffff",
-              borderRadius: "16px",
-              border: "1px solid var(--border)",
               display: "flex",
               flexDirection: "column",
-              gap: 4,
-              minWidth: 260,
+              gap: 2,
+              minWidth: 240,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: "var(--success)",
-                  boxShadow: "0 0 8px var(--success)",
-                }}
-              />
-              <span className="text-micro" style={{ color: "var(--fg)", fontWeight: 700 }}>
-                INGESTION STORE READY
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span className="ds-badge ds-badge-success">INGESTION STORE READY</span>
+              <span style={{ fontSize: 11, color: "var(--fg-muted)" }}>
+                {options.total_matches.toLocaleString()} matches
               </span>
             </div>
-            <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-muted)" }}>
-              <strong style={{ color: "var(--fg)" }}>{options.total_matches.toLocaleString()}</strong> matches ingested
-              {options.earliest_date && options.latest_date && (
-                <span> ({options.earliest_date.split("-")[0]} – {options.latest_date.split("-")[0]})</span>
-              )}
-            </div>
             {options.last_match && (
-              <div
-                style={{
-                  fontSize: "var(--text-xs)",
-                  color: "var(--fg-muted)",
-                  borderTop: "1px solid var(--border)",
-                  paddingTop: 4,
-                  marginTop: 2,
-                }}
-              >
-                Latest: <strong>{options.last_match.team_a}</strong> vs <strong>{options.last_match.team_b}</strong> ({options.last_match.date})
+              <div style={{ fontSize: 11, color: "var(--fg-muted)", marginTop: 2 }}>
+                Last: {options.last_match.team_a} vs {options.last_match.team_b}
+              </div>
+            )}
+            {options.earliest_date && options.latest_date && (
+              <div style={{ fontSize: 11, color: "var(--fg-muted)", marginTop: 2 }}>
+                Coverage: {options.earliest_date.split("-")[0]} – {options.latest_date.split("-")[0]} across 28 leagues
               </div>
             )}
           </div>
@@ -378,16 +371,15 @@ export default function BacktestPage() {
 
       {/* ── Selection Control Bar ───────────────────────────────────────── */}
       <div
-        className="card-container"
+        className="ds-card"
         style={{
-          padding: "var(--space-md) var(--space-lg)",
+          padding: "var(--space-md)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
           gap: "var(--space-md)",
           background: "#ffffff",
-          borderRadius: "18px",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)", flexWrap: "wrap" }}>
@@ -399,17 +391,8 @@ export default function BacktestPage() {
               value={selectedLeague}
               onChange={(e) => handleLeagueChange(e.target.value)}
               disabled={optionsLoading || !options || options.leagues.length === 0}
-              className="ds-input"
-              style={{
-                minWidth: 160,
-                padding: "8px 12px",
-                borderRadius: "10px",
-                border: "1px solid var(--border)",
-                fontSize: "var(--text-sm)",
-                fontWeight: 600,
-                background: "#ffffff",
-                cursor: "pointer",
-              }}
+              className="ds-select"
+              style={{ minWidth: 180 }}
             >
               {options?.leagues.map((lg) => (
                 <option key={lg} value={lg}>
@@ -427,17 +410,8 @@ export default function BacktestPage() {
               value={selectedSeason}
               onChange={(e) => setSelectedSeason(e.target.value)}
               disabled={optionsLoading || !selectedLeague || !options}
-              className="ds-input"
-              style={{
-                minWidth: 140,
-                padding: "8px 12px",
-                borderRadius: "10px",
-                border: "1px solid var(--border)",
-                fontSize: "var(--text-sm)",
-                fontWeight: 600,
-                background: "#ffffff",
-                cursor: "pointer",
-              }}
+              className="ds-select"
+              style={{ minWidth: 140 }}
             >
               {(options?.seasons_by_league[selectedLeague] ?? []).map((s) => (
                 <option key={s} value={s}>
@@ -454,34 +428,13 @@ export default function BacktestPage() {
             type="button"
             onClick={handleRunBacktest}
             disabled={running || optionsLoading || !selectedLeague || !selectedSeason}
-            className="ds-btn-pill ds-btn-pill-dark"
+            className="ds-btn ds-btn-primary"
             style={{
-              padding: "10px 24px",
-              fontSize: "var(--text-sm)",
-              fontWeight: 700,
+              padding: "9px 20px",
               cursor: running ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
             }}
           >
-            {running ? (
-              <>
-                <span
-                  style={{
-                    width: 14,
-                    height: 14,
-                    border: "2px solid rgba(255,255,255,0.3)",
-                    borderTopColor: "#ffffff",
-                    borderRadius: "50%",
-                    animation: "spin 0.8s linear infinite",
-                  }}
-                />
-                Simulating {selectedLeague} {selectedSeason}...
-              </>
-            ) : (
-              <>Run Backtest</>
-            )}
+            {running ? `Simulating ${selectedLeague} ${selectedSeason}...` : "Run Backtest"}
           </button>
         </div>
       </div>
@@ -489,13 +442,12 @@ export default function BacktestPage() {
       {/* ── Error Notices ───────────────────────────────────────────────── */}
       {optionsError && (
         <div
-          className="card-container"
+          className="ds-card"
           style={{
             padding: "var(--space-md)",
             background: "var(--error-tint)",
-            borderColor: "var(--error)",
-            color: "var(--error)",
-            borderRadius: "14px",
+            borderColor: "rgba(239, 68, 68, 0.2)",
+            color: "var(--error-text)",
           }}
         >
           <strong>Options Error:</strong> {optionsError}
@@ -504,33 +456,19 @@ export default function BacktestPage() {
 
       {runError && (
         <div
-          className="card-container"
+          className="ds-card"
           style={{
-            padding: "var(--space-lg)",
+            padding: "var(--space-md)",
             background: "var(--error-tint)",
-            borderColor: "var(--error)",
-            borderRadius: "16px",
+            borderColor: "rgba(239, 68, 68, 0.2)",
+            color: "var(--error-text)",
             display: "flex",
             flexDirection: "column",
-            gap: 6,
+            gap: 4,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--error)" }}>
-            <span className="text-micro" style={{ color: "var(--error)", fontWeight: 700 }}>
-              BACKTEST EXECUTION FAILED
-            </span>
-          </div>
-          <p style={{ margin: 0, fontSize: "var(--text-base)", color: "var(--fg)" }}>
-            {runError}
-          </p>
-          {runError.toLowerCase().includes("artifact") && (
-            <p className="text-caption" style={{ margin: "4px 0 0 0" }}>
-              Please train and generate the model artifact first via:{" "}
-              <code style={{ background: "rgba(0,0,0,0.06)", padding: "2px 6px", borderRadius: 4 }}>
-                python -m bot.train --cricsheet-dir ... --league-map ...
-              </code>
-            </p>
-          )}
+          <span className="ds-badge ds-badge-danger">BACKTEST EXECUTION FAILED</span>
+          <p style={{ margin: "4px 0 0 0", fontSize: "var(--text-sm)" }}>{runError}</p>
         </div>
       )}
 
@@ -541,17 +479,16 @@ export default function BacktestPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
               gap: "var(--space-md)",
             }}
           >
             {/* Accuracy Ring Hero Card */}
             <div
-              className="card-container"
+              className="ds-card"
               style={{
                 gridColumn: "1 / -1",
                 background: "#ffffff",
-                borderRadius: "20px",
                 padding: "var(--space-sm)",
               }}
             >
@@ -564,20 +501,20 @@ export default function BacktestPage() {
 
             {/* Metric 1: Model Accuracy */}
             <div
-              className="card-container"
+              className="ds-card"
               style={{
-                padding: "var(--space-md) var(--space-lg)",
+                padding: "var(--space-md)",
                 background: "#ffffff",
-                borderRadius: "16px",
               }}
             >
-              <span className="text-micro">LIGHTGBM MODEL</span>
+              <span className="text-micro">LightGBM Model</span>
               <div
                 style={{
-                  fontSize: "var(--text-2xl)",
-                  fontWeight: 800,
+                  fontSize: 26,
+                  fontWeight: 700,
                   color: "var(--fg)",
                   marginTop: 4,
+                  fontVariantNumeric: "tabular-nums",
                 }}
               >
                 {pct(result.accuracy_pct)}
@@ -589,84 +526,82 @@ export default function BacktestPage() {
 
             {/* Metric 2: Elo Baseline */}
             <div
-              className="card-container"
+              className="ds-card"
               style={{
-                padding: "var(--space-md) var(--space-lg)",
+                padding: "var(--space-md)",
                 background: "#ffffff",
-                borderRadius: "16px",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span className="text-micro">ELO BASELINE</span>
+                <span className="text-micro">ELO Baseline</span>
                 <span
-                  className={`status-pill ${
-                    result.accuracy_pct >= result.elo_accuracy_pct
-                      ? "status-pill--correct"
-                      : "status-pill--incorrect"
-                  }`}
-                  style={{ fontSize: 11 }}
+                  className="ds-badge"
+                  style={{
+                    color: result.accuracy_pct >= result.elo_accuracy_pct ? "var(--success-text)" : "var(--warning-text)",
+                    background: result.accuracy_pct >= result.elo_accuracy_pct ? "var(--success-tint)" : "var(--warning-tint)",
+                  }}
                 >
                   {result.accuracy_pct >= result.elo_accuracy_pct
                     ? `+${result.accuracy_pct - result.elo_accuracy_pct}% vs Elo`
-                    : `-${result.elo_accuracy_pct - result.accuracy_pct}% vs Elo`}
+                    : `${result.accuracy_pct - result.elo_accuracy_pct}% vs Elo`}
                 </span>
               </div>
               <div
                 style={{
-                  fontSize: "var(--text-2xl)",
-                  fontWeight: 800,
+                  fontSize: 26,
+                  fontWeight: 700,
                   color: "var(--fg)",
                   marginTop: 4,
+                  fontVariantNumeric: "tabular-nums",
                 }}
               >
                 {pct(result.elo_accuracy_pct)}
               </div>
               <div className="text-caption" style={{ marginTop: 2 }}>
-                Chronological pre-match rating expectation
+                Naive rating benchmark
               </div>
             </div>
 
             {/* Metric 3: Home Advantage Baseline */}
             <div
-              className="card-container"
+              className="ds-card"
               style={{
-                padding: "var(--space-md) var(--space-lg)",
+                padding: "var(--space-md)",
                 background: "#ffffff",
-                borderRadius: "16px",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span className="text-micro">ALWAYS-HOME BASELINE</span>
+                <span className="text-micro">Home Advantage</span>
                 <span
-                  className={`status-pill ${
-                    result.accuracy_pct >= result.home_accuracy_pct
-                      ? "status-pill--correct"
-                      : "status-pill--incorrect"
-                  }`}
-                  style={{ fontSize: 11 }}
+                  className="ds-badge"
+                  style={{
+                    color: result.accuracy_pct >= result.home_accuracy_pct ? "var(--success-text)" : "var(--warning-text)",
+                    background: result.accuracy_pct >= result.home_accuracy_pct ? "var(--success-tint)" : "var(--warning-tint)",
+                  }}
                 >
                   {result.accuracy_pct >= result.home_accuracy_pct
                     ? `+${result.accuracy_pct - result.home_accuracy_pct}% vs Home`
-                    : `-${result.home_accuracy_pct - result.accuracy_pct}% vs Home`}
+                    : `${result.accuracy_pct - result.home_accuracy_pct}% vs Home`}
                 </span>
               </div>
               <div
                 style={{
-                  fontSize: "var(--text-2xl)",
-                  fontWeight: 800,
+                  fontSize: 26,
+                  fontWeight: 700,
                   color: "var(--fg)",
                   marginTop: 4,
+                  fontVariantNumeric: "tabular-nums",
                 }}
               >
                 {pct(result.home_accuracy_pct)}
               </div>
               <div className="text-caption" style={{ marginTop: 2 }}>
-                Always picking franchise at home venue
+                Home team win rate
               </div>
             </div>
           </div>
 
-          {/* ── Match Ledger Toolbar ─────────────────────────────────────── */}
+          {/* ── Match Feed Filters & Search Bar ─────────────────────────── */}
           <div
             style={{
               display: "flex",
@@ -674,32 +609,29 @@ export default function BacktestPage() {
               alignItems: "center",
               flexWrap: "wrap",
               gap: "var(--space-md)",
-              marginTop: "var(--space-sm)",
+              paddingTop: "var(--space-xs)",
             }}
           >
-            {/* Filter Tabs */}
-            <div style={{ display: "flex", gap: "var(--space-xs)" }}>
+            {/* Segmented Filter Control */}
+            <div className="ds-segmented-control">
               <button
                 type="button"
                 onClick={() => setFilterOutcome("all")}
-                className={`ds-btn-pill ${filterOutcome === "all" ? "ds-btn-pill-dark" : "ds-btn-pill-light"}`}
-                style={{ fontSize: 12, padding: "6px 14px" }}
+                className={`ds-segmented-item ${filterOutcome === "all" ? "ds-segmented-item--active" : ""}`}
               >
-                All Matches ({result.total})
+                All Matches ({result.games.length})
               </button>
               <button
                 type="button"
                 onClick={() => setFilterOutcome("correct")}
-                className={`ds-btn-pill ${filterOutcome === "correct" ? "ds-btn-pill-dark" : "ds-btn-pill-light"}`}
-                style={{ fontSize: 12, padding: "6px 14px" }}
+                className={`ds-segmented-item ${filterOutcome === "correct" ? "ds-segmented-item--active" : ""}`}
               >
                 Hits ({result.correct})
               </button>
               <button
                 type="button"
                 onClick={() => setFilterOutcome("incorrect")}
-                className={`ds-btn-pill ${filterOutcome === "incorrect" ? "ds-btn-pill-dark" : "ds-btn-pill-light"}`}
-                style={{ fontSize: 12, padding: "6px 14px" }}
+                className={`ds-segmented-item ${filterOutcome === "incorrect" ? "ds-segmented-item--active" : ""}`}
               >
                 Misses ({result.total - result.correct})
               </button>
@@ -708,37 +640,20 @@ export default function BacktestPage() {
             {/* Search input */}
             <input
               type="search"
-              placeholder="Search team or venue..."
+              placeholder="Search team or venue…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="ds-input"
-              style={{
-                maxWidth: 240,
-                padding: "6px 12px",
-                borderRadius: "10px",
-                border: "1px solid var(--border)",
-                fontSize: "var(--text-sm)",
-                background: "#ffffff",
-              }}
+              style={{ maxWidth: 220, padding: "6px 12px", fontSize: 13 }}
             />
           </div>
 
           {/* ── Upcoming Fixtures / Future Predictions ─────────────────── */}
           {result.upcoming_games && result.upcoming_games.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)", marginTop: "var(--space-md)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-xs)" }}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: "#6366f1",
-                    boxShadow: "0 0 8px #6366f1",
-                  }}
-                />
-                <span className="text-micro" style={{ color: "#6366f1", fontWeight: 800 }}>
-                  UPCOMING FIXTURES & MODEL PREDICTIONS ({result.upcoming_games.length})
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)", marginTop: "var(--space-sm)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="ds-badge" style={{ background: "rgba(0, 113, 227, 0.1)", color: "var(--apple-blue)" }}>
+                  UPCOMING FIXTURES &amp; MODEL PREDICTIONS ({result.upcoming_games.length})
                 </span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
@@ -757,12 +672,11 @@ export default function BacktestPage() {
           {/* ── Matches List ────────────────────────────────────────────── */}
           {filteredGames.length === 0 ? (
             <div
-              className="card-container"
+              className="ds-card"
               style={{
                 padding: "var(--space-xl)",
                 textAlign: "center",
                 background: "#ffffff",
-                borderRadius: "18px",
                 color: "var(--fg-muted)",
               }}
             >
@@ -788,38 +702,23 @@ export default function BacktestPage() {
       {/* Empty State before running */}
       {!result && !running && !runError && (
         <div
-          className="card-container"
+          className="ds-card"
           style={{
             padding: "var(--space-xl) var(--space-lg)",
             textAlign: "center",
             background: "#ffffff",
-            borderRadius: "20px",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "var(--space-sm)",
+            gap: "var(--space-xs)",
           }}
         >
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: "50%",
-              background: "var(--bg)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 20,
-            }}
-          >
-            🏏
-          </div>
-          <h3 style={{ margin: 0, fontSize: "var(--text-lg)", fontWeight: 700, color: "var(--fg)" }}>
-            Select a League & Season to Begin
+          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "var(--fg)" }}>
+            Select a League &amp; Season
           </h3>
           <p className="text-caption" style={{ maxWidth: 460, margin: 0 }}>
-            Choose from the available historical datasets above and click <strong>Run Backtest</strong> to
-            evaluate accuracy and baseline comparisons.
+            Choose from the 28 available competition archives above and click <strong>Run Backtest</strong> to
+            evaluate model accuracy against historical outcomes.
           </p>
         </div>
       )}
@@ -854,16 +753,14 @@ function MatchBacktestCard({
 
   return (
     <div
-      className="card-container"
+      className="ds-card"
       style={{
-        padding: "var(--space-md) var(--space-lg)",
+        padding: "14px 18px",
         background: "#ffffff",
-        borderRadius: "16px",
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-sm)",
-        border: isUpcoming ? "1.5px solid rgba(99, 102, 241, 0.4)" : undefined,
-        boxShadow: isUpcoming ? "0 4px 20px rgba(99, 102, 241, 0.08)" : undefined,
+        gap: 10,
+        border: isUpcoming ? "1px solid rgba(0, 113, 227, 0.3)" : "1px solid var(--border)",
       }}
     >
       {/* Header: Date + Venue + Status Pill */}
@@ -877,35 +774,22 @@ function MatchBacktestCard({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span className="text-micro" style={{ color: "var(--fg-muted)" }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }}>
             {fmtDate(game.date)}
           </span>
           <span style={{ color: "var(--border)" }}>•</span>
-          <span className="text-caption" style={{ fontSize: "var(--text-xs)" }}>
+          <span style={{ fontSize: 12, color: "var(--fg-muted)" }}>
             {game.venue}
           </span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {isUpcoming ? (
-            <span
-              style={{
-                fontSize: 11,
-                padding: "3px 10px",
-                fontWeight: 700,
-                borderRadius: 999,
-                background: "rgba(99, 102, 241, 0.12)",
-                color: "#6366f1",
-                border: "1px solid rgba(99, 102, 241, 0.25)",
-              }}
-            >
-              UPCOMING / PREDICTED
+            <span className="ds-badge" style={{ background: "rgba(0, 113, 227, 0.1)", color: "var(--apple-blue)" }}>
+              Upcoming
             </span>
           ) : (
-            <span
-              className={`status-pill ${game.correct ? "status-pill--correct" : "status-pill--incorrect"}`}
-              style={{ fontSize: 12, padding: "2px 10px", fontWeight: 700 }}
-            >
+            <span className={`ds-badge ${game.correct ? "ds-badge-success" : "ds-badge-danger"}`}>
               {game.correct ? "Hit" : "Miss"}
             </span>
           )}
@@ -923,19 +807,19 @@ function MatchBacktestCard({
         }}
       >
         {/* Team A */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 160 }}>
-          <Crest team={game.team_a} size={30} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 140 }}>
+          <Crest team={game.team_a} size={24} />
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span
               style={{
-                fontSize: "var(--text-sm)",
-                fontWeight: game.actual_winner === game.team_a || (!game.actual_winner && game.predicted_winner === game.team_a) ? 800 : 500,
+                fontSize: 14,
+                fontWeight: game.actual_winner === game.team_a || (!game.actual_winner && game.predicted_winner === game.team_a) ? 700 : 500,
                 color: "var(--fg)",
               }}
             >
               {game.team_a}
             </span>
-            <span className="text-micro" style={{ fontSize: 10 }}>
+            <span style={{ fontSize: 11, color: "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }}>
               {probA}% win prob
             </span>
           </div>
@@ -948,22 +832,22 @@ function MatchBacktestCard({
             flexDirection: "column",
             alignItems: "center",
             gap: 2,
-            minWidth: 160,
+            minWidth: 140,
           }}
         >
-          <div style={{ fontSize: "var(--text-xs)", color: "var(--fg-muted)" }}>
-            Predicted: <strong style={{ color: "var(--fg)" }}>{game.predicted_winner}</strong>
+          <div style={{ fontSize: 12, color: "var(--fg-muted)" }}>
+            Pick: <strong style={{ color: "var(--fg)" }}>{game.predicted_winner}</strong>
           </div>
           {isUpcoming ? (
-            <div style={{ fontSize: "var(--text-xs)", color: "#6366f1", fontWeight: 600 }}>
-              Match Scheduled / Pending
+            <div style={{ fontSize: 11, color: "var(--apple-blue)", fontWeight: 500 }}>
+              Scheduled
             </div>
           ) : (
-            <div style={{ fontSize: "var(--text-xs)", color: "var(--fg-muted)" }}>
+            <div style={{ fontSize: 11, color: "var(--fg-muted)" }}>
               Winner:{" "}
               <strong
                 style={{
-                  color: game.correct ? "var(--success)" : "var(--wire-red)",
+                  color: game.correct ? "var(--success-text)" : "var(--error-text)",
                 }}
               >
                 {game.actual_winner}
@@ -978,26 +862,26 @@ function MatchBacktestCard({
             display: "flex",
             alignItems: "center",
             justifyContent: "flex-end",
-            gap: 10,
+            gap: 8,
             flex: 1,
-            minWidth: 160,
+            minWidth: 140,
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
             <span
               style={{
-                fontSize: "var(--text-sm)",
-                fontWeight: game.actual_winner === game.team_b ? 800 : 500,
+                fontSize: 14,
+                fontWeight: game.actual_winner === game.team_b ? 700 : 500,
                 color: "var(--fg)",
               }}
             >
               {game.team_b}
             </span>
-            <span className="text-micro" style={{ fontSize: 10 }}>
+            <span style={{ fontSize: 11, color: "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }}>
               {probB}% win prob
             </span>
           </div>
-          <Crest team={game.team_b} size={30} />
+          <Crest team={game.team_b} size={24} />
         </div>
       </div>
 
@@ -1005,9 +889,9 @@ function MatchBacktestCard({
       <div
         style={{
           width: "100%",
-          height: 5,
-          borderRadius: 3,
-          background: "var(--border)",
+          height: 3,
+          borderRadius: 2,
+          background: "var(--surface-tertiary)",
           overflow: "hidden",
           display: "flex",
         }}
@@ -1020,8 +904,8 @@ function MatchBacktestCard({
               game.prob_team_a >= 0.5
                 ? game.correct
                   ? "var(--success)"
-                  : "var(--wire-red)"
-                : "var(--border)",
+                  : "var(--error)"
+                : "var(--border-strong)",
           }}
         />
         <div
@@ -1032,59 +916,48 @@ function MatchBacktestCard({
               game.prob_team_a < 0.5
                 ? game.correct
                   ? "var(--success)"
-                  : "var(--wire-red)"
-                : "var(--border)",
+                  : "var(--error)"
+                : "var(--border-strong)",
           }}
         />
       </div>
 
-      {/* ── Social Card & Composer Shortcut Actions ──────────────────── */}
+      {/* Social Card & Composer Shortcut Actions */}
       <div
         style={{
           display: "flex",
           justifyContent: "flex-end",
           alignItems: "center",
           gap: 8,
-          marginTop: 4,
+          marginTop: 2,
           paddingTop: 8,
-          borderTop: "1px solid rgba(0,0,0,0.04)",
+          borderTop: "1px solid var(--border)",
         }}
       >
         <button
           type="button"
           onClick={() => onShare(game)}
-          className="ds-btn-pill ds-btn-pill-light"
+          className="ds-btn ds-btn-secondary"
           style={{
             fontSize: 11,
-            padding: "4px 12px",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            fontWeight: 600,
-            background: isUpcoming ? "rgba(99, 102, 241, 0.08)" : undefined,
-            color: isUpcoming ? "#4f46e5" : undefined,
-            borderColor: isUpcoming ? "rgba(99, 102, 241, 0.2)" : undefined,
+            padding: "4px 10px",
+            borderRadius: 4,
           }}
-          title="Preview & Share Social Media Graphic (X, Instagram, WhatsApp)"
         >
-          <span>🎨</span> Share Card (X / Insta)
+          Share Card (X / Insta)
         </button>
 
         <button
           type="button"
           onClick={() => onCompose(game)}
-          className="ds-btn-pill ds-btn-pill-dark"
+          className="ds-btn ds-btn-primary"
           style={{
             fontSize: 11,
-            padding: "4px 12px",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            fontWeight: 600,
+            padding: "4px 10px",
+            borderRadius: 4,
           }}
-          title="Open and edit this match card in Press Box Studio Composer"
         >
-          <span>🚀</span> Open in Studio Composer
+          Open in Studio Composer
         </button>
       </div>
     </div>
@@ -1143,9 +1016,9 @@ function QuickShareModal({
     try {
       const blob = await captureCard(captureRef.current);
       await copyImageToClipboard(blob);
-      setFeedback("Image copied to clipboard! 📋");
+      setFeedback("Copied to clipboard");
     } catch {
-      setFeedback("Copy failed. Try Download PNG instead.");
+      setFeedback("Copy failed. Use download.");
     } finally {
       setBusy(false);
       setTimeout(() => setFeedback(null), 2500);
@@ -1159,7 +1032,7 @@ function QuickShareModal({
       const blob = await captureCard(captureRef.current);
       const filename = `${game.team_a.toLowerCase().replace(/\s+/g, "_")}_vs_${game.team_b.toLowerCase().replace(/\s+/g, "_")}_prediction.png`;
       await downloadCard(blob, filename);
-      setFeedback("Card downloaded! ⬇️");
+      setFeedback("Card downloaded");
     } catch {
       setFeedback("Failed to download image.");
     } finally {
@@ -1184,8 +1057,9 @@ function QuickShareModal({
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        background: "rgba(0, 0, 0, 0.75)",
-        backdropFilter: "blur(10px)",
+        background: "rgba(0, 0, 0, 0.65)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -1194,14 +1068,13 @@ function QuickShareModal({
       onClick={onClose}
     >
       <div
-        className="card-container"
+        className="ds-card"
         style={{
-          background: "#111116",
-          borderRadius: 24,
+          background: "#111114",
+          borderRadius: "var(--radius-lg)",
           border: "1px solid rgba(255, 255, 255, 0.12)",
-          boxShadow: "0 24px 64px rgba(0, 0, 0, 0.8)",
           width: "100%",
-          maxWidth: 680,
+          maxWidth: 640,
           maxHeight: "92vh",
           overflowY: "auto",
           color: "#ffffff",
@@ -1216,25 +1089,16 @@ function QuickShareModal({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span className="text-micro" style={{ color: "var(--wire-red)" }}>
+              <span className="ds-badge" style={{ background: "rgba(255,255,255,0.1)", color: "#ffffff" }}>
                 SHAREABLE MATCH CARD
               </span>
               {isUpcoming && (
-                <span
-                  style={{
-                    fontSize: 10,
-                    padding: "2px 8px",
-                    borderRadius: 999,
-                    background: "rgba(99, 102, 241, 0.2)",
-                    color: "#a5b4fc",
-                    fontWeight: 700,
-                  }}
-                >
-                  UPCOMING
+                <span className="ds-badge" style={{ background: "rgba(0, 113, 227, 0.2)", color: "var(--apple-blue)" }}>
+                  Upcoming
                 </span>
               )}
             </div>
-            <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 700, margin: "4px 0 0 0", color: "#ffffff" }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, margin: "6px 0 0 0", color: "#ffffff" }}>
               {game.team_a} vs {game.team_b}
             </h2>
           </div>
@@ -1246,14 +1110,14 @@ function QuickShareModal({
               background: "rgba(255, 255, 255, 0.1)",
               border: "none",
               color: "#ffffff",
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
+              width: 28,
+              height: 28,
+              borderRadius: 6,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 16,
+              fontSize: 14,
             }}
           >
             ✕
@@ -1261,63 +1125,45 @@ function QuickShareModal({
         </div>
 
         {/* Aspect Ratio Selector */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div className="ds-segmented-control" style={{ background: "rgba(255, 255, 255, 0.08)" }}>
           <button
             type="button"
             onClick={() => setAspect("1:1")}
-            className={`ds-btn-pill ${aspect === "1:1" ? "ds-btn-pill-dark" : "ds-btn-pill-light"}`}
-            style={{
-              fontSize: 12,
-              padding: "6px 14px",
-              background: aspect === "1:1" ? "#ffffff" : "rgba(255,255,255,0.08)",
-              color: aspect === "1:1" ? "#000000" : "#ffffff",
-              borderColor: "transparent",
-            }}
+            className={`ds-segmented-item ${aspect === "1:1" ? "ds-segmented-item--active" : ""}`}
+            style={{ color: aspect === "1:1" ? "#000000" : "#d4d4d8" }}
           >
-            1:1 Square (Instagram / X)
+            1:1 Square
           </button>
           <button
             type="button"
             onClick={() => setAspect("16:9")}
-            className={`ds-btn-pill ${aspect === "16:9" ? "ds-btn-pill-dark" : "ds-btn-pill-light"}`}
-            style={{
-              fontSize: 12,
-              padding: "6px 14px",
-              background: aspect === "16:9" ? "#ffffff" : "rgba(255,255,255,0.08)",
-              color: aspect === "16:9" ? "#000000" : "#ffffff",
-              borderColor: "transparent",
-            }}
+            className={`ds-segmented-item ${aspect === "16:9" ? "ds-segmented-item--active" : ""}`}
+            style={{ color: aspect === "16:9" ? "#000000" : "#d4d4d8" }}
           >
-            16:9 Landscape (Feed / Banner)
+            16:9 Landscape
           </button>
           <button
             type="button"
             onClick={() => setAspect("4:5")}
-            className={`ds-btn-pill ${aspect === "4:5" ? "ds-btn-pill-dark" : "ds-btn-pill-light"}`}
-            style={{
-              fontSize: 12,
-              padding: "6px 14px",
-              background: aspect === "4:5" ? "#ffffff" : "rgba(255,255,255,0.08)",
-              color: aspect === "4:5" ? "#000000" : "#ffffff",
-              borderColor: "transparent",
-            }}
+            className={`ds-segmented-item ${aspect === "4:5" ? "ds-segmented-item--active" : ""}`}
+            style={{ color: aspect === "4:5" ? "#000000" : "#d4d4d8" }}
           >
-            4:5 Portrait (Stories / Reels)
+            4:5 Portrait
           </button>
         </div>
 
         {/* Live Card Preview Box */}
         <div
           style={{
-            background: "#09090c",
-            borderRadius: 16,
+            background: "#000000",
+            borderRadius: "var(--radius-md)",
             padding: "var(--space-md)",
             border: "1px solid rgba(255, 255, 255, 0.08)",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             overflow: "hidden",
-            minHeight: 340,
+            minHeight: 320,
           }}
         >
           <div
@@ -1336,14 +1182,13 @@ function QuickShareModal({
         {feedback && (
           <div
             style={{
-              padding: "8px 14px",
-              borderRadius: 8,
-              background: "rgba(16, 185, 129, 0.15)",
-              border: "1px solid var(--success)",
+              padding: "6px 12px",
+              borderRadius: 6,
+              background: "rgba(52, 199, 89, 0.15)",
               color: "var(--success)",
-              fontSize: "var(--text-sm)",
+              fontSize: 13,
               textAlign: "center",
-              fontWeight: 600,
+              fontWeight: 500,
             }}
           >
             {feedback}
@@ -1351,75 +1196,62 @@ function QuickShareModal({
         )}
 
         {/* Action Toolbar */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <button
             type="button"
             disabled={busy}
             onClick={handleCopyImage}
-            className="ds-btn-pill ds-btn-pill-light"
+            className="ds-btn ds-btn-secondary"
             style={{
-              padding: "10px",
-              fontSize: 13,
-              fontWeight: 600,
+              fontSize: 12,
               background: "rgba(255, 255, 255, 0.1)",
               color: "#ffffff",
-              borderColor: "transparent",
-              justifyContent: "center",
+              borderColor: "rgba(255, 255, 255, 0.15)",
             }}
           >
-            📋 Copy PNG to Clipboard
+            Copy PNG to Clipboard
           </button>
 
           <button
             type="button"
             disabled={busy}
             onClick={handleDownloadImage}
-            className="ds-btn-pill ds-btn-pill-light"
+            className="ds-btn ds-btn-secondary"
             style={{
-              padding: "10px",
-              fontSize: 13,
-              fontWeight: 600,
+              fontSize: 12,
               background: "rgba(255, 255, 255, 0.1)",
               color: "#ffffff",
-              borderColor: "transparent",
-              justifyContent: "center",
+              borderColor: "rgba(255, 255, 255, 0.15)",
             }}
           >
-            ⬇️ Download PNG File
+            Download PNG File
           </button>
 
           <button
             type="button"
             onClick={handleShareX}
-            className="ds-btn-pill ds-btn-pill-dark"
+            className="ds-btn"
             style={{
-              padding: "10px",
-              fontSize: 13,
-              fontWeight: 600,
+              fontSize: 12,
               background: "#000000",
               color: "#ffffff",
               border: "1px solid rgba(255, 255, 255, 0.2)",
-              justifyContent: "center",
             }}
           >
-            🐦 Share to X / Twitter
+            Share to X / Twitter
           </button>
 
           <button
             type="button"
             onClick={handleShareWhatsApp}
-            className="ds-btn-pill"
+            className="ds-btn"
             style={{
-              padding: "10px",
-              fontSize: 13,
-              fontWeight: 600,
+              fontSize: 12,
               background: "#25D366",
               color: "#ffffff",
-              border: "none",
-              justifyContent: "center",
             }}
           >
-            💬 Share to WhatsApp
+            Share to WhatsApp
           </button>
         </div>
 
@@ -1427,23 +1259,19 @@ function QuickShareModal({
         <button
           type="button"
           onClick={() => onOpenComposer(game)}
-          className="ds-btn-pill ds-btn-pill-dark"
+          className="ds-btn ds-btn-primary"
           style={{
-            padding: "12px",
-            fontSize: 14,
-            fontWeight: 700,
-            background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
-            color: "#ffffff",
+            fontSize: 13,
+            padding: "10px",
+            background: "#ffffff",
+            color: "#000000",
             border: "none",
-            boxShadow: "0 4px 16px rgba(99, 102, 241, 0.4)",
-            justifyContent: "center",
             marginTop: 4,
           }}
         >
-          🚀 Open in Press Box Studio Composer to Edit Copy & Themes
+          Open in Studio Composer
         </button>
       </div>
     </div>
   );
 }
-

@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useRef, useState } from "react";
 import { composerApi, type Draft } from "@/lib/composerApi";
 import { captureCard, copyImageToClipboard, downloadCard } from "@/lib/share";
@@ -63,7 +64,7 @@ export default function CardPreview({
   async function handleCopyText() {
     await navigator.clipboard.writeText(draft.text);
     await composerApi.logEvent(draft.id, { action: "copied" });
-    setFeedback("Text copied to clipboard!");
+    setFeedback("Text copied to clipboard");
     setTimeout(() => setFeedback(null), 2500);
   }
 
@@ -74,7 +75,7 @@ export default function CardPreview({
       const blob = await captureCard(captureRef.current);
       await copyImageToClipboard(blob);
       await composerApi.logEvent(draft.id, { action: "copied" });
-      setFeedback("Image copied to clipboard!");
+      setFeedback("Image copied to clipboard");
     } catch {
       setFeedback("Failed to copy image. Try Download instead.");
     } finally {
@@ -90,7 +91,7 @@ export default function CardPreview({
       const blob = await captureCard(captureRef.current);
       await downloadCard(blob, `cricket-card-${draft.id}.png`);
       await composerApi.logEvent(draft.id, { action: "copied" });
-      setFeedback("Image downloaded!");
+      setFeedback("Image downloaded");
     } catch {
       setFeedback("Failed to render image.");
     } finally {
@@ -103,7 +104,7 @@ export default function CardPreview({
     await composerApi.logEvent(draft.id, { action: "posted" });
     const updated = { ...draft, status: "posted" as const };
     onUpdate?.(updated);
-    setFeedback("Marked as posted!");
+    setFeedback("Marked as published");
     setTimeout(() => setFeedback(null), 2500);
   }
 
@@ -113,7 +114,7 @@ export default function CardPreview({
     await composerApi.logEvent(draft.id, { action: "posted" });
     const updated = { ...draft, status: "posted" as const };
     onUpdate?.(updated);
-    setFeedback("Copied and marked as posted!");
+    setFeedback("Copied & marked as published");
     setTimeout(() => setFeedback(null), 2500);
   }
 
@@ -128,7 +129,7 @@ export default function CardPreview({
         card_meta: draft.card_meta,
       });
       onDuplicate?.(created);
-      setFeedback("Duplicated!");
+      setFeedback("Draft duplicated");
     } catch {
       setFeedback("Failed to duplicate. Try again.");
     } finally {
@@ -154,9 +155,10 @@ export default function CardPreview({
 
   return (
     <div
-      className="card-container"
+      className="ds-card"
       style={{
-        padding: "var(--space-md)",
+        padding: "18px 20px",
+        background: "#ffffff",
         display: "flex",
         flexDirection: "column",
         gap: "var(--space-md)",
@@ -169,31 +171,29 @@ export default function CardPreview({
           alignItems: "center",
         }}
       >
-        <span className="ds-chip ds-chip-category">{cardType}</span>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <span className="text-micro">Card Output</span>
+          <span
+            className="ds-badge"
+            style={{
+              background: "var(--surface-tertiary)",
+              color: "var(--fg-secondary)",
+              textTransform: "capitalize",
+            }}
+          >
+            {cardType}
+          </span>
+        </div>
 
-        <div
-          role="group"
-          aria-label="aspect ratio"
-          style={{ display: "flex", gap: "var(--space-xs)" }}
-        >
+        {/* Aspect Ratio Segmented Control */}
+        <div className="ds-segmented-control">
           {(["1:1", "16:9", "4:5"] as AspectRatio[]).map((a) => (
             <button
               key={a}
+              type="button"
               onClick={() => setAspect(a)}
-              aria-pressed={aspect === a}
-              style={{
-                padding: "4px 10px",
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: "0.05em",
-                background: aspect === a ? "var(--fg)" : "transparent",
-                color: aspect === a ? "var(--bg)" : "var(--muted)",
-                border: "1px solid var(--border)",
-                borderRadius: 4,
-                cursor: "pointer",
-                transition:
-                  "background-color var(--duration-fast) var(--ease-out-quart), color var(--duration-fast) var(--ease-out-quart)",
-              }}
+              className={`ds-segmented-item ${aspect === a ? "ds-segmented-item--active" : ""}`}
+              style={{ fontSize: 11, padding: "3px 10px" }}
             >
               {a}
             </button>
@@ -204,30 +204,29 @@ export default function CardPreview({
       {/* Scaled preview container */}
       <div
         style={{
-          background: "var(--surface)",
+          background: "#09090b",
           border: "1px solid var(--border)",
-          borderRadius: 8,
+          borderRadius: "var(--radius-md)",
           padding: "var(--space-md)",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
           overflow: "hidden",
+          minHeight: 280,
         }}
       >
         <div
           style={{
-            transform: "scale(0.35)",
+            transform: aspect === "16:9" ? "scale(0.32)" : aspect === "4:5" ? "scale(0.26)" : "scale(0.3)",
             transformOrigin: "center center",
-            margin: "-250px -300px", // Offset scale whitespace
+            margin: aspect === "16:9" ? "-160px 0" : aspect === "4:5" ? "-380px 0" : "-280px 0",
           }}
         >
           {renderCard(aspect)}
         </div>
       </div>
 
-      {/* Off-screen twin container for pixel-perfect html-to-image capture.
-          No visibility:hidden — browsers don't paint that, so html-to-image's
-          foreignObject capture would come back blank/black. */}
+      {/* Off-screen twin container for html-to-image capture */}
       <div
         style={{
           position: "fixed",
@@ -239,78 +238,90 @@ export default function CardPreview({
         <div ref={captureRef}>{renderCard(aspect)}</div>
       </div>
 
-      {/* Actions — Download PNG is the one primary (Wire Red) action per
-          DESIGN.md's One Red Rule: it's the actual export/payoff moment. */}
+      {/* Actions Toolbar */}
       <div
         style={{
           display: "flex",
           flexWrap: "wrap",
-          gap: "var(--space-sm)",
+          gap: 8,
         }}
       >
-        <button onClick={handleCopyText} className="ds-btn-secondary">
+        <button
+          type="button"
+          onClick={handleCopyText}
+          className="ds-btn ds-btn-secondary"
+        >
           Copy Text
         </button>
+
         <button
+          type="button"
           onClick={handleCopyImage}
           disabled={busy}
-          className="ds-btn-secondary"
+          className="ds-btn ds-btn-secondary"
         >
           Copy Image
         </button>
+
         <button
+          type="button"
           onClick={handleDownloadImage}
           disabled={busy}
-          className="ds-btn-primary"
+          className="ds-btn ds-btn-primary"
         >
           Download PNG
         </button>
+
         <button
+          type="button"
           onClick={handleMarkPosted}
           disabled={draft.status === "posted"}
-          className="ds-btn-secondary"
+          className="ds-btn ds-btn-secondary"
         >
           {draft.status === "posted" ? "Posted" : "Mark Posted"}
         </button>
+
         <button
+          type="button"
           onClick={handleCopyAndMarkPosted}
           disabled={draft.status === "posted"}
-          className="ds-btn-secondary"
+          className="ds-btn ds-btn-secondary"
         >
           Copy + Mark Posted
         </button>
+
         <button
+          type="button"
           onClick={handleDuplicate}
           disabled={busy}
-          className="ds-btn-secondary"
+          className="ds-btn ds-btn-secondary"
         >
           Duplicate
         </button>
+
         <button
+          type="button"
           onClick={handleDelete}
-          className="ds-btn-secondary"
-          style={{
-            marginLeft: "auto",
-            color: confirmingDelete ? "var(--wire-red)" : "var(--muted)",
-            borderColor: confirmingDelete ? "var(--wire-red)" : undefined,
-          }}
+          className={`ds-btn ${confirmingDelete ? "ds-btn-danger" : "ds-btn-ghost"}`}
+          style={{ marginLeft: "auto" }}
         >
           {confirmingDelete ? "Confirm Delete?" : "Delete"}
         </button>
       </div>
 
       {feedback && (
-        <p
-          className="text-micro"
+        <div
           style={{
-            color: feedback.startsWith("Failed")
-              ? "var(--wire-red)"
-              : "var(--floodlight-cyan)",
-            margin: 0,
+            padding: "6px 12px",
+            borderRadius: 6,
+            background: feedback.startsWith("Failed") ? "var(--error-tint)" : "var(--success-tint)",
+            color: feedback.startsWith("Failed") ? "var(--error-text)" : "var(--success-text)",
+            fontSize: 12,
+            fontWeight: 500,
           }}
         >
           {feedback}
-        </p>
+        </div>
       )}
     </div>
   );

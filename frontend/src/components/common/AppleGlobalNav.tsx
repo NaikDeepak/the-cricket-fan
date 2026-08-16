@@ -6,27 +6,30 @@ import { motion } from "framer-motion";
 import { prefersReducedMotion } from "@/lib/motion";
 
 export default function AppleGlobalNav() {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const pathname = rawPathname || "";
   const isReduced = prefersReducedMotion();
 
   const navItems = [
     { label: "The Vault", href: "/stories" },
+    { label: "Track Record", href: "/predictions" },
     { label: "Composer", href: "/composer" },
+    { label: "Backtest", href: "/composer/backtest" },
+    { label: "Live Predict", href: "/composer/live-predict" },
     { label: "Posts", href: "/composer/posts" },
-    { label: "Predictions", href: "/composer/predictions" },
     { label: "Analytics", href: "/composer/analytics" },
   ];
 
   return (
     <motion.header
-      initial={isReduced ? false : { y: -20, opacity: 0 }}
+      initial={isReduced ? false : { y: -10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       style={{
         position: "sticky",
         top: 0,
         zIndex: 100,
-        background: "rgba(245, 245, 247, 0.85)",
+        background: "rgba(255, 255, 257, 0.85)",
         backdropFilter: "saturate(180%) blur(20px)",
         WebkitBackdropFilter: "saturate(180%) blur(20px)",
         borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
@@ -42,45 +45,72 @@ export default function AppleGlobalNav() {
           alignItems: "center",
         }}
       >
-        {/* Brand logo & tagline */}
-        <Link href="/stories" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
+        {/* Brand logo */}
+        <Link
+          href="/stories"
+          style={{
+            textDecoration: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
           <span
             style={{
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              background: "#000000",
+              width: 26,
+              height: 26,
+              borderRadius: 6,
+              background: "#1d1d1f",
               color: "#ffffff",
-              fontSize: 13,
-              fontWeight: 700,
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: "-0.04em",
             }}
           >
-            🏏
+            TCF
           </span>
-          <span style={{ fontSize: 18, fontWeight: 800, color: "#000000", letterSpacing: "-0.03em" }}>
-            TCF.
+          <span
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: "#1d1d1f",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            The Cricket Fan
           </span>
         </Link>
 
         {/* Apple Style Nav Items */}
-        <nav style={{ display: "flex", alignItems: "center", gap: "var(--space-lg)" }}>
+        <nav
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-xs)",
+          }}
+        >
           {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/stories" && pathname.startsWith(item.href));
+            const isActive =
+              item.href === "/composer"
+                ? pathname === "/composer"
+                : pathname === item.href || (item.href !== "/stories" && pathname.startsWith(item.href));
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 style={{
                   fontSize: 13,
-                  fontWeight: isActive ? 700 : 500,
-                  color: isActive ? "#000000" : "var(--fg-muted)",
+                  fontWeight: isActive ? 600 : 400,
+                  color: isActive ? "#1d1d1f" : "#6e6e73",
                   textDecoration: "none",
-                  transition: "color 150ms ease",
-                  padding: "4px 8px",
+                  padding: "6px 12px",
                   borderRadius: 6,
+                  background: isActive ? "rgba(0, 0, 0, 0.05)" : "transparent",
+                  transition: "all 150ms ease",
                 }}
               >
                 {item.label}
@@ -93,10 +123,14 @@ export default function AppleGlobalNav() {
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
           <Link
             href="/composer"
-            className="ds-btn-pill ds-btn-pill-dark"
-            style={{ textDecoration: "none", fontSize: 12, padding: "6px 16px" }}
+            className="ds-btn ds-btn-primary"
+            style={{
+              fontSize: 12,
+              padding: "6px 14px",
+              borderRadius: 6,
+            }}
           >
-            Composer ↗
+            Studio
           </Link>
         </div>
       </div>

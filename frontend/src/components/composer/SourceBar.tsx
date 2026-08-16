@@ -1,12 +1,21 @@
 "use client";
+
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   composerApi,
   type ContentBankItem,
   type Draft,
 } from "@/lib/composerApi";
 
-const BOT_KINDS = ["prediction", "trivia", "h2h", "venue", "record"];
+const BOT_KINDS = [
+  { id: "prediction", label: "Match Prediction" },
+  { id: "trivia", label: "Daily Trivia Quiz" },
+  { id: "h2h", label: "Head-to-Head Duel" },
+  { id: "venue", label: "Venue Conditions" },
+  { id: "record", label: "Record Milestone" },
+];
+
 const FRESHNESS_WINDOW_DAYS = 14;
 
 export default function SourceBar({
@@ -15,7 +24,7 @@ export default function SourceBar({
   onCreated: (d: Draft) => void;
 }) {
   const [prompt, setPrompt] = useState("");
-  const [kind, setKind] = useState(BOT_KINDS[0]);
+  const [kind, setKind] = useState(BOT_KINDS[0].id);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -31,7 +40,10 @@ export default function SourceBar({
   const [teamNames, setTeamNames] = useState<string[]>([]);
 
   useEffect(() => {
-    composerApi.teams().then((ts) => setTeamNames(ts.map((t) => t.name))).catch(() => setTeamNames([]));
+    composerApi
+      .teams()
+      .then((ts) => setTeamNames(ts.map((t) => t.name)))
+      .catch(() => setTeamNames([]));
   }, []);
 
   async function run(fn: () => Promise<Draft>) {
@@ -46,8 +58,8 @@ export default function SourceBar({
         detail
           ? detail
           : msg.includes("503")
-            ? "AI generation unavailable (GEMINI_API_KEY not configured)."
-            : "Generation failed. Try again."
+          ? "AI generation unavailable (GEMINI_API_KEY not configured)."
+          : "Generation failed. Try again."
       );
     } finally {
       setBusy(false);
@@ -77,79 +89,99 @@ export default function SourceBar({
 
   return (
     <div
-      className="card-container"
+      className="ds-card"
       style={{
-        padding: "var(--space-md)",
+        padding: "18px 20px",
+        background: "#ffffff",
         display: "flex",
         flexDirection: "column",
         gap: "var(--space-md)",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "var(--space-lg)",
-        }}
-      >
-        <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <span className="text-micro">Content Sources</span>
+          <h3
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              margin: "2px 0 0 0",
+              color: "var(--fg)",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Drafts &amp; Generators
+          </h3>
+        </div>
+        {busy && (
+          <span className="ds-badge" style={{ background: "var(--surface-tertiary)", color: "var(--fg-muted)" }}>
+            Generating draft…
+          </span>
+        )}
+      </div>
+
+      {/* Grid of Clean Apple Action Rows */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {/* Row 1: Blank & Content Bank */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 8,
+          }}
+        >
           <button
+            type="button"
             onClick={() =>
               run(() => composerApi.createDraft({ source: "freeform", text: "" }))
             }
             disabled={busy}
-            className="ds-btn-secondary"
+            className="ds-btn ds-btn-secondary"
+            style={{ justifyContent: "center" }}
           >
-            + Blank
+            + Blank Draft
           </button>
 
           <button
+            type="button"
             onClick={toggleBank}
             disabled={busy}
-            className="ds-btn-secondary"
+            className={`ds-btn ${showBank ? "ds-btn-primary" : "ds-btn-secondary"}`}
             aria-pressed={showBank}
-            style={{ borderColor: showBank ? "var(--floodlight-cyan)" : undefined }}
+            style={{ justifyContent: "center" }}
           >
-            Browse Bank
+            {showBank ? "Hide Content Bank" : "Browse Bank"}
           </button>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-sm)",
-            alignItems: "center",
-          }}
-        >
+        {/* Row 2: Bot Model Generator */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value)}
             aria-label="bot kind"
             className="ds-select"
+            style={{ flex: 1 }}
           >
             {BOT_KINDS.map((k) => (
-              <option key={k} value={k}>
-                {k}
+              <option key={k.id} value={k.id}>
+                {k.label}
               </option>
             ))}
           </select>
           <button
+            type="button"
             onClick={() => run(() => composerApi.generateBot(kind))}
             disabled={busy}
-            className="ds-btn-secondary"
+            className="ds-btn ds-btn-primary"
+            style={{ minWidth: 100, justifyContent: "center" }}
           >
             Generate
           </button>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-sm)",
-            alignItems: "center",
-            flex: "1 1 240px",
-          }}
-        >
+        {/* Row 3: AI Prompt Generator */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input
             placeholder="AI prompt…"
             value={prompt}
@@ -159,15 +191,18 @@ export default function SourceBar({
             style={{ flex: 1, minWidth: 0 }}
           />
           <button
+            type="button"
             onClick={() => run(() => composerApi.generateLlm({ prompt }))}
             disabled={busy || !prompt}
-            className="ds-btn-secondary"
+            className="ds-btn ds-btn-secondary"
+            style={{ minWidth: 140, justifyContent: "center" }}
           >
             Generate with AI
           </button>
         </div>
 
-        <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "center" }}>
+        {/* Row 4: Google News RSS Match Recap */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input
             placeholder="Team A"
             value={teamA}
@@ -175,7 +210,7 @@ export default function SourceBar({
             aria-label="recap team a"
             list="team-names"
             className="ds-input"
-            style={{ width: 110 }}
+            style={{ flex: 1, minWidth: 0 }}
           />
           <input
             placeholder="Team B"
@@ -184,7 +219,7 @@ export default function SourceBar({
             aria-label="recap team b"
             list="team-names"
             className="ds-input"
-            style={{ width: 110 }}
+            style={{ flex: 1, minWidth: 0 }}
           />
           <datalist id="team-names">
             {teamNames.map((t) => (
@@ -192,34 +227,34 @@ export default function SourceBar({
             ))}
           </datalist>
           <button
+            type="button"
             onClick={() => run(() => composerApi.generateRecap(teamA, teamB))}
             disabled={busy || !teamA || !teamB}
-            className="ds-btn-secondary"
+            className="ds-btn ds-btn-secondary"
+            style={{ minWidth: 90, justifyContent: "center" }}
           >
             Recap
           </button>
         </div>
       </div>
 
-      <p style={{ margin: 0, fontSize: "var(--text-sm)", lineHeight: 1.5, color: "var(--muted)" }}>
-        <strong style={{ color: "var(--fg)" }}>Blank</strong>: freeform card,
-        no setup. <strong style={{ color: "var(--fg)" }}>Browse Bank</strong>:
-        needs content_bank seeded (see below).{" "}
-        <strong style={{ color: "var(--fg)" }}>Generate</strong>: needs an
-        upcoming fixture in the DB (bot/run.py fetch, CRICKET_API_KEY).{" "}
-        <strong style={{ color: "var(--fg)" }}>Generate with AI</strong>:
-        needs GEMINI_API_KEY in the composer&apos;s env.{" "}
-        <strong style={{ color: "var(--fg)" }}>Recap</strong>: fetches the
-        latest match-report headline from Google News RSS (works offline
-        with a fallback line).
-      </p>
-
       {error && (
-        <p style={{ color: "var(--wire-red)", fontSize: "var(--text-sm)", margin: 0 }}>
+        <div
+          className="ds-card"
+          style={{
+            padding: "8px 12px",
+            background: "var(--error-tint)",
+            borderColor: "rgba(239, 68, 68, 0.2)",
+            color: "var(--error-text)",
+            fontSize: 12,
+            fontWeight: 500,
+          }}
+        >
           {error}
-        </p>
+        </div>
       )}
 
+      {/* Content Bank Popover List */}
       {showBank && (
         <div
           style={{
@@ -230,34 +265,30 @@ export default function SourceBar({
             gap: "var(--space-sm)",
           }}
         >
-          <p className="text-micro" style={{ margin: 0 }}>
-            Select from content bank
-          </p>
+          <span className="text-micro">Select from Content Bank</span>
 
           <div
             style={{
-              maxHeight: 220,
+              maxHeight: 240,
               overflowY: "auto",
               display: "flex",
               flexDirection: "column",
-              gap: "var(--space-sm)",
+              gap: 8,
             }}
           >
             {loadingBank && (
-              <p style={{ color: "var(--muted)", fontSize: "var(--text-sm)", margin: 0 }}>
+              <p style={{ color: "var(--fg-muted)", fontSize: 13, margin: 0 }}>
                 Loading bank items…
               </p>
             )}
             {!loadingBank && bankError && (
-              <p style={{ color: "var(--wire-red)", fontSize: "var(--text-sm)", margin: 0 }}>
+              <p style={{ color: "var(--error-text)", fontSize: 13, margin: 0 }}>
                 {bankError}
               </p>
             )}
             {!loadingBank && !bankError && bankItems.length === 0 && (
-              <p style={{ color: "var(--muted)", fontSize: "var(--text-sm)", margin: 0 }}>
-                Content bank is empty. Seed it with{" "}
-                <code>python -m bot.scripts.seed_content_bank</code> (owner
-                reviews content before commit — see script docstring).
+              <p style={{ color: "var(--fg-muted)", fontSize: 13, margin: 0 }}>
+                Content bank is empty. Seed it via <code>python -m bot.scripts.seed_content_bank</code>.
               </p>
             )}
             {bankItems.map((item) => {
@@ -267,6 +298,7 @@ export default function SourceBar({
               return (
                 <button
                   key={item.content_key}
+                  type="button"
                   onClick={() => {
                     setShowBank(false);
                     run(() =>
@@ -279,98 +311,74 @@ export default function SourceBar({
                     );
                   }}
                   className="ds-card"
-                  style={{ opacity: recentlyUsed ? 0.5 : 1 }}
+                  style={{
+                    padding: "10px 14px",
+                    background: "#ffffff",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    opacity: recentlyUsed ? 0.5 : 1,
+                  }}
                 >
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "var(--space-sm)",
-                      marginBottom: "var(--space-xs)",
+                      justifyContent: "space-between",
+                      marginBottom: 4,
                     }}
                   >
-                    <span className="ds-chip ds-chip-category">
-                      {item.category}
-                    </span>
-                    {item.on_this_day && (
-                      <span
-                        className="ds-chip"
-                        style={{ color: "var(--floodlight-cyan)" }}
-                      >
-                        On this day
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <span className="ds-badge" style={{ background: "var(--surface-tertiary)", color: "var(--fg-secondary)" }}>
+                        {item.category}
                       </span>
-                    )}
-                    {recentlyUsed && (
-                      <span className="text-micro" style={{ margin: 0 }}>
-                        used {item.last_used_days}d ago
-                      </span>
-                    )}
-                    <div
-                      style={{
-                        marginLeft: "auto",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--space-sm)",
-                      }}
-                    >
-                      <a
-                        href={`/stories/${encodeURIComponent(item.content_key)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-micro"
-                        style={{
-                          margin: 0,
-                          color: "var(--floodlight-cyan)",
-                          textDecoration: "none",
-                        }}
-                      >
-                        View in Vault ↗
-                      </a>
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        aria-label={
-                          item.is_published
-                            ? "Unpublish from vault"
-                            : "Publish to vault"
-                        }
-                        title={
-                          item.is_published
-                            ? "Visible in Vault — click to hide"
-                            : "Hidden from Vault — click to show"
-                        }
+                      {item.on_this_day && (
+                        <span className="ds-badge ds-badge-success">
+                          On This Day
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      {recentlyUsed && (
+                        <span style={{ fontSize: 11, color: "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }}>
+                          used {item.last_used_days}d ago
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        aria-label={item.is_published ? "Unpublish from vault" : "Publish to vault"}
                         onClick={async (e) => {
                           e.stopPropagation();
-                          const updated = await composerApi.setBankPublished(
-                            item.id,
-                            !item.is_published
-                          );
-                          setBankItems((prev) =>
-                            prev.map((b) =>
-                              b.id === updated.id
-                                ? { ...b, is_published: updated.is_published }
-                                : b
-                            )
-                          );
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            (e.target as HTMLElement).click();
+                          try {
+                            const updated = await composerApi.setBankPublished(item.id, !item.is_published);
+                            setBankItems((prev) =>
+                              prev.map((b) => (b.id === item.id ? { ...b, is_published: updated.is_published } : b))
+                            );
+                          } catch (err) {
+                            console.error(err);
                           }
                         }}
-                        style={{
-                          cursor: "pointer",
-                          opacity: item.is_published ? 1 : 0.4,
-                          fontSize: "var(--text-sm)",
-                        }}
+                        className="ds-btn ds-btn-ghost"
+                        style={{ fontSize: 12, padding: "2px 6px" }}
                       >
-                        {item.is_published ? "\u{1F441}" : "\u{1F6AB}"}
-                      </span>
+                        {item.is_published ? "👁" : "👁‍🗨"}
+                      </button>
+                      <Link
+                        href={`/stories/${encodeURIComponent(item.content_key)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: 11,
+                          color: "var(--apple-blue)",
+                          textDecoration: "none",
+                          fontWeight: 500,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        View in Vault
+                      </Link>
                     </div>
                   </div>
-                  <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--fg)" }}>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--fg)", lineHeight: 1.4 }}>
                     {item.segments[0]}
                   </p>
                 </button>

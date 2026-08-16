@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { composerApi } from "@/lib/composerApi";
 import type { Prediction, PredictionAccuracyStats } from "@/lib/composerApi";
 import PredictionTrackCard from "@/components/predictions/PredictionTrackCard";
+import AppleGlobalNav from "@/components/common/AppleGlobalNav";
 
 const PAGE_SIZE = 20;
 
@@ -83,186 +83,183 @@ export default function PredictionsPage() {
   const isEmpty = !loading && pending.length === 0 && settled.length === 0;
 
   return (
-    <main style={{ maxWidth: 960, margin: "0 auto", padding: "0 var(--space-lg)" }}>
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "var(--space-md) 0 var(--space-lg)",
-          borderBottom: "1px solid var(--border)",
-          marginBottom: "var(--space-lg)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
-          <Link href="/stories" style={{ textDecoration: "none" }}>
-            <span
-              style={{
-                fontFamily: "var(--font-serif)",
-                fontSize: 26,
-                fontWeight: 800,
-                color: "var(--fg)",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              The Cricket Fan
-            </span>
-          </Link>
+    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      <AppleGlobalNav />
+
+      <main style={{ maxWidth: 960, margin: "0 auto", padding: "var(--space-xl) var(--space-lg) var(--space-2xl)" }}>
+        <div style={{ marginBottom: "var(--space-lg)" }}>
+          <span className="text-micro">Public Track Record</span>
+          <h1
+            style={{
+              fontSize: 26,
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+              margin: "4px 0 0 0",
+              color: "var(--fg)",
+            }}
+          >
+            Prediction Performance History
+          </h1>
+          <p className="text-caption" style={{ margin: "4px 0 0 0" }}>
+            Unfiltered record of every automated match prediction, probability, and outcome published by the model.
+          </p>
         </div>
-        <nav style={{ display: "flex", alignItems: "center", gap: "var(--space-lg)" }}>
-          <Link href="/stories" className="ds-nav-link" style={{ fontSize: 14 }}>
-            The Vault
-          </Link>
-          <Link href="/predictions" className="ds-nav-link" style={{ color: "var(--fg)", fontWeight: 700, fontSize: 14 }}>
-            Predictions
-          </Link>
-          <Link href="/composer" className="ds-nav-link" style={{ fontSize: 14 }}>
-            Composer
-          </Link>
-        </nav>
-      </header>
 
-      <h1
-        style={{
-          fontFamily: "var(--font-serif)",
-          fontSize: "var(--text-3xl)",
-          fontWeight: 800,
-          color: "var(--fg)",
-          margin: "0 0 var(--space-lg) 0",
-        }}
-      >
-        Every Prediction We&apos;ve Made
-      </h1>
+        {/* Accuracy Stats Strip */}
+        {accuracy && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: "var(--space-md)",
+              marginBottom: "var(--space-lg)",
+            }}
+          >
+            <div className="ds-card" style={{ padding: "14px 18px", background: "#ffffff" }}>
+              <span className="text-micro">Hit Rate</span>
+              <div style={{ fontSize: 24, fontWeight: 700, color: "var(--fg)", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+                {accuracy.accuracy_pct}%
+              </div>
+              <div className="text-caption" style={{ fontSize: 12, marginTop: 2 }}>
+                Overall model win rate
+              </div>
+            </div>
 
-      {accuracy && (
-        <p
+            <div className="ds-card" style={{ padding: "14px 18px", background: "#ffffff" }}>
+              <span className="text-micro">Evaluated Matches</span>
+              <div style={{ fontSize: 24, fontWeight: 700, color: "var(--fg)", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+                {accuracy.evaluated} Evaluated
+              </div>
+              <div className="text-caption" style={{ fontSize: 12, marginTop: 2 }}>
+                Settled fixtures
+              </div>
+            </div>
+
+            {accuracy.streak > 0 && (
+              <div className="ds-card" style={{ padding: "14px 18px", background: "#ffffff" }}>
+                <span className="text-micro">Current Streak</span>
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 700,
+                    color: accuracy.streak_type === "win" ? "var(--success-text)" : "var(--error-text)",
+                    marginTop: 2,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {accuracy.streak} {accuracy.streak_type === "win" ? "Wins" : "Losses"}
+                </div>
+                <div className="text-caption" style={{ fontSize: 12, marginTop: 2 }}>
+                  Active run
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* League Filter Chips */}
+        <div
           style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "var(--text-base)",
-            color: "var(--fg-muted)",
+            display: "flex",
+            gap: "var(--space-xs)",
+            overflowX: "auto",
+            paddingBottom: "var(--space-xs)",
             marginBottom: "var(--space-lg)",
+            scrollbarWidth: "none",
           }}
         >
-          {accuracy.accuracy_pct}% Hit Rate · {accuracy.evaluated} Evaluated
-          {accuracy.streak > 0
-            ? ` · ${accuracy.streak}-${accuracy.streak_type === "win" ? "Win" : "Loss"} Streak`
-            : ""}
-        </p>
-      )}
-
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-sm)",
-          overflowX: "auto",
-          marginBottom: "var(--space-lg)",
-        }}
-      >
-        <button
-          onClick={() => setSelectedLeague("")}
-          className="ds-nav-link"
-          style={{
-            border: "1px solid var(--border)",
-            borderRadius: 999,
-            padding: "6px 14px",
-            background: selectedLeague === "" ? "var(--fg)" : "var(--surface)",
-            color: selectedLeague === "" ? "var(--surface)" : "var(--fg-muted)",
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
-        >
-          All Leagues
-        </button>
-        {leagues.map((lg) => (
           <button
-            key={lg}
-            onClick={() => setSelectedLeague(lg)}
-            className="ds-nav-link"
-            style={{
-              border: "1px solid var(--border)",
-              borderRadius: 999,
-              padding: "6px 14px",
-              background: selectedLeague === lg ? "var(--fg)" : "var(--surface)",
-              color: selectedLeague === lg ? "var(--surface)" : "var(--fg-muted)",
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
+            type="button"
+            onClick={() => setSelectedLeague("")}
+            className={`ds-filter-tab ${selectedLeague === "" ? "ds-filter-tab--active" : ""}`}
+            style={{ fontSize: 13, padding: "5px 12px" }}
           >
-            {lg}
+            All Leagues
           </button>
-        ))}
-      </div>
-
-      {isEmpty && (
-        <p style={{ color: "var(--fg-muted)", fontSize: "var(--text-base)" }}>
-          No predictions recorded{selectedLeague ? ` for ${selectedLeague}` : ""} yet.
-        </p>
-      )}
-
-      {pending.length > 0 && (
-        <section style={{ marginBottom: "var(--space-xl)" }}>
-          <h2
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "var(--text-sm)",
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              color: "var(--fg-muted)",
-              marginBottom: "var(--space-md)",
-            }}
-          >
-            Upcoming
-          </h2>
-          <div style={{ display: "grid", gap: "var(--space-md)" }}>
-            {pending.map((p) => (
-              <PredictionTrackCard key={p.id} prediction={p} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {settled.length > 0 && (
-        <section>
-          <h2
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "var(--text-sm)",
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              color: "var(--fg-muted)",
-              marginBottom: "var(--space-md)",
-            }}
-          >
-            History
-          </h2>
-          <div style={{ display: "grid", gap: "var(--space-md)" }}>
-            {settled.map((p) => (
-              <PredictionTrackCard key={p.id} prediction={p} />
-            ))}
-          </div>
-          {hasMore && (
+          {leagues.map((lg) => (
             <button
-              onClick={loadMore}
-              disabled={loadingMore}
-              className="ds-nav-link"
+              key={lg}
+              type="button"
+              onClick={() => setSelectedLeague(lg)}
+              className={`ds-filter-tab ${selectedLeague === lg ? "ds-filter-tab--active" : ""}`}
+              style={{ fontSize: 13, padding: "5px 12px" }}
+            >
+              {lg}
+            </button>
+          ))}
+        </div>
+
+        {isEmpty && (
+          <div className="ds-card" style={{ textAlign: "center", padding: "var(--space-xl)", background: "#ffffff" }}>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--fg)" }}>
+              No predictions recorded{selectedLeague ? ` for ${selectedLeague}` : ""} yet.
+            </p>
+            <p className="text-caption" style={{ marginTop: 4 }}>
+              Predictions will automatically appear here once match fixtures are published.
+            </p>
+          </div>
+        )}
+
+        {pending.length > 0 && (
+          <section style={{ marginBottom: "var(--space-xl)" }}>
+            <h2
               style={{
-                marginTop: "var(--space-lg)",
-                border: "1px solid var(--border)",
-                borderRadius: 999,
-                padding: "10px 24px",
-                background: "var(--surface)",
-                color: "var(--fg)",
-                cursor: loadingMore ? "default" : "pointer",
-                fontWeight: 600,
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: "var(--fg-muted)",
+                marginBottom: "var(--space-sm)",
               }}
             >
-              {loadingMore ? "Loading…" : "Load More"}
-            </button>
-          )}
-        </section>
-      )}
-    </main>
+              Upcoming Fixtures ({pending.length})
+            </h2>
+            <div style={{ display: "grid", gap: "var(--space-sm)" }}>
+              {pending.map((p) => (
+                <PredictionTrackCard key={p.id} prediction={p} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {settled.length > 0 && (
+          <section>
+            <h2
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: "var(--fg-muted)",
+                marginBottom: "var(--space-sm)",
+              }}
+            >
+              Completed History ({settled.length})
+            </h2>
+            <div style={{ display: "grid", gap: "var(--space-sm)" }}>
+              {settled.map((p) => (
+                <PredictionTrackCard key={p.id} prediction={p} />
+              ))}
+            </div>
+            {hasMore && (
+              <div style={{ display: "flex", justifyContent: "center", marginTop: "var(--space-lg)" }}>
+                <button
+                  type="button"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="ds-btn ds-btn-secondary"
+                  style={{
+                    padding: "8px 24px",
+                    fontSize: 13,
+                  }}
+                >
+                  {loadingMore ? "Loading…" : "Load More Predictions"}
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+      </main>
+    </div>
   );
 }

@@ -26,14 +26,14 @@ function hexGlow(hex: string): string {
   return `rgba(${r}, ${g}, ${b}, 0.4)`;
 }
 
-function Swatch({ color, size = 20 }: { color: string; size?: number }) {
+function Swatch({ color, size = 18 }: { color: string; size?: number }) {
   return (
     <span
       style={{
         display: "inline-block",
         width: size,
         height: size,
-        borderRadius: 4,
+        borderRadius: "var(--radius-xs)",
         background: color,
         border: "1px solid rgba(0,0,0,0.12)",
         flexShrink: 0,
@@ -42,34 +42,13 @@ function Swatch({ color, size = 20 }: { color: string; size?: number }) {
   );
 }
 
-function LeaguePill({ league }: { league: string }) {
-  const colors: Record<string, string> = {
-    IPL: "#3b82f6",
-    TNPL: "#10b981",
-    WPL: "#ec4899",
-    "The Hundred Women": "#a855f7",
-    WBBL: "#06b6d4",
-    "The Hundred": "#6366f1",
-    MPL: "#f59e0b",
-    CPL: "#8b5cf6",
-    BBL: "#0ea5e9",
-    SA20: "#f97316",
-    PSL: "#14b8a6",
-    MLC: "#ef4444",
-    International: "#6b7280",
-  };
-  const bg = colors[league] ?? "#6b7280";
+function LeagueBadge({ league }: { league: string }) {
   return (
     <span
+      className="ds-badge"
       style={{
-        padding: "2px 8px",
-        borderRadius: 999,
-        fontSize: 10,
-        fontWeight: 700,
-        letterSpacing: 0.5,
-        background: bg + "22",
-        color: bg,
-        border: `1px solid ${bg}44`,
+        background: "rgba(0,0,0,0.06)",
+        color: "var(--fg)",
       }}
     >
       {league}
@@ -133,7 +112,6 @@ function TeamEditDrawer({
   const preview = {
     background: form.gradient,
     color: form.text_dark ? "#000" : "#fff",
-    boxShadow: `0 0 20px ${form.glow}`,
   };
 
   async function handleSave() {
@@ -157,22 +135,21 @@ function TeamEditDrawer({
 
   return (
     <div
+      className="ds-card"
       style={{
-        border: "1px solid var(--border)",
-        borderRadius: 12,
-        padding: "var(--space-md)",
+        padding: "16px 18px",
         background: "#fafafa",
         display: "flex",
         flexDirection: "column",
-        gap: 16,
+        gap: 14,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div
           style={{
             ...preview,
-            borderRadius: 10,
-            padding: "8px 16px",
+            borderRadius: "var(--radius-sm)",
+            padding: "6px 14px",
             fontWeight: 800,
             fontSize: 13,
             letterSpacing: 0.5,
@@ -182,11 +159,11 @@ function TeamEditDrawer({
           {team.short_name} · {team.name}
         </div>
         <div style={{ fontSize: 11, color: "var(--fg-muted)" }}>
-          Live preview updates as you change colors
+          Live preview
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         {(
           [
             { key: "primary_color" as const, label: "Primary" },
@@ -195,7 +172,7 @@ function TeamEditDrawer({
           ]
         ).map(({ key, label }) => (
           <label key={key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-muted)" }}>
+            <span className="text-micro" style={{ margin: 0 }}>
               {label}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -203,59 +180,59 @@ function TeamEditDrawer({
                 type="color"
                 value={form[key]}
                 onChange={(e) => set(key, e.target.value)}
-                style={{ width: 32, height: 28, padding: 0, border: "none", cursor: "pointer", borderRadius: 4 }}
+                style={{ width: 28, height: 24, padding: 0, border: "none", cursor: "pointer", borderRadius: 4 }}
               />
               <input
                 className="ds-input"
                 value={form[key]}
                 onChange={(e) => set(key, e.target.value)}
-                style={{ flex: 1, fontSize: 11, fontFamily: "monospace" }}
+                style={{ flex: 1, fontSize: 11, fontFamily: "monospace", padding: "4px 6px" }}
               />
             </div>
           </label>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-muted)" }}>Gradient CSS</span>
+          <span className="text-micro" style={{ margin: 0 }}>Gradient CSS</span>
           <input
             className="ds-input"
             value={form.gradient}
             onChange={(e) => set("gradient", e.target.value)}
-            style={{ fontSize: 11, fontFamily: "monospace" }}
+            style={{ fontSize: 11, fontFamily: "monospace", padding: "4px 6px" }}
           />
         </label>
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-muted)" }}>Glow (rgba)</span>
+          <span className="text-micro" style={{ margin: 0 }}>Glow</span>
           <input
             className="ds-input"
             value={form.glow}
             onChange={(e) => set("glow", e.target.value)}
-            style={{ fontSize: 11, fontFamily: "monospace" }}
+            style={{ fontSize: 11, fontFamily: "monospace", padding: "4px 6px" }}
           />
         </label>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-muted)" }}>Logo URL (optional)</span>
+          <span className="text-micro" style={{ margin: 0 }}>Logo URL</span>
           <input
             className="ds-input"
             value={form.logo_url}
             onChange={(e) => set("logo_url", e.target.value)}
-            placeholder="https://..."
-            style={{ fontSize: 11 }}
+            placeholder="https://…"
+            style={{ fontSize: 11, padding: "4px 6px" }}
           />
         </label>
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-muted)" }}>Aliases (comma-separated)</span>
+          <span className="text-micro" style={{ margin: 0 }}>Aliases</span>
           <input
             className="ds-input"
             value={form.aliases}
             onChange={(e) => set("aliases", e.target.value)}
             placeholder="CSK, Super Kings"
-            style={{ fontSize: 11 }}
+            style={{ fontSize: 11, padding: "4px 6px" }}
           />
         </label>
       </div>
@@ -272,10 +249,10 @@ function TeamEditDrawer({
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        <button type="button" onClick={onCancel} className="ds-btn-secondary" style={{ fontSize: 12 }}>
+        <button type="button" onClick={onCancel} className="ds-btn ds-btn-secondary" style={{ fontSize: 12, padding: "4px 10px" }}>
           Cancel
         </button>
-        <button type="button" onClick={handleSave} disabled={saving} className="ds-btn-primary" style={{ fontSize: 12 }}>
+        <button type="button" onClick={handleSave} disabled={saving} className="ds-btn ds-btn-primary" style={{ fontSize: 12, padding: "4px 12px" }}>
           {saving ? "Saving…" : "Save Changes"}
         </button>
       </div>
@@ -347,27 +324,27 @@ function AddTeamModal({ onSave, onCancel }: { onSave: (body: TeamIn) => Promise<
     >
       <form
         onSubmit={handleSubmit}
+        className="ds-card"
         style={{
           background: "#ffffff",
-          borderRadius: 16,
+          borderRadius: "var(--radius-lg)",
           padding: "var(--space-lg)",
           width: "100%",
-          maxWidth: 560,
+          maxWidth: 540,
           display: "flex",
           flexDirection: "column",
           gap: 14,
-          boxShadow: "0 24px 48px rgba(0,0,0,0.18)",
           maxHeight: "90vh",
           overflowY: "auto",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "#000" }}>Add New Team</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "var(--fg)" }}>Add New Team</h2>
           <div
             style={{
-              padding: "5px 14px",
-              borderRadius: 999,
-              fontWeight: 800,
+              padding: "4px 12px",
+              borderRadius: "var(--radius-xs)",
+              fontWeight: 700,
               fontSize: 12,
               background: previewGrad,
               color: textDark ? "#000" : "#fff",
@@ -381,17 +358,17 @@ function AddTeamModal({ onSave, onCancel }: { onSave: (body: TeamIn) => Promise<
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8 }}>
           <label className="text-micro">
             Team Name *
-            <input className="ds-input" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Chennai Super Kings" />
+            <input className="ds-input" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Chennai Super Kings" style={{ marginTop: 4 }} />
           </label>
           <label className="text-micro">
             Short Code *
-            <input className="ds-input" value={shortName} onChange={(e) => setShortName(e.target.value)} required maxLength={8} placeholder="CSK" />
+            <input className="ds-input" value={shortName} onChange={(e) => setShortName(e.target.value)} required maxLength={8} placeholder="CSK" style={{ marginTop: 4 }} />
           </label>
         </div>
 
         <label className="text-micro">
           League *
-          <select className="ds-select" value={league} onChange={(e) => setLeague(e.target.value)} required>
+          <select className="ds-select" value={league} onChange={(e) => setLeague(e.target.value)} required style={{ marginTop: 4 }}>
             {ALL_LEAGUES.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
         </label>
@@ -415,7 +392,7 @@ function AddTeamModal({ onSave, onCancel }: { onSave: (body: TeamIn) => Promise<
                   className="ds-input"
                   value={val}
                   onChange={(e) => setFn(e.target.value)}
-                  style={{ flex: 1, fontSize: 10, fontFamily: "monospace" }}
+                  style={{ flex: 1, fontSize: 10, fontFamily: "monospace", padding: "3px 5px" }}
                 />
               </div>
             </label>
@@ -424,12 +401,12 @@ function AddTeamModal({ onSave, onCancel }: { onSave: (body: TeamIn) => Promise<
 
         <label className="text-micro">
           Aliases (comma-separated)
-          <input className="ds-input" value={aliasStr} onChange={(e) => setAliasStr(e.target.value)} placeholder="Super Kings, Yellow Army" />
+          <input className="ds-input" value={aliasStr} onChange={(e) => setAliasStr(e.target.value)} placeholder="Super Kings, Yellow Army" style={{ marginTop: 4 }} />
         </label>
 
         <label className="text-micro">
           Logo URL (optional)
-          <input className="ds-input" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." />
+          <input className="ds-input" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://…" style={{ marginTop: 4 }} />
         </label>
 
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
@@ -444,8 +421,8 @@ function AddTeamModal({ onSave, onCancel }: { onSave: (body: TeamIn) => Promise<
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
-          <button type="button" onClick={onCancel} className="ds-btn-secondary">Cancel</button>
-          <button type="submit" disabled={saving} className="ds-btn-primary">{saving ? "Adding…" : "Add Team"}</button>
+          <button type="button" onClick={onCancel} className="ds-btn ds-btn-secondary">Cancel</button>
+          <button type="submit" disabled={saving} className="ds-btn ds-btn-primary">{saving ? "Adding…" : "Add Team"}</button>
         </div>
       </form>
     </div>
@@ -460,14 +437,13 @@ function TeamCard({ team, onEdit, onDelete }: { team: TeamRecord; onEdit: () => 
 
   return (
     <div
-      className="card-container"
+      className="ds-card"
       style={{
         background: "#ffffff",
-        borderRadius: 14,
+        padding: 0,
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        border: team.is_active ? "1px solid var(--border)" : "1px solid rgba(0,0,0,0.06)",
         opacity: team.is_active ? 1 : 0.6,
       }}
     >
@@ -478,25 +454,24 @@ function TeamCard({ team, onEdit, onDelete }: { team: TeamRecord; onEdit: () => 
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          boxShadow: `0 4px 14px ${team.glow ?? "transparent"}`,
         }}
       >
         <div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: txtColor, letterSpacing: "-0.02em", lineHeight: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: txtColor, letterSpacing: "-0.02em", lineHeight: 1 }}>
             {team.short_name}
           </div>
-          <div style={{ fontSize: 11, color: txtColor, opacity: 0.85, marginTop: 2, fontWeight: 600 }}>
+          <div style={{ fontSize: 11, color: txtColor, opacity: 0.85, marginTop: 3, fontWeight: 600 }}>
             {team.name}
           </div>
         </div>
-        <LeaguePill league={team.league} />
+        <LeagueBadge league={team.league} />
       </div>
 
       <div style={{ padding: "10px 14px", display: "flex", gap: 6, alignItems: "center", borderBottom: "1px solid var(--border)" }}>
-        <Swatch color={team.primary_color} size={18} />
-        <Swatch color={team.secondary_color} size={18} />
-        {team.accent_color && <Swatch color={team.accent_color} size={18} />}
-        <span style={{ fontSize: 10, color: "var(--fg-muted)", marginLeft: 4, fontFamily: "monospace" }}>
+        <Swatch color={team.primary_color} size={16} />
+        <Swatch color={team.secondary_color} size={16} />
+        {team.accent_color && <Swatch color={team.accent_color} size={16} />}
+        <span style={{ fontSize: 11, color: "var(--fg-muted)", marginLeft: 4, fontFamily: "monospace" }}>
           {team.primary_color}
         </span>
         {!team.is_active && (
@@ -507,7 +482,7 @@ function TeamCard({ team, onEdit, onDelete }: { team: TeamRecord; onEdit: () => 
       {team.aliases.length > 0 && (
         <div style={{ padding: "6px 14px", display: "flex", gap: 4, flexWrap: "wrap" }}>
           {team.aliases.map((a) => (
-            <span key={a} style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "var(--surface)", color: "var(--fg-muted)" }}>
+            <span key={a} className="ds-badge" style={{ background: "var(--surface-tertiary)", color: "var(--fg-muted)", fontSize: 10 }}>
               {a}
             </span>
           ))}
@@ -515,10 +490,10 @@ function TeamCard({ team, onEdit, onDelete }: { team: TeamRecord; onEdit: () => 
       )}
 
       <div style={{ padding: "8px 14px", marginTop: "auto", display: "flex", justifyContent: "flex-end", gap: 6 }}>
-        <button onClick={onEdit} className="ds-btn-secondary" style={{ fontSize: 11, padding: "4px 10px" }}>
+        <button type="button" onClick={onEdit} className="ds-btn ds-btn-secondary" style={{ fontSize: 11, padding: "3px 8px" }}>
           Edit Colors
         </button>
-        <button onClick={onDelete} style={{ background: "none", border: "none", color: "var(--fg-muted)", cursor: "pointer", fontSize: 11, padding: "4px 6px" }}>
+        <button type="button" onClick={onDelete} className="ds-btn ds-btn-ghost" style={{ fontSize: 11, padding: "3px 6px" }}>
           Delete
         </button>
       </div>
@@ -551,8 +526,10 @@ export default function TeamsPage() {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { loadTeams(); }, [loadTeams]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadTeams();
+  }, [loadTeams]);
 
   const leagues = useMemo(() => {
     const s = new Set(teams.map((t) => t.league));
@@ -615,62 +592,56 @@ export default function TeamsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
         <div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: "var(--space-xs)" }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--floodlight-cyan)", boxShadow: "0 0 8px var(--floodlight-cyan)" }} />
-            <span className="text-micro" style={{ color: "#000000" }}>TEAM DATABASE · COLOR PALETTE MANAGER</span>
+            <span className="ds-badge" style={{ background: "var(--surface-tertiary)", color: "var(--fg-secondary)" }}>
+              Team Database
+            </span>
           </div>
-          <h1 style={{ fontSize: "var(--text-3xl)", fontWeight: 800, letterSpacing: "-0.02em", margin: "var(--space-xs) 0", color: "#000000" }}>
+          <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", margin: "var(--space-xs) 0", color: "var(--fg)" }}>
             Teams &amp; Color Palettes
           </h1>
-          <p style={{ color: "var(--fg-muted)", fontSize: "var(--text-base)", maxWidth: 640, margin: 0 }}>
-            Manage team color themes stored in the database. These palettes power all prediction cards, match graphics, and badge components.
+          <p className="text-caption" style={{ maxWidth: 640, margin: 0 }}>
+            Manage official team color themes in the database. These palettes theme prediction cards, match graphics, and badges.
           </p>
         </div>
-        <button onClick={() => setShowAddModal(true)} className="ds-btn-primary" style={{ padding: "8px 18px", fontSize: 12, fontWeight: 700 }}>
+        <button type="button" onClick={() => setShowAddModal(true)} className="ds-btn ds-btn-primary">
           + Add Team
         </button>
       </div>
 
       {/* Stats Bar */}
       {!loading && !error && (
-        <div style={{ display: "flex", background: "#ffffff", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12 }}>
           {[
             { label: "Total Teams", value: teams.length },
-            { label: "Active", value: teams.filter((t) => t.is_active).length },
+            { label: "Active Teams", value: teams.filter((t) => t.is_active).length },
             { label: "Leagues", value: new Set(teams.map((t) => t.league)).size },
             { label: "Shown", value: filtered.length },
-          ].map(({ label, value }, i) => (
-            <div key={label} style={{ flex: 1, padding: "12px 16px", borderRight: i < 3 ? "1px solid var(--border)" : "none" }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#000000" }}>{value}</div>
-              <div className="text-micro" style={{ color: "var(--fg-muted)" }}>{label}</div>
+          ].map(({ label, value }) => (
+            <div key={label} className="ds-card" style={{ padding: "12px 16px", background: "#ffffff" }}>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "var(--fg)", fontVariantNumeric: "tabular-nums" }}>{value}</div>
+              <div className="text-micro" style={{ marginTop: 2 }}>{label}</div>
             </div>
           ))}
         </div>
       )}
 
       {/* Filter Bar */}
-      <div className="card-container" style={{ background: "#ffffff", borderRadius: 12, padding: "10px 16px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+      <div className="ds-card" style={{ background: "#ffffff", padding: "12px 16px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {leagues.map((lg) => (
             <button
               key={lg}
+              type="button"
               onClick={() => setLeagueFilter(lg)}
-              style={{
-                padding: "4px 12px",
-                borderRadius: 999,
-                fontSize: 11,
-                fontWeight: 600,
-                border: "1px solid var(--border)",
-                background: leagueFilter === lg ? "#000000" : "transparent",
-                color: leagueFilter === lg ? "#ffffff" : "var(--fg-muted)",
-                cursor: "pointer",
-              }}
+              className={`ds-filter-tab ${leagueFilter === lg ? "ds-filter-tab--active" : ""}`}
+              style={{ fontSize: 11, padding: "3px 8px" }}
             >
               {lg}
             </button>
           ))}
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "var(--fg-secondary)" }}>
             <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
             Show inactive
           </label>
@@ -679,36 +650,47 @@ export default function TeamsPage() {
             placeholder="Search teams…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ fontSize: 12, padding: "5px 10px", width: 180 }}
+            style={{ fontSize: 12, padding: "5px 10px", width: 160 }}
           />
         </div>
       </div>
 
       {/* Content */}
       {loading ? (
-        <p style={{ color: "var(--fg-muted)", fontSize: 13 }}>Loading team database…</p>
+        <div className="ds-card" style={{ padding: "var(--space-md)", textAlign: "center", color: "var(--fg-muted)", fontSize: 13 }}>
+          Loading team database…
+        </div>
       ) : error ? (
-        <div style={{ background: "#fff5f5", border: "1px solid #fca5a5", borderRadius: 12, padding: "var(--space-md)" }}>
-          <p style={{ color: "#dc2626", margin: 0, fontSize: 13 }}>{error}</p>
+        <div
+          className="ds-card"
+          style={{
+            padding: "10px 14px",
+            background: "var(--error-tint)",
+            borderColor: "rgba(239, 68, 68, 0.2)",
+            color: "var(--error-text)",
+            fontSize: 13,
+          }}
+        >
+          {error}
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: "#ffffff", borderRadius: 16, padding: "var(--space-xl)", textAlign: "center" }}>
-          <p style={{ margin: 0, color: "var(--fg-muted)", fontSize: 14 }}>No teams match your filters.</p>
+        <div className="ds-card" style={{ padding: "var(--space-xl)", textAlign: "center", background: "#ffffff" }}>
+          <p style={{ margin: 0, color: "var(--fg-muted)", fontSize: 13 }}>No teams match your filter.</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xl)" }}>
           {orderedLeagues.map((league) => (
             <section key={league}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <h2 style={{ fontSize: 14, fontWeight: 800, letterSpacing: 1, color: "#000000", margin: 0, textTransform: "uppercase" }}>
+                <span className="text-micro" style={{ color: "var(--fg)", fontSize: 12 }}>
                   {league}
-                </h2>
+                </span>
                 <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-                <span style={{ fontSize: 11, color: "var(--fg-muted)", fontWeight: 600 }}>
-                  {byLeague[league].length} team{byLeague[league].length !== 1 ? "s" : ""}
+                <span style={{ fontSize: 11, color: "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }}>
+                  {byLeague[league].length} {byLeague[league].length === 1 ? "team" : "teams"}
                 </span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "var(--space-md)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "var(--space-md)" }}>
                 {byLeague[league].map((team) => (
                   <div key={team.id}>
                     {editingId === team.id ? (
