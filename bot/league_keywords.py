@@ -22,8 +22,10 @@ league-resolution-design.md's "Keyword table" section for why):
 
 LEAGUE_KEYWORDS: list[tuple[str, str]] = [
     ("indian premier league", "IPL"),
+    ("women's big bash", "WBBL"),  # before the bare entry below
     ("big bash league", "BBL"),
     ("pakistan super league", "PSL"),
+    ("women's caribbean premier league", "WCPL"),  # before the bare entry below
     ("caribbean premier league", "CPL"),
     ("sa20", "SA20"),
     ("major league cricket", "MLC"),
@@ -35,8 +37,6 @@ LEAGUE_KEYWORDS: list[tuple[str, str]] = [
     ("csa t20", "CSA T20"),
     ("syed mushtaq ali", "SMAT"),
     ("women's premier league", "WPL"),
-    ("women's big bash", "WBBL"),
-    ("women's caribbean premier league", "WCPL"),
     ("charlotte edwards cup", "Charlotte Edwards Cup"),
     ("women's t20 blast", "Women's T20 Blast"),  # before the bare entry below
     ("t20 blast", "T20 Blast"),

@@ -34,3 +34,17 @@ def test_no_match_returns_none():
     assert (
         match_league_keyword("Women's T20I Quadrangular Series in Namibia 2026") is None
     )
+
+
+def test_matches_womens_big_bash_not_mens_keyword():
+    # Regression: "big bash league" is a substring of "Women's Big Bash League",
+    # so ordering must put the women's entry first or this returns the
+    # men's label instead.
+    assert match_league_keyword("Women's Big Bash League 2026") == "WBBL"
+
+
+def test_matches_womens_caribbean_premier_league_not_mens_keyword():
+    # Regression: "caribbean premier league" is a substring of "Women's Caribbean Premier League",
+    # so ordering must put the women's entry first or this returns the
+    # men's label instead.
+    assert match_league_keyword("Women's Caribbean Premier League 2026") == "WCPL"
