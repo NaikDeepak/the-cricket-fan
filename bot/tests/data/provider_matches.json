@@ -9,7 +9,7 @@
       "venue": "M.Chinnaswamy Stadium",
       "dateTimeGMT": "2026-07-20T14:00:00",
       "teams": ["Royal Challengers Bangalore", "Chennai Super Kings"],
-      "series": "Indian Premier League",
+      "series_id": "series-ipl-2026",
       "matchStarted": false,
       "matchEnded": false
     },
@@ -21,7 +21,7 @@
       "venue": "M.Chinnaswamy Stadium",
       "dateTimeGMT": "2026-07-18T14:00:00",
       "teams": ["Mumbai Indians", "Kolkata Knight Riders"],
-      "series": "Indian Premier League",
+      "series_id": "series-ipl-2026",
       "matchStarted": true,
       "matchEnded": true,
       "matchWinner": "Mumbai Indians"
@@ -34,7 +34,7 @@
       "venue": "M.Chinnaswamy Stadium",
       "dateTimeGMT": "2026-07-18T10:00:00",
       "teams": ["Delhi Capitals", "Punjab Kings"],
-      "series": "Indian Premier League",
+      "series_id": "series-ipl-2026",
       "matchStarted": true,
       "matchEnded": true
     },
@@ -46,7 +46,7 @@
       "venue": "M.Chinnaswamy Stadium",
       "dateTimeGMT": "2026-07-21T14:00:00",
       "teams": ["Gotham Galacticos", "Chennai Super Kings"],
-      "series": "Indian Premier League",
+      "series_id": "series-ipl-2026",
       "matchStarted": false,
       "matchEnded": false
     },
@@ -58,7 +58,7 @@
       "venue": "M.Chinnaswamy Stadium",
       "dateTimeGMT": "2026-07-22T09:00:00",
       "teams": ["India", "Australia"],
-      "series": "ODI Series",
+      "series_id": "series-odi-2026",
       "matchStarted": false,
       "matchEnded": false
     }
