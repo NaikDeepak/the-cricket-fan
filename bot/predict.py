@@ -18,8 +18,12 @@ def load_artifact(path: Path) -> dict:
     # never loaded from user input or fetched over the network. Do not point this
     # at untrusted files.
     art = joblib.load(path)
+    art.setdefault("league_elo_override", [])
     if shap is not None:
-        art["explainer"] = shap.TreeExplainer(art["model"])
+        try:
+            art["explainer"] = shap.TreeExplainer(art["model"])
+        except Exception:
+            art["explainer"] = None
     return art
 
 
@@ -28,7 +32,7 @@ def predict(artifact: dict, features: dict) -> tuple[float, list[str]]:
     X = pd.DataFrame([[features[n] for n in names]], columns=names)
     raw = artifact["model"].predict_proba(X)[:, 1]
     prob = float(np.clip(artifact["calibrator"].predict(raw), 0.02, 0.98)[0])
-    
+
     reasons: list[str] = []
     explainer = artifact.get("explainer")
     if explainer is not None:
@@ -42,5 +46,5 @@ def predict(artifact: dict, features: dict) -> tuple[float, list[str]]:
     else:
         # Fallback to strongest non-zero feature differences
         reasons = ["form5_a", "bat_rr_a", "bowl_econ_a"]
-        
+
     return prob, reasons

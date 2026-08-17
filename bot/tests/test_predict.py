@@ -45,3 +45,19 @@ def test_predict_clips_extremes(tmp_path):
     f = {n: 0.5 for n in art["feature_names"]}
     prob, _ = predict(art, f)
     assert 0.02 <= prob <= 0.98
+
+
+def test_load_artifact_defaults_missing_league_elo_override(tmp_path):
+    import joblib
+
+    # Simulate a pre-Phase-1 artifact that predates league_elo_override.
+    old_shape = {
+        "model": object(),
+        "calibrator": object(),
+        "feature_names": ["form5_a"],
+    }
+    path = tmp_path / "old_model.pkl"
+    joblib.dump(old_shape, path)
+
+    art = load_artifact(path)
+    assert art["league_elo_override"] == []

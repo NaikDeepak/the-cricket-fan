@@ -16,6 +16,7 @@ from sklearn.metrics import accuracy_score, brier_score_loss, log_loss
 from .cricsheet import parse_result
 from .elo import Elo
 from .features import FEATURE_NAMES, build_features
+from .gating import per_league_gate
 
 
 def build_team_matches(cricsheet_dir: Path, league_map: dict[str, str]) -> pd.DataFrame:
@@ -39,8 +40,8 @@ def build_team_matches(cricsheet_dir: Path, league_map: dict[str, str]) -> pd.Da
 def build_dataset(df: pd.DataFrame):
     """One sample per match. team_a = alphabetically-first team (deterministic).
 
-    Returns (X, y, meta) where meta is a DataFrame with columns date/team_a/team_b,
-    index-aligned with X and y.
+    Returns (X, y, meta) where meta is a DataFrame with columns
+    date/team_a/team_b/league, index-aligned with X and y.
     """
     matches = df.copy()
     matches["pair"] = matches.apply(
@@ -54,7 +55,7 @@ def build_dataset(df: pd.DataFrame):
         if r["home"]:
             home_lookup[(r["date"], r["pair"])] = r["team"]
     matches = matches.drop_duplicates(subset=["date", "pair"])
-    feats, labels, dts, pairs = [], [], [], []
+    feats, labels, dts, pairs, leagues = [], [], [], [], []
     for _, m in matches.iterrows():
         team_a, team_b = m["pair"]
         won_a = m["won"] if m["team"] == team_a else not m["won"]
@@ -66,10 +67,16 @@ def build_dataset(df: pd.DataFrame):
         labels.append(1 if won_a else 0)
         dts.append(m["date"])
         pairs.append((team_a, team_b))
+        leagues.append(m["league"])
     X = pd.DataFrame(feats, columns=FEATURE_NAMES)
     y = pd.Series(labels, name="y")
     meta = pd.DataFrame(
-        {"date": dts, "team_a": [p[0] for p in pairs], "team_b": [p[1] for p in pairs]}
+        {
+            "date": dts,
+            "team_a": [p[0] for p in pairs],
+            "team_b": [p[1] for p in pairs],
+            "league": leagues,
+        }
     )
     return X, y, meta
 
@@ -117,6 +124,21 @@ def train_and_evaluate(
 
     home_pred = (X.loc[te, "home_a"] >= X.loc[te, "home_b"]).astype(int)
 
+    # Full-history model/Elo probabilities, for the per-league gate below.
+    # NOTE: rows in `tr` are in-sample for `model` here (it trained on
+    # them) -- a known Phase 1 limitation documented in bot/gating.py's
+    # module docstring. `calibrator` was fit only on `va`, so its output
+    # isn't literally memorized, but the underlying tree's raw score is.
+    p_model_all = np.clip(calibrator.predict(model.predict_proba(X)[:, 1]), 0.01, 0.99)
+    per_league, league_elo_override = per_league_gate(
+        league=meta["league"],
+        date=meta["date"],
+        y=y,
+        p_model=p_model_all,
+        p_elo=elo_p,
+        latest_date=meta["date"].max(),
+    )
+
     metrics = {
         "model": {
             "accuracy": float(accuracy_score(y_test, p_test > 0.5)),
@@ -132,6 +154,8 @@ def train_and_evaluate(
         "n_train": int(tr.sum()),
         "n_test": int(te.sum()),
         "test_period": str(max_year),
+        "per_league": per_league,
+        "league_elo_override": league_elo_override,
     }
     metrics["gate_passed"] = bool(
         metrics["model"]["log_loss"] < metrics["elo"]["log_loss"]
@@ -139,7 +163,12 @@ def train_and_evaluate(
     )
     (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
     joblib.dump(
-        {"model": model, "calibrator": calibrator, "feature_names": FEATURE_NAMES},
+        {
+            "model": model,
+            "calibrator": calibrator,
+            "feature_names": FEATURE_NAMES,
+            "league_elo_override": league_elo_override,
+        },
         out_dir / "model.pkl",
     )
     return metrics
