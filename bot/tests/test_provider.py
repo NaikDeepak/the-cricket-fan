@@ -388,3 +388,119 @@ def test_fetch_falls_back_when_series_info_call_fails(conn):
         )
     ).first()
     assert row is None
+
+
+def test_fetch_race_pre_existing_resolved_leagues_row_does_not_crash(conn):
+    """Regression: a resolved_leagues row can already exist for a
+    series_id by the time fetch() looks it up (e.g. another overlapping
+    ingestion run resolved it first). fetch() must not raise and must
+    return a sensible league value -- here the already-cached value wins
+    via the ordinary cache-hit path, without ever calling series_info."""
+    conn.execute(
+        resolved_leagues.insert().values(
+            series_id="series-race-1",
+            series_name="Big Bash League 2026",
+            canonical_league="BBL",
+            resolved_at=datetime.now(timezone.utc),
+        )
+    )
+    conn.commit()
+
+    def handler(request):
+        if "series_info" in str(request.url):
+            # A different name/canonical than what's already cached --
+            # proves the cached value wins and series_info is never called.
+            return httpx.Response(
+                200,
+                json={"data": {"info": {"name": "Pakistan Super League 2026"}}},
+            )
+        return httpx.Response(
+            200,
+            json={
+                "status": "success",
+                "data": [
+                    {
+                        "id": "race-1",
+                        "name": "Team A vs Team B",
+                        "matchType": "t20",
+                        "teams": ["Chennai Super Kings", "Mumbai Indians"],
+                        "venue": "M.Chinnaswamy Stadium",
+                        "dateTimeGMT": "2026-08-14T14:00:00",
+                        "series_id": "series-race-1",
+                        "matchStarted": False,
+                        "matchEnded": False,
+                    }
+                ],
+            },
+        )
+
+    p = CricApiProvider(
+        "https://api.example.com/v1",
+        "k",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    fixtures, _ = p.fetch(conn)
+    assert fixtures[0].league == "BBL"
+
+
+def test_fetch_falls_back_gracefully_when_resolved_leagues_insert_conflicts(conn):
+    """Regression for the concurrent-insert IntegrityError itself: forces
+    the resolved_leagues insert inside _resolve_league to raise
+    IntegrityError (simulating a second overlapping ingestion run winning
+    the same-series_id race between this run's cache-miss SELECT and its
+    own INSERT -- e.g. two overlapping tick() runs) and asserts fetch()
+    still returns the correct fixture with the locally-computed league
+    value instead of propagating the exception out of fetch()."""
+
+    def handler(request):
+        if "series_info" in str(request.url):
+            return httpx.Response(
+                200, json={"data": {"info": {"name": "Big Bash League 2026"}}}
+            )
+        return httpx.Response(
+            200,
+            json={
+                "status": "success",
+                "data": [
+                    {
+                        "id": "race-2",
+                        "name": "Team A vs Team B",
+                        "matchType": "t20",
+                        "teams": ["Chennai Super Kings", "Mumbai Indians"],
+                        "venue": "M.Chinnaswamy Stadium",
+                        "dateTimeGMT": "2026-08-14T14:00:00",
+                        "series_id": "series-race-2",
+                        "matchStarted": False,
+                        "matchEnded": False,
+                    }
+                ],
+            },
+        )
+
+    p = CricApiProvider(
+        "https://api.example.com/v1",
+        "k",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    real_execute = conn.execute
+
+    def racing_execute(statement, *args, **kwargs):
+        if (
+            isinstance(statement, sa.sql.dml.Insert)
+            and statement.table.name == "resolved_leagues"
+        ):
+            raise sa.exc.IntegrityError(
+                "INSERT INTO resolved_leagues ...",
+                {},
+                Exception("UNIQUE constraint failed: resolved_leagues.series_id"),
+            )
+        return real_execute(statement, *args, **kwargs)
+
+    conn.execute = racing_execute
+    try:
+        fixtures, _ = p.fetch(conn)
+    finally:
+        conn.execute = real_execute
+
+    assert fixtures[0].league == "BBL"

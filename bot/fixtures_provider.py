@@ -67,14 +67,21 @@ def _resolve_league(
         return fallback
 
     canonical = match_league_keyword(series_name)
-    conn.execute(
-        resolved_leagues.insert().values(
-            series_id=series_id,
-            series_name=series_name,
-            canonical_league=canonical,
-            resolved_at=datetime.now(timezone.utc),
+    try:
+        with conn.begin_nested():
+            conn.execute(
+                resolved_leagues.insert().values(
+                    series_id=series_id,
+                    series_name=series_name,
+                    canonical_league=canonical,
+                    resolved_at=datetime.now(timezone.utc),
+                )
+            )
+    except sa.exc.IntegrityError:
+        logger.info(
+            "resolved_leagues row for series_id=%s already inserted concurrently; skipping",
+            series_id,
         )
-    )
     return canonical or fallback
 
 
