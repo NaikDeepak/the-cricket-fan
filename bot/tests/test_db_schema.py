@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import sqlalchemy as sa
 from sqlalchemy.pool import StaticPool
 
-from bot.db import content_bank, ensure_schema, metadata
+from bot.db import content_bank, ensure_schema, metadata, resolved_leagues
 
 
 def _engine():
@@ -116,3 +116,35 @@ VALUES (1, 'wiki_record', 'single', '["test"]', 'test:key', \
         assert bool(row.is_published) is True
 
     eng.dispose()
+
+
+def test_resolved_leagues_table_columns():
+    assert {c.name for c in resolved_leagues.c} == {
+        "series_id",
+        "series_name",
+        "canonical_league",
+        "resolved_at",
+    }
+    assert resolved_leagues.c.series_id.primary_key is True
+    assert resolved_leagues.c.canonical_league.nullable is True
+    assert resolved_leagues.c.series_name.nullable is False
+
+
+def test_resolved_leagues_created_by_ensure_schema_and_roundtrips():
+    eng = _engine()
+    metadata.create_all(eng)
+    with eng.begin() as conn:
+        ensure_schema(conn)
+        conn.execute(
+            resolved_leagues.insert().values(
+                series_id="s1",
+                series_name="Indian Premier League 2026",
+                canonical_league="IPL",
+                resolved_at=datetime.now(timezone.utc),
+            )
+        )
+        row = conn.execute(
+            sa.select(resolved_leagues).where(resolved_leagues.c.series_id == "s1")
+        ).first()
+        assert row.canonical_league == "IPL"
+        assert row.series_name == "Indian Premier League 2026"

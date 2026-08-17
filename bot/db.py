@@ -37,6 +37,18 @@ aliases = sa.Table(
     sa.UniqueConstraint("kind", "alias", name="uq_alias"),
 )
 
+resolved_leagues = sa.Table(
+    "resolved_leagues",
+    metadata,
+    sa.Column("series_id", sa.String(64), primary_key=True),
+    sa.Column("series_name", sa.String(256), nullable=False),
+    # raw name from CricAPI's series_info, kept for debugging keyword misses
+    sa.Column("canonical_league", sa.String(32), nullable=True),
+    # NULL = series_info succeeded but no keyword matched (cached as a
+    # confirmed miss, so it isn't re-fetched on the next ingestion run)
+    sa.Column("resolved_at", sa.DateTime(timezone=True), nullable=False),
+)
+
 fixtures = sa.Table(
     "fixtures",
     metadata,
