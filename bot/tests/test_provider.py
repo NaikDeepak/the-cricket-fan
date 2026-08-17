@@ -1,11 +1,13 @@
 import json
-from datetime import timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
 import pytest
+import sqlalchemy as sa
 
 from bot.aliases import seed_aliases
+from bot.db import resolved_leagues
 from bot.fixtures_provider import CricApiProvider
 
 DATA = json.loads(
@@ -24,7 +26,14 @@ def provider():
 
 @pytest.fixture
 def conn(engine):
-    with engine.begin() as c:
+    # engine.connect() (not engine.begin()) so tests can call conn.commit()
+    # mid-test (as the resolved_leagues cache-hit/cache-miss tests below
+    # do) without breaking subsequent execute() calls — engine.begin()'s
+    # "begin-once" context manager raises InvalidRequestError on any
+    # execute() issued after a manual commit() inside its block. Reads
+    # still see prior writes without a commit since everything in a test
+    # runs on this same connection/transaction.
+    with engine.connect() as c:
         seed_aliases(c)
         yield c
 
@@ -153,3 +162,345 @@ def test_fetch_resolves_the_hundred_women_league_from_name(conn):
     fixtures, _ = p.fetch(conn)
     assert len(fixtures) == 1
     assert fixtures[0].league == "The Hundred Women"
+
+
+def test_fetch_resolves_league_via_series_id_cache_hit(conn):
+    conn.execute(
+        resolved_leagues.insert().values(
+            series_id="series-ipl-1",
+            series_name="Indian Premier League 2026",
+            canonical_league="IPL",
+            resolved_at=datetime.now(timezone.utc),
+        )
+    )
+    conn.commit()
+    calls = {"series_info": 0}
+
+    def handler(request):
+        if "series_info" in str(request.url):
+            calls["series_info"] += 1
+            return httpx.Response(200, json={"data": {"info": {"name": "unused"}}})
+        return httpx.Response(
+            200,
+            json={
+                "status": "success",
+                "data": [
+                    {
+                        "id": "ipl-1",
+                        "name": "Team A vs Team B",
+                        "matchType": "t20",
+                        "teams": ["Chennai Super Kings", "Mumbai Indians"],
+                        "venue": "M.Chinnaswamy Stadium",
+                        "dateTimeGMT": "2026-08-14T14:00:00",
+                        "series_id": "series-ipl-1",
+                        "matchStarted": False,
+                        "matchEnded": False,
+                    }
+                ],
+            },
+        )
+
+    p = CricApiProvider(
+        "https://api.example.com/v1",
+        "k",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    fixtures, _ = p.fetch(conn)
+    assert len(fixtures) == 1
+    assert fixtures[0].league == "IPL"
+    assert calls["series_info"] == 0
+
+
+def test_fetch_resolves_league_via_series_id_cache_miss_matches_keyword(conn):
+    def handler(request):
+        if "series_info" in str(request.url):
+            return httpx.Response(
+                200,
+                json={"data": {"info": {"name": "Pakistan Super League 2026"}}},
+            )
+        return httpx.Response(
+            200,
+            json={
+                "status": "success",
+                "data": [
+                    {
+                        "id": "psl-1",
+                        "name": "Team A vs Team B",
+                        "matchType": "t20",
+                        "teams": ["Chennai Super Kings", "Mumbai Indians"],
+                        "venue": "M.Chinnaswamy Stadium",
+                        "dateTimeGMT": "2026-08-14T14:00:00",
+                        "series_id": "series-psl-1",
+                        "matchStarted": False,
+                        "matchEnded": False,
+                    }
+                ],
+            },
+        )
+
+    p = CricApiProvider(
+        "https://api.example.com/v1",
+        "k",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    fixtures, _ = p.fetch(conn)
+    assert fixtures[0].league == "PSL"
+
+    row = conn.execute(
+        sa.select(resolved_leagues).where(
+            resolved_leagues.c.series_id == "series-psl-1"
+        )
+    ).first()
+    assert row.canonical_league == "PSL"
+    assert row.series_name == "Pakistan Super League 2026"
+
+
+def test_fetch_resolves_league_via_series_id_cache_miss_no_keyword_match(conn):
+    def handler(request):
+        if "series_info" in str(request.url):
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "info": {
+                            "name": "Womens T20I Quadrangular Series in Namibia 2026"
+                        }
+                    }
+                },
+            )
+        return httpx.Response(
+            200,
+            json={
+                "status": "success",
+                "data": [
+                    {
+                        "id": "unmapped-1",
+                        "name": "Team A vs Team B, Namibia Quadrangular",
+                        "matchType": "t20",
+                        "teams": ["Chennai Super Kings", "Mumbai Indians"],
+                        "venue": "M.Chinnaswamy Stadium",
+                        "dateTimeGMT": "2026-08-14T14:00:00",
+                        "series_id": "series-namibia-1",
+                        "matchStarted": False,
+                        "matchEnded": False,
+                    }
+                ],
+            },
+        )
+
+    p = CricApiProvider(
+        "https://api.example.com/v1",
+        "k",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    fixtures, _ = p.fetch(conn)
+    assert fixtures[0].league == "Team A vs Team B, Namibia Quadrangular"
+
+    row = conn.execute(
+        sa.select(resolved_leagues).where(
+            resolved_leagues.c.series_id == "series-namibia-1"
+        )
+    ).first()
+    assert row.canonical_league is None
+
+
+def test_fetch_uses_cached_null_without_recalling_series_info(conn):
+    conn.execute(
+        resolved_leagues.insert().values(
+            series_id="series-unmapped-1",
+            series_name="Some Unmapped Series 2026",
+            canonical_league=None,
+            resolved_at=datetime.now(timezone.utc),
+        )
+    )
+    conn.commit()
+    calls = {"series_info": 0}
+
+    def handler(request):
+        if "series_info" in str(request.url):
+            calls["series_info"] += 1
+            return httpx.Response(200, json={"data": {"info": {"name": "unused"}}})
+        return httpx.Response(
+            200,
+            json={
+                "status": "success",
+                "data": [
+                    {
+                        "id": "x-1",
+                        "name": "Fallback Name String",
+                        "matchType": "t20",
+                        "teams": ["Chennai Super Kings", "Mumbai Indians"],
+                        "venue": "M.Chinnaswamy Stadium",
+                        "dateTimeGMT": "2026-08-14T14:00:00",
+                        "series_id": "series-unmapped-1",
+                        "matchStarted": False,
+                        "matchEnded": False,
+                    }
+                ],
+            },
+        )
+
+    p = CricApiProvider(
+        "https://api.example.com/v1",
+        "k",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    fixtures, _ = p.fetch(conn)
+    assert fixtures[0].league == "Fallback Name String"
+    assert calls["series_info"] == 0
+
+
+def test_fetch_falls_back_when_series_info_call_fails(conn):
+    def handler(request):
+        if "series_info" in str(request.url):
+            return httpx.Response(500, json={"error": "server error"})
+        return httpx.Response(
+            200,
+            json={
+                "status": "success",
+                "data": [
+                    {
+                        "id": "err-1",
+                        "name": "Some Match Description League 2026",
+                        "matchType": "t20",
+                        "teams": ["Chennai Super Kings", "Mumbai Indians"],
+                        "venue": "M.Chinnaswamy Stadium",
+                        "dateTimeGMT": "2026-08-14T14:00:00",
+                        "series_id": "series-error-1",
+                        "matchStarted": False,
+                        "matchEnded": False,
+                    }
+                ],
+            },
+        )
+
+    p = CricApiProvider(
+        "https://api.example.com/v1",
+        "k",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    fixtures, _ = p.fetch(conn)
+    assert fixtures[0].league == "Some Match Description League 2026"
+
+    row = conn.execute(
+        sa.select(resolved_leagues).where(
+            resolved_leagues.c.series_id == "series-error-1"
+        )
+    ).first()
+    assert row is None
+
+
+def test_fetch_race_pre_existing_resolved_leagues_row_does_not_crash(conn):
+    """Regression: a resolved_leagues row can already exist for a
+    series_id by the time fetch() looks it up (e.g. another overlapping
+    ingestion run resolved it first). fetch() must not raise and must
+    return a sensible league value -- here the already-cached value wins
+    via the ordinary cache-hit path, without ever calling series_info."""
+    conn.execute(
+        resolved_leagues.insert().values(
+            series_id="series-race-1",
+            series_name="Big Bash League 2026",
+            canonical_league="BBL",
+            resolved_at=datetime.now(timezone.utc),
+        )
+    )
+    conn.commit()
+
+    def handler(request):
+        if "series_info" in str(request.url):
+            # A different name/canonical than what's already cached --
+            # proves the cached value wins and series_info is never called.
+            return httpx.Response(
+                200,
+                json={"data": {"info": {"name": "Pakistan Super League 2026"}}},
+            )
+        return httpx.Response(
+            200,
+            json={
+                "status": "success",
+                "data": [
+                    {
+                        "id": "race-1",
+                        "name": "Team A vs Team B",
+                        "matchType": "t20",
+                        "teams": ["Chennai Super Kings", "Mumbai Indians"],
+                        "venue": "M.Chinnaswamy Stadium",
+                        "dateTimeGMT": "2026-08-14T14:00:00",
+                        "series_id": "series-race-1",
+                        "matchStarted": False,
+                        "matchEnded": False,
+                    }
+                ],
+            },
+        )
+
+    p = CricApiProvider(
+        "https://api.example.com/v1",
+        "k",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    fixtures, _ = p.fetch(conn)
+    assert fixtures[0].league == "BBL"
+
+
+def test_fetch_falls_back_gracefully_when_resolved_leagues_insert_conflicts(conn):
+    """Regression for the concurrent-insert IntegrityError itself: forces
+    the resolved_leagues insert inside _resolve_league to raise
+    IntegrityError (simulating a second overlapping ingestion run winning
+    the same-series_id race between this run's cache-miss SELECT and its
+    own INSERT -- e.g. two overlapping tick() runs) and asserts fetch()
+    still returns the correct fixture with the locally-computed league
+    value instead of propagating the exception out of fetch()."""
+
+    def handler(request):
+        if "series_info" in str(request.url):
+            return httpx.Response(
+                200, json={"data": {"info": {"name": "Big Bash League 2026"}}}
+            )
+        return httpx.Response(
+            200,
+            json={
+                "status": "success",
+                "data": [
+                    {
+                        "id": "race-2",
+                        "name": "Team A vs Team B",
+                        "matchType": "t20",
+                        "teams": ["Chennai Super Kings", "Mumbai Indians"],
+                        "venue": "M.Chinnaswamy Stadium",
+                        "dateTimeGMT": "2026-08-14T14:00:00",
+                        "series_id": "series-race-2",
+                        "matchStarted": False,
+                        "matchEnded": False,
+                    }
+                ],
+            },
+        )
+
+    p = CricApiProvider(
+        "https://api.example.com/v1",
+        "k",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    real_execute = conn.execute
+
+    def racing_execute(statement, *args, **kwargs):
+        if (
+            isinstance(statement, sa.sql.dml.Insert)
+            and statement.table.name == "resolved_leagues"
+        ):
+            raise sa.exc.IntegrityError(
+                "INSERT INTO resolved_leagues ...",
+                {},
+                Exception("UNIQUE constraint failed: resolved_leagues.series_id"),
+            )
+        return real_execute(statement, *args, **kwargs)
+
+    conn.execute = racing_execute
+    try:
+        fixtures, _ = p.fetch(conn)
+    finally:
+        conn.execute = real_execute
+
+    assert fixtures[0].league == "BBL"
