@@ -328,6 +328,7 @@ def tick(
                     prob_team_a=prob,
                     reasons_json=json.dumps(reasons),
                     features_json=json.dumps(feats),
+                    source="model",
                     created_at=now,
                     outcome="pending",
                 )

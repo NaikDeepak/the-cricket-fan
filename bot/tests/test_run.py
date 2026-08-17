@@ -155,6 +155,7 @@ def test_prediction_posted_inside_window(conn, art):
         conn.execute(sa.select(sa.func.count()).select_from(predictions)).scalar_one()
         == 1
     )
+    assert conn.execute(sa.select(predictions.c.source)).scalar_one() == "model"
 
 
 def test_upsert_fixtures_syncs_reschedule(conn, art):

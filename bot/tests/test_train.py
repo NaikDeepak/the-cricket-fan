@@ -2,6 +2,7 @@ import json
 from datetime import date, timedelta
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -61,6 +62,13 @@ def test_build_dataset_shapes_and_no_leakage_column():
     X, y, meta = build_dataset(df)
     assert len(X) == len(y) == len(meta) == 200  # one sample per match
     assert "won" not in X.columns
+
+
+def test_build_dataset_meta_includes_league():
+    df = synthetic_team_matches(50)
+    X, y, meta = build_dataset(df)
+    assert "league" in meta.columns
+    assert set(meta["league"]) == {"SYN"}
 
 
 def test_build_dataset_home_team_survives_dedup():
@@ -140,3 +148,39 @@ def test_train_writes_artifact_and_metrics(tmp_path):
     assert 0.0 < metrics["model"]["log_loss"] < 1.5
     # synthetic league is learnable: model should beat coin flip clearly
     assert metrics["model"]["accuracy"] > 0.55
+
+
+def synthetic_multi_league_matches(n_per_league=600) -> pd.DataFrame:
+    """Two leagues ('SYN_A', 'SYN_B') covering the same date range, so
+    both have plenty of matches inside any recent trailing window.
+
+    n_per_league=600 (not the plan's original 300): synthetic_team_matches's
+    date grid is start + i*2 days, so 300 matches only spans ~598 days
+    (2 calendar years), leaving train_and_evaluate's `tr = years <= max_year
+    - 2` split empty. 600 matches spans ~1198 days (4 calendar years),
+    matching test_train_writes_artifact_and_metrics's already-passing usage,
+    so train/val/test are all non-empty.
+    """
+    a = synthetic_team_matches(n_per_league, seed=7)
+    a["league"] = "SYN_A"
+    b = synthetic_team_matches(n_per_league, seed=11)
+    b["league"] = "SYN_B"
+    return pd.concat([a, b], ignore_index=True)
+
+
+def test_train_and_evaluate_includes_per_league_gate(tmp_path):
+    df = synthetic_multi_league_matches(600)
+    X, y, meta = build_dataset(df)
+    metrics = train_and_evaluate(X, y, meta, out_dir=tmp_path)
+
+    assert "per_league" in metrics
+    assert "league_elo_override" in metrics
+    assert set(metrics["per_league"]) == {"SYN_A", "SYN_B"}
+    assert isinstance(metrics["league_elo_override"], list)
+
+    saved = json.loads((tmp_path / "metrics.json").read_text())
+    assert saved["per_league"] == metrics["per_league"]
+    assert saved["league_elo_override"] == metrics["league_elo_override"]
+
+    artifact = joblib.load(tmp_path / "model.pkl")
+    assert artifact["league_elo_override"] == metrics["league_elo_override"]

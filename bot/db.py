@@ -73,6 +73,12 @@ predictions = sa.Table(
     sa.Column("result_summary", sa.String(256), nullable=True),
     sa.Column("outcome", sa.String(16), nullable=False, default="pending"),
     # 'pending' | 'correct' | 'incorrect' | 'void'
+    sa.Column("source", sa.String(16), nullable=True),
+    # 'model' for predictions from the model-scoring path (both
+    # composer/routers/predictions.py::run_model's model branch and
+    # bot/run.py's tick cron) | 'elo_fallback' for predictions from the
+    # Elo-fallback path (currently only reachable via run_model) | NULL
+    # for rows that predate this column (before this branch merged)
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column("evaluated_at", sa.DateTime(timezone=True), nullable=True),
 )
@@ -274,6 +280,7 @@ def ensure_schema(conn: sa.Connection) -> None:
         ("actual_winner", "VARCHAR(64)"),
         ("result_summary", "VARCHAR(256)"),
         ("evaluated_at", "TIMESTAMP"),
+        ("source", "VARCHAR(16)"),
     ]:
         if col not in pred_cols:
             conn.execute(
