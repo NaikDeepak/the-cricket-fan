@@ -1,17 +1,150 @@
 {
   "model": {
-    "accuracy": 0.6638655462184874,
-    "log_loss": 0.6091943636553718,
-    "brier": 0.20879372299511728
+    "accuracy": 0.5203836930455635,
+    "log_loss": 0.6952408917168661,
+    "brier": 0.2509671139005198
   },
   "elo": {
-    "accuracy": 0.6326530612244898,
-    "log_loss": 0.6420707262989527,
-    "brier": 0.22533405631430306
+    "accuracy": 0.5683453237410072,
+    "log_loss": 0.6972744508980872,
+    "brier": 0.2515001239745075
   },
-  "always_home_accuracy": 0.5354141656662665,
-  "n_train": 6326,
-  "n_test": 833,
+  "always_home_accuracy": 0.5155875299760192,
+  "n_train": 5172,
+  "n_test": 417,
   "test_period": "2026",
+  "per_league": {
+    "BPL": {
+      "n": 34,
+      "gated": true,
+      "passed": false,
+      "model_log_loss": 0.6801683449083571,
+      "elo_log_loss": 0.6778413921381238,
+      "model_brier": 0.2433391986393475,
+      "elo_brier": 0.24208040709619916
+    },
+    "CSA T20": {
+      "n": 0,
+      "gated": false
+    },
+    "Charlotte Edwards Cup": {
+      "n": 0,
+      "gated": false
+    },
+    "FairBreak": {
+      "n": 0,
+      "gated": false
+    },
+    "ILT20": {
+      "n": 34,
+      "gated": true,
+      "passed": false,
+      "model_log_loss": 0.719129534091002,
+      "elo_log_loss": 0.6735571799666441,
+      "model_brier": 0.2629306329430804,
+      "elo_brier": 0.23973578077755028
+    },
+    "IPL": {
+      "n": 73,
+      "gated": true,
+      "passed": true,
+      "model_log_loss": 0.6905401566407917,
+      "elo_log_loss": 0.6923663561625782,
+      "model_brier": 0.2483543767492596,
+      "elo_brier": 0.2495795499143513
+    },
+    "LPL": {
+      "n": 23,
+      "gated": false
+    },
+    "MLC": {
+      "n": 34,
+      "gated": true,
+      "passed": true,
+      "model_log_loss": 0.7062627988359512,
+      "elo_log_loss": 0.7301544982129843,
+      "model_brier": 0.2565226597536081,
+      "elo_brier": 0.26694533804622544
+    },
+    "MSL": {
+      "n": 0,
+      "gated": false
+    },
+    "NPL": {
+      "n": 32,
+      "gated": true,
+      "passed": true,
+      "model_log_loss": 0.6700201158641788,
+      "elo_log_loss": 0.7034577771732773,
+      "model_brier": 0.23822411990850698,
+      "elo_brier": 0.2552439745406057
+    },
+    "PSL": {
+      "n": 43,
+      "gated": true,
+      "passed": false,
+      "model_log_loss": 0.7444743923876498,
+      "elo_log_loss": 0.6806428759059154,
+      "model_brier": 0.27496956163287933,
+      "elo_brier": 0.24365949561534944
+    },
+    "SA20": {
+      "n": 29,
+      "gated": false
+    },
+    "SMAT": {
+      "n": 0,
+      "gated": false
+    },
+    "T20 Blast": {
+      "n": 113,
+      "gated": true,
+      "passed": true,
+      "model_log_loss": 0.6705384678240659,
+      "elo_log_loss": 0.6977663738917876,
+      "model_brier": 0.23920066991998307,
+      "elo_brier": 0.25115303500463765
+    },
+    "WBBL": {
+      "n": 39,
+      "gated": true,
+      "passed": true,
+      "model_log_loss": 0.6840183597453701,
+      "elo_log_loss": 0.756856888770573,
+      "model_brier": 0.24566832741430053,
+      "elo_brier": 0.28119366101254034
+    },
+    "WCPL": {
+      "n": 8,
+      "gated": false
+    },
+    "WPL": {
+      "n": 22,
+      "gated": false
+    },
+    "WSL": {
+      "n": 0,
+      "gated": false
+    },
+    "Women's T20 Blast": {
+      "n": 48,
+      "gated": true,
+      "passed": false,
+      "model_log_loss": 0.7174305644326661,
+      "elo_log_loss": 0.6847725106917096,
+      "model_brier": 0.26226261258388334,
+      "elo_brier": 0.24562399037705185
+    },
+    "Women's T20 Challenge": {
+      "n": 0,
+      "gated": false
+    }
+  },
+  "league_elo_override": [
+    "BPL",
+    "ILT20",
+    "PSL",
+    "Women's T20 Blast"
+  ],
   "gate_passed": true
 }
